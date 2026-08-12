@@ -1,5 +1,5 @@
 import { useState, type ComponentType } from "react";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/mobius--logo.png";
 import { useMutation } from "@tanstack/react-query";
 import type { PermissionName, RoleName } from "@mobiusbloom/shared";
 import {

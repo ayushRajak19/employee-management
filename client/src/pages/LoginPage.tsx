@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { ArrowRight, CheckCircle2, Eye, EyeOff, ShieldCheck } from "lucide-react";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/mobius--logo.png";
 import { Navigate, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { ApiError } from "@/api/client"; import { Button } from "@/components/ui/Button"; import { Input } from "@/components/ui/Input"; import { authApi } from "@/features/auth/authApi"; import { useAuth } from "@/features/auth/AuthProvider";
