@@ -4,7 +4,10 @@
 
 @layer base {
   html {
-    overflow-x: hidden;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: clip;
   }
 
   * {
@@ -12,8 +15,11 @@
   }
 
   body {
-    @apply m-0 min-w-[320px] bg-[#faf8ff] text-ink antialiased;
-    overflow-x: hidden;
+    @apply m-0 bg-[#faf8ff] text-ink antialiased;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: clip;
     background-image: radial-gradient(
       circle at 85% 5%,
       rgba(223, 210, 255, 0.32),
@@ -21,11 +27,26 @@
     );
   }
 
+  #root {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    min-height: 100vh;
+    overflow-x: clip;
+  }
+
+  main {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
   button,
   input,
   select,
   textarea {
     font: inherit;
+    min-width: 0;
   }
 
   :focus-visible {

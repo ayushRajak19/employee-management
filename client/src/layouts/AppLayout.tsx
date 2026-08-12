@@ -1,4 +1,4 @@
-import { useState, type ComponentType } from "react";
+import { useEffect, useState, type ComponentType } from "react";
 import logo from "@/assets/mobius--logo.png";
 import { useMutation } from "@tanstack/react-query";
 import type { PermissionName, RoleName } from "@mobiusbloom/shared";
@@ -86,6 +86,12 @@ export const AppLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    document.documentElement.scrollLeft = 0;
+    document.body.scrollLeft = 0;
+  }, [location.pathname]);
+
   const logout = useMutation({
     mutationFn: authApi.logout,
     onSettled: () => { setUser(null); navigate("/login", { replace: true }); },
@@ -105,7 +111,7 @@ export const AppLayout = () => {
   const sidebar = (
     <aside
       className={cn(
-        "flex h-full flex-col border-r bg-white transition-[width] duration-200",
+        "flex h-full max-w-[86vw] flex-col border-r bg-white transition-[width] duration-200",
         collapsed ? "w-[76px]" : "w-[260px]"
       )}
     >
@@ -199,7 +205,7 @@ export const AppLayout = () => {
   );
 
   return (
-    <div className="flex min-h-screen overflow-x-hidden">
+    <div className="flex min-h-screen w-full min-w-0 max-w-full overflow-x-clip">
       {/* Desktop sidebar — fixed */}
       <div className="fixed inset-y-0 left-0 z-40 hidden lg:block">
         {sidebar}
@@ -215,7 +221,7 @@ export const AppLayout = () => {
             onClick={() => setMobileOpen(false)}
           />
           {/* Drawer */}
-          <div className="relative h-full w-[280px] shadow-2xl">
+          <div className="relative h-full w-[min(280px,86vw)] shadow-2xl">
             {sidebar}
           </div>
         </div>
@@ -224,12 +230,12 @@ export const AppLayout = () => {
       {/* Main content area */}
       <div
         className={cn(
-          "flex min-w-0 flex-1 flex-col transition-[margin] duration-200",
+          "flex w-full min-w-0 max-w-full flex-1 flex-col overflow-x-clip transition-[margin] duration-200",
           collapsed ? "lg:ml-[76px]" : "lg:ml-[260px]"
         )}
       >
         {/* Top header */}
-        <header className="sticky top-0 z-30 flex h-16 items-center gap-2 border-b bg-[#f6f8f7]/90 px-4 backdrop-blur-xl sm:h-20 sm:gap-3 sm:px-8">
+        <header className="sticky top-0 z-30 flex h-16 min-w-0 max-w-full items-center gap-2 border-b bg-[#f6f8f7]/90 px-4 backdrop-blur-xl sm:h-20 sm:gap-3 sm:px-8">
           {/* Hamburger — mobile only */}
           <button
             className="grid size-10 shrink-0 place-items-center rounded-xl border bg-white lg:hidden"
