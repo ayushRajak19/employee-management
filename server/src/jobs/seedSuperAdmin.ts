@@ -1,6 +1,5 @@
 import bcrypt from "bcrypt";
 import { PERMISSIONS, ROLE_PERMISSIONS, ROLES } from "@mobiusbloom/shared";
-import { connectDatabase, disconnectDatabase } from "../config/database.js";
 import { env } from "../config/env.js";
 import { Permission } from "../models/Permission.js";
 import { Role } from "../models/Role.js";
@@ -9,9 +8,10 @@ import { Department } from "../models/Department.js";
 import { Team } from "../models/Team.js";
 import { Designation } from "../models/Designation.js";
 
-if (!env.SUPER_ADMIN_NAME || !env.SUPER_ADMIN_EMAIL || !env.SUPER_ADMIN_PASSWORD) throw new Error("SUPER_ADMIN_NAME, SUPER_ADMIN_EMAIL and SUPER_ADMIN_PASSWORD are required for seeding");
-await connectDatabase();
-try {
+export const seedOrganization = async (): Promise<void> => {
+  if (!env.SUPER_ADMIN_NAME || !env.SUPER_ADMIN_EMAIL || !env.SUPER_ADMIN_PASSWORD) {
+    throw new Error("SUPER_ADMIN_NAME, SUPER_ADMIN_EMAIL and SUPER_ADMIN_PASSWORD are required for seeding");
+  }
   await Permission.bulkWrite(PERMISSIONS.map((key) => ({ updateOne: { filter: { key }, update: { $set: { description: key.replace(".", " ") } }, upsert: true } })));
   await Role.bulkWrite(ROLES.map((name) => ({ updateOne: { filter: { name }, update: { $set: { description: name.replaceAll("_", " "), permissions: [...ROLE_PERMISSIONS[name]], isSystem: true } }, upsert: true } })));
   const departmentPresets = [
@@ -55,4 +55,4 @@ try {
   if (existing) { existing.name = env.SUPER_ADMIN_NAME; existing.role = role._id; existing.isActive = true; existing.onboardingComplete = true; await existing.save(); console.log("Super Admin metadata updated; password was not overwritten"); }
   else { await User.create({ name: env.SUPER_ADMIN_NAME, email: env.SUPER_ADMIN_EMAIL, passwordHash: await bcrypt.hash(env.SUPER_ADMIN_PASSWORD, 12), role: role._id, isActive: true, forcePasswordChange: false, onboardingComplete: true }); console.log("Super Admin created"); }
   console.log("Organization presets seeded");
-} finally { await disconnectDatabase(); }
+};

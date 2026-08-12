@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import { createApp } from "./app.js";
 import { connectDatabase, disconnectDatabase } from "./config/database.js";
 import { env } from "./config/env.js";
+import { seedOrganization } from "./jobs/seedSuperAdmin.js";
 
 const start = async (): Promise<void> => {
   const server = createServer(createApp());
@@ -11,6 +12,7 @@ const start = async (): Promise<void> => {
     try {
       await connectDatabase();
       console.log("MongoDB connected");
+      await seedOrganization();
     } catch (error: unknown) {
       console.error("MongoDB connection failed; retrying in 15 seconds", error);
       databaseRetry = setTimeout(() => void connectWithRetry(), 15_000);
