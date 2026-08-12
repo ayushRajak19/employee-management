@@ -14,6 +14,7 @@ export interface RoleSkillScore {
 export interface RoleSkillAssessmentDocument {
   employee: Types.ObjectId;
   role: string;
+  designation?: string;
   scores: RoleSkillScore[];
   averageRating: number;
   submittedAt: Date;
@@ -33,6 +34,7 @@ const scoreSchema = new Schema<RoleSkillScore>({
 const schema = new Schema<RoleSkillAssessmentDocument>({
   employee: { type: Schema.Types.ObjectId, ref: "Employee", required: true, unique: true, index: true },
   role: { type: String, required: true, trim: true, index: true },
+  designation: { type: String, trim: true, maxlength: 120 },
   scores: { type: [scoreSchema], required: true },
   averageRating: { type: Number, required: true, min: 1, max: 10 },
   submittedAt: { type: Date, required: true, default: Date.now }
