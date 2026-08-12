@@ -1,7 +1,7 @@
 import { useState, type ComponentType } from "react";
 import { useMutation } from "@tanstack/react-query";
 import type { PermissionName, RoleName } from "@mobiusbloom/shared";
-import { Activity, BarChart3, BriefcaseBusiness, Building2, ChevronLeft, CircleGauge, FileText, GraduationCap, LogOut, Menu, Settings, ShieldCheck, Sparkles, Target, UserCog, UserRound, Users, X } from "lucide-react";
+import { Activity, BarChart3, BriefcaseBusiness, Building2, CalendarCheck2, ChevronLeft, CircleGauge, FileText, GraduationCap, LogOut, Menu, Settings, ShieldCheck, Sparkles, Target, UserCog, UserRound, Users, X } from "lucide-react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { HeaderSearch } from "@/components/HeaderSearch";
 import { NotificationsPopover } from "@/components/NotificationsPopover";
@@ -23,7 +23,7 @@ const groups: { label: string; items: NavItem[] }[] = [
   { label: "Performance", items: [{ label: "Goals & performance", icon: Target, path: "/performance", roles: employeeRole }, { label: "Goals, KPIs & reviews", icon: Activity, path: "/performance", roles: managementRoles }] },
   { label: "Development", items: [{ label: "Learning & training", icon: GraduationCap, path: "/development" }] },
   { label: "Records", items: [{ label: "My resume", icon: FileText, path: "/resumes", roles: employeeRole }, { label: "My documents", icon: FileText, path: "/governance", roles: employeeRole }, { label: "Applicants", icon: Users, path: "/applicants", roles: applicantRoles }, { label: "Resume library", icon: FileText, path: "/resumes", roles: superAdminRole }, { label: "Documents & reports", icon: FileText, path: "/governance", roles: managementRoles }] },
-  { label: "People operations", items: [{ label: "Leave & recognition", icon: Users, path: "/people-ops", roles: employeeRole }, { label: "People operations", icon: Users, path: "/people-ops", roles: managementRoles }] },
+  { label: "People operations", items: [{ label: "My attendance", icon: CalendarCheck2, path: "/attendance", roles: employeeRole }, { label: "Attendance register", icon: CalendarCheck2, path: "/attendance", roles: superAdminRole }, { label: "Leave & recognition", icon: Users, path: "/people-ops", roles: employeeRole }, { label: "People operations", icon: Users, path: "/people-ops", roles: managementRoles }] },
   { label: "Administration", items: [{ label: "Administrators", icon: UserCog, path: "/administrators", roles: superAdminRole }, { label: "Access & audit", icon: ShieldCheck, path: "/governance", permission: "audit.view" }, { label: "Settings", icon: Settings, path: "/people-ops", permission: "settings.manage" }] }
 ];
 
