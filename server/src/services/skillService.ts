@@ -14,15 +14,15 @@ export const roleCatalogAssessment = async (userId: string) => {
   const roles = [...new Set(roleSkillCatalog.map((item) => item.role))].map((role) => ({ role, skillCount: roleSkillCatalog.filter((item) => item.role === role).length }));
   return { roles, catalog: assessment ? [] : roleSkillCatalog, assessment };
 };
-export const submitRoleCatalogAssessment = async (userId: string, input: { role: string; ratings: { skillId: string; rating: number }[] }, meta: { ip?: string; userAgent?: string }) => {
+export const submitRoleCatalogAssessment = async (userId: string, input: { role: string; ratings: { skillId: string; rating: number; implementationNote?: string }[] }, meta: { ip?: string; userAgent?: string }) => {
   const employee = await Employee.findOne({ user: userId, isActive: true }).select("_id");
   if (!employee) throw new AppError("Employee profile not found", 404);
   if (await RoleSkillAssessment.exists({ employee: employee._id })) throw new AppError("This one-time skill assessment has already been submitted and cannot be edited", 409, "ASSESSMENT_LOCKED");
   const expected = roleSkillCatalog.filter((item) => item.role === input.role);
   if (!expected.length) throw new AppError("Select a valid role from the catalog", 422, "INVALID_CATALOG_ROLE");
-  const ratingMap = new Map(input.ratings.map((item) => [item.skillId, item.rating]));
+  const ratingMap = new Map(input.ratings.map((item) => [item.skillId, item]));
   if (ratingMap.size !== input.ratings.length || ratingMap.size !== expected.length || expected.some((item) => !ratingMap.has(item.id))) throw new AppError(`Rate all ${expected.length} skills for ${input.role} before submitting`, 422, "INCOMPLETE_ROLE_ASSESSMENT");
-  const scores = expected.map((item) => ({ skillId: item.id, level: item.level, category: item.category, name: item.name, tools: item.tools, description: item.description, rating: ratingMap.get(item.id)! }));
+  const scores = expected.map((item) => { const response = ratingMap.get(item.id)!; return { skillId: item.id, level: item.level, category: item.category, name: item.name, tools: item.tools, description: item.description, rating: response.rating, implementationNote: response.implementationNote || undefined }; });
   const averageRating = Math.round(scores.reduce((sum, item) => sum + item.rating, 0) / scores.length * 10) / 10;
   const assessment = await RoleSkillAssessment.create({ employee: employee._id, role: input.role, scores, averageRating, submittedAt: new Date() });
   await writeAudit({ user: userId, action: "ROLE_SKILL_ASSESSMENT_SUBMITTED", entityType: "RoleSkillAssessment", entityId: assessment.id, newValue: { role: input.role, skillCount: scores.length, averageRating }, ipAddress: meta.ip, userAgent: meta.userAgent });
