@@ -36,17 +36,17 @@ export const seedOrganization = async (): Promise<void> => {
     { upsert: true, new: true, runValidators: true },
   );
   const designationPresets = [
-    { name: "Software Engineer", code: "SWE", department: "IT" },
-    { name: "Senior Engineer", code: "SSE", department: "IT" },
-    { name: "Sales Executive", code: "SALES", department: "Sales" },
-    { name: "Marketing Specialist", code: "MKT", department: "Marketing" },
-    { name: "HR Executive", code: "HRE", department: "HR" },
-    { name: "Operations Analyst", code: "OPS", department: "Operations" },
+    { name: "Software Engineer", code: "SWE", department: "IT", catalogRole: "AI/ML Developer" },
+    { name: "Senior Engineer", code: "SSE", department: "IT", catalogRole: "AI/ML Developer" },
+    { name: "Sales Executive", code: "SALES", department: "Sales", catalogRole: "SaaS Sales (AE)" },
+    { name: "Marketing Specialist", code: "MKT", department: "Marketing", catalogRole: "SaaS Sales (AE)" },
+    { name: "HR Executive", code: "HRE", department: "HR", catalogRole: "HR" },
+    { name: "Operations Analyst", code: "OPS", department: "Operations", catalogRole: "Admin" },
   ];
   for (const preset of designationPresets) {
     await Designation.findOneAndUpdate(
       { code: preset.code },
-      { $set: { name: preset.name, department: departments.get(preset.department)!._id, isActive: true } },
+      { $set: { name: preset.name, department: departments.get(preset.department)!._id, catalogRole: preset.catalogRole, isActive: true } },
       { upsert: true, new: true, runValidators: true },
     );
   }

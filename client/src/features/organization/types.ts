@@ -1,3 +1,3 @@
-export interface NamedEntity { _id: string; name: string; code: string; description?: string; department?: NamedEntity }
-export interface OrganizationData { departments: NamedEntity[]; teams: NamedEntity[]; designations: NamedEntity[] }
+export interface NamedEntity { _id: string; name: string; code: string; description?: string; department?: NamedEntity; catalogRole?: string }
+export interface OrganizationData { departments: NamedEntity[]; teams: NamedEntity[]; designations: NamedEntity[]; skillCatalogRoles: { role: string; skillCount: number }[] }
 export interface EmployeeRow { _id: string; employeeId: string; firstName: string; lastName: string; officialEmail: string; phone?: string; profilePhotoUrl?: string; department: NamedEntity; team?: NamedEntity; designation: NamedEntity; reportingManager?: { firstName: string; lastName: string }; status: string; employmentType: string; profileCompletion: number }

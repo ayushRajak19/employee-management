@@ -25,7 +25,7 @@ export const employeeApi = {
   create: (body: CreateEmployeeInput) => api.post<{ employee: EmployeeRow; temporaryCredentials: { email: string; password: string } }>("/api/v1/employees", body),
   me: () => api.get<{ employee: MyEmployee }>("/api/v1/employees/me"),
   updateMe: (body: unknown) => api.patch<{ employee: MyEmployee }>("/api/v1/employees/me/profile", body),
-  uploadProfilePhoto: (file: File) => { const body = new FormData(); body.append("photo", file); return api.post<{ employee: MyEmployee }>("/api/v1/employees/me/profile-photo", body); },
+  uploadProfilePhoto: (file: File) => { const body = new FormData(); body.append("photo", file); return api.upload<{ employee: MyEmployee }>("/api/v1/employees/me/profile-photo", body); },
   onboarding: (body: unknown) => api.patch<{ employee: EmployeeRow }>("/api/v1/employees/me/onboarding", body),
   profile: (id: string) => api.get<Employee360>(`/api/v1/employees/${id}`),
   update: (id: string, body: unknown) => api.patch<{ employee: EmployeeRow }>(`/api/v1/employees/${id}`, body),

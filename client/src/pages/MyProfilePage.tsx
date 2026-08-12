@@ -12,7 +12,7 @@ export const MyProfilePage = () => {
   const [form, setForm] = useState({ firstName: "", lastName: "", phone: "", personalEmail: "", address: "", emergencyContact: "", professionalSummary: "" });
   useEffect(() => { const employee = query.data?.employee; if (employee) setForm({ firstName: employee.firstName, lastName: employee.lastName, phone: employee.phone ?? "", personalEmail: employee.personal?.personalEmail ?? "", address: employee.personal?.address ?? "", emergencyContact: employee.personal?.emergencyContact ?? "", professionalSummary: employee.professionalSummary ?? "" }); }, [query.data?.employee]);
   const save = useMutation({ mutationFn: () => employeeApi.updateMe({ firstName: form.firstName, lastName: form.lastName, phone: form.phone || undefined, professionalSummary: form.professionalSummary || undefined, personal: { personalEmail: form.personalEmail || undefined, address: form.address || undefined, emergencyContact: form.emergencyContact || undefined } }), onSuccess: () => queryClient.invalidateQueries({ queryKey: ["employee"] }) });
-  const photo = useMutation({ mutationFn: employeeApi.uploadProfilePhoto, onSuccess: () => queryClient.invalidateQueries({ queryKey: ["employee"] }) });
+  const photo = useMutation({ mutationFn: employeeApi.uploadProfilePhoto, onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["employee"] }); } });
   if (query.isLoading) return <main className="p-8"><Skeleton className="h-96"/></main>;
   const employee = query.data?.employee; if (!employee) return <main className="grid min-h-96 place-items-center text-sm text-slate-500">Your employee profile is unavailable.</main>;
   const message = save.error?.message ?? photo.error?.message;

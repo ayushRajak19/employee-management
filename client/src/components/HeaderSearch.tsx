@@ -1,3 +1,94 @@
-import { useState } from "react"; import { useQuery } from "@tanstack/react-query"; import { Search, X } from "lucide-react"; import { useNavigate } from "react-router-dom"; import { governanceApi } from "@/features/governance/governanceApi";
-const routes: Record<string, string> = { employees: "/employees", skills: "/skills", departments: "/organization", projects: "/work", tasks: "/work" };
-export const HeaderSearch = () => { const navigate = useNavigate(); const [query, setQuery] = useState(""); const search = useQuery({ queryKey: ["search", query], queryFn: () => governanceApi.search(query), enabled: query.trim().length >= 2, staleTime: 30_000 }); return <div className="relative min-w-0 flex-1 sm:max-w-md"><div className="flex h-11 items-center rounded-xl border bg-white px-3 shadow-sm"><Search size={17} className="mr-2.5 shrink-0 text-slate-400"/><input aria-label="Global search" className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-slate-400" placeholder="Search people, skills, projects…" value={query} onChange={(e) => setQuery(e.target.value)}/>{query && <button aria-label="Clear search" onClick={() => setQuery("")}><X size={15} className="text-slate-400"/></button>}</div>{query.length >= 2 && <div className="absolute left-0 right-0 top-12 z-50 max-h-[420px] overflow-y-auto rounded-2xl border bg-white p-2 shadow-2xl">{search.isLoading ? <p className="p-4 text-sm text-slate-400">Searching…</p> : Object.entries(search.data ?? {}).every(([,items]) => items.length === 0) ? <p className="p-4 text-sm text-slate-400">No categorized results found.</p> : Object.entries(search.data ?? {}).map(([category, items]) => items.length > 0 && <div className="mb-2" key={category}><p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">{category}</p>{items.map((item) => <button className="flex w-full items-center rounded-xl px-3 py-2 text-left text-sm hover:bg-slate-50" key={item._id} onClick={() => { navigate(routes[category] ?? "/"); setQuery(""); }}><span className="font-medium">{item.name ?? `${item.firstName ?? ""} ${item.lastName ?? ""}`}</span><span className="ml-auto text-xs text-slate-400">{item.employeeId ?? item.code ?? item.taskId}</span></button>)}</div>)}</div>}</div>; };
+import { useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Search, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { governanceApi } from "@/features/governance/governanceApi";
+
+const routes: Record<string, string> = {
+  employees: "/employees",
+  skills: "/skills",
+  departments: "/organization",
+  projects: "/work",
+  tasks: "/work",
+};
+
+export const HeaderSearch = () => {
+  const navigate = useNavigate();
+  const [query, setQuery] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
+
+  const search = useQuery({
+    queryKey: ["search", query],
+    queryFn: () => governanceApi.search(query),
+    enabled: query.trim().length >= 2,
+    staleTime: 30_000,
+  });
+
+  // Close results when clicking outside
+  useEffect(() => {
+    if (query.length < 2) return;
+    const handleClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setQuery("");
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [query]);
+
+  return (
+    <div className="relative min-w-0 w-full" ref={ref}>
+      {/* Input */}
+      <div className="flex h-10 items-center rounded-xl border bg-white px-3 shadow-sm sm:h-11">
+        <Search size={17} className="mr-2.5 shrink-0 text-slate-400" />
+        <input
+          aria-label="Global search"
+          className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-slate-400"
+          placeholder="Search people, skills, projects…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+        {query && (
+          <button aria-label="Clear search" onClick={() => setQuery("")}>
+            <X size={15} className="text-slate-400" />
+          </button>
+        )}
+      </div>
+
+      {/* Results dropdown */}
+      {query.length >= 2 && (
+        <div className="absolute left-0 right-0 top-12 z-50 max-h-[420px] overflow-y-auto rounded-2xl border bg-white p-2 shadow-2xl">
+          {search.isLoading ? (
+            <p className="p-4 text-sm text-slate-400">Searching…</p>
+          ) : Object.entries(search.data ?? {}).every(([, items]) => items.length === 0) ? (
+            <p className="p-4 text-sm text-slate-400">No categorized results found.</p>
+          ) : (
+            Object.entries(search.data ?? {}).map(([category, items]) =>
+              items.length > 0 && (
+                <div className="mb-2" key={category}>
+                  <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                    {category}
+                  </p>
+                  {items.map((item) => (
+                    <button
+                      className="flex w-full items-center rounded-xl px-3 py-2 text-left text-sm hover:bg-slate-50"
+                      key={item._id}
+                      onClick={() => { navigate(routes[category] ?? "/"); setQuery(""); }}
+                    >
+                      <span className="font-medium">
+                        {item.name ?? `${item.firstName ?? ""} ${item.lastName ?? ""}`}
+                      </span>
+                      <span className="ml-auto text-xs text-slate-400">
+                        {item.employeeId ?? item.code ?? item.taskId}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )
+            )
+          )}
+        </div>
+      )}
+    </div>
+  );
+};

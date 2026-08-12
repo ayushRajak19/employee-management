@@ -3,29 +3,32 @@ import { Assessment, type AssessmentDocument } from "../models/Assessment.js"; i
 import { recalculateProfileCompletion } from "./profileCompletionService.js";
 import { roleSkillCatalog } from "../data/roleSkillCatalog.js";
 import { RoleSkillAssessment } from "../models/RoleSkillAssessment.js";
+const catalogRoles: string[] = [...new Set(roleSkillCatalog.map((item) => item.role))];
+const normalized = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, "");
+const legacyDesignationRole = (name: string, code: string) => { const exact = catalogRoles.find((role) => normalized(role) === normalized(name)); if (exact) return exact; const combined = `${name} ${code}`.toLowerCase(); if (combined.includes("data") && combined.includes("analyst")) return "Data Analyst"; if (/(software|engineer|developer|ai|ml)/.test(combined)) return "AI/ML Developer"; if (combined.includes("field") && combined.includes("sales")) return "Field Sales Executive"; if (combined.includes("sales")) return "SaaS Sales (AE)"; if (combined.includes("bde")) return "BDE"; if (combined.includes("bdm")) return "BDM"; if (combined.includes("sdr")) return "SDR"; if (combined.includes("executive assistant") || normalized(code) === "ea") return "EA"; if (combined.includes("hr")) return "HR"; if (combined.includes("admin") || combined.includes("operation")) return "Admin"; return undefined; };
+const assignedCatalogRole = async (designation: { _id?: unknown; name: string; code: string; catalogRole?: string }) => { const role = designation.catalogRole ?? legacyDesignationRole(designation.name, designation.code); if (!role || !catalogRoles.includes(role)) throw new AppError(`No skill catalogue is assigned to designation ${designation.name}. Ask Super Admin to configure it.`, 422, "DESIGNATION_SKILL_CATALOG_MISSING"); if (!designation.catalogRole && designation._id) await Designation.updateOne({ _id: designation._id }, { $set: { catalogRole: role } }); return role; };
 export const listSkills = async () => Skill.find({ isActive: true }).sort({ category: 1, name: 1 }).lean();
 export const createSkill = async (input: { name: string; category: string; description?: string }) => Skill.create(input);
 export const claimSkill = async (userId: string, input: { skill: string; selfRating: number; yearsOfExperience: number; lastUsed?: Date; description?: string; evidence: EmployeeSkillDocument["evidence"] }) => { const employee = await Employee.findOne({ user: userId, isActive: true }); if (!employee) throw new AppError("Employee profile not found", 404); if (!await Skill.exists({ _id: input.skill, isActive: true })) throw new AppError("Skill not found", 404); const claim = await EmployeeSkill.findOneAndUpdate({ employee: employee._id, skill: input.skill }, { $set: { ...input, verificationStatus: "PENDING", verifiedRating: undefined, latestVerification: undefined, isActive: true } }, { upsert: true, new: true, runValidators: true }).populate("skill", "name category"); await recalculateProfileCompletion(employee.id); return claim; };
 export const mySkills = async (userId: string) => { const employee = await Employee.findOne({ user: userId }).select("_id designation"); if (!employee) throw new AppError("Employee profile not found", 404); const items = await EmployeeSkill.find({ employee: employee._id, isActive: true }).populate("skill", "name category").sort({ updatedAt: -1 }).lean(); return { items, gap: await roleGap(employee._id.toString(), employee.designation.toString()) }; };
 export const roleCatalogAssessment = async (userId: string) => {
-  const employee = await Employee.findOne({ user: userId, isActive: true }).select("_id designation").populate<{ designation: { name: string; code: string } }>("designation", "name code");
+  const employee = await Employee.findOne({ user: userId, isActive: true }).select("_id designation").populate<{ designation: { _id?: unknown; name: string; code: string; catalogRole?: string } }>("designation", "name code catalogRole");
   if (!employee) throw new AppError("Employee profile not found", 404);
   const assessment = await RoleSkillAssessment.findOne({ employee: employee._id }).lean();
-  const roles = [...new Set(roleSkillCatalog.map((item) => item.role))].map((role) => ({ role, skillCount: roleSkillCatalog.filter((item) => item.role === role).length }));
-  return { roles, catalog: assessment ? [] : roleSkillCatalog, assessment, designation: employee.designation };
+  const assignedRole = await assignedCatalogRole(employee.designation);
+  return { catalog: assessment ? [] : roleSkillCatalog.filter((item) => item.role === assignedRole), assessment, designation: employee.designation, assignedRole };
 };
-export const submitRoleCatalogAssessment = async (userId: string, input: { role: string; ratings: { skillId: string; rating: number; implementationNote: string }[] }, meta: { ip?: string; userAgent?: string }) => {
-  const employee = await Employee.findOne({ user: userId, isActive: true }).select("_id designation").populate<{ designation: { name: string; code: string } }>("designation", "name code");
+export const submitRoleCatalogAssessment = async (userId: string, input: { ratings: { skillId: string; rating: number; implementationNote: string }[] }, meta: { ip?: string; userAgent?: string }) => {
+  const employee = await Employee.findOne({ user: userId, isActive: true }).select("_id designation").populate<{ designation: { _id?: unknown; name: string; code: string; catalogRole?: string } }>("designation", "name code catalogRole");
   if (!employee) throw new AppError("Employee profile not found", 404);
   if (await RoleSkillAssessment.exists({ employee: employee._id })) throw new AppError("This one-time skill assessment has already been submitted and cannot be edited", 409, "ASSESSMENT_LOCKED");
-  const expected = roleSkillCatalog.filter((item) => item.role === input.role);
-  if (!expected.length) throw new AppError("Select a valid role from the catalog", 422, "INVALID_CATALOG_ROLE");
+  const role = await assignedCatalogRole(employee.designation); const expected = roleSkillCatalog.filter((item) => item.role === role);
   const ratingMap = new Map(input.ratings.map((item) => [item.skillId, item]));
-  if (ratingMap.size !== input.ratings.length || ratingMap.size !== expected.length || expected.some((item) => !ratingMap.has(item.id))) throw new AppError(`Rate all ${expected.length} skills for ${input.role} before submitting`, 422, "INCOMPLETE_ROLE_ASSESSMENT");
+  if (ratingMap.size !== input.ratings.length || ratingMap.size !== expected.length || expected.some((item) => !ratingMap.has(item.id))) throw new AppError(`Rate all ${expected.length} skills for ${role} before submitting`, 422, "INCOMPLETE_ROLE_ASSESSMENT");
   const scores = expected.map((item) => { const response = ratingMap.get(item.id)!; return { skillId: item.id, level: item.level, category: item.category, name: item.name, tools: item.tools, description: item.description, rating: response.rating, implementationNote: response.implementationNote }; });
   const averageRating = Math.round(scores.reduce((sum, item) => sum + item.rating, 0) / scores.length * 10) / 10;
-  const assessment = await RoleSkillAssessment.create({ employee: employee._id, role: input.role, designation: employee.designation.name, scores, averageRating, submittedAt: new Date() });
-  await writeAudit({ user: userId, action: "ROLE_SKILL_ASSESSMENT_SUBMITTED", entityType: "RoleSkillAssessment", entityId: assessment.id, newValue: { role: input.role, skillCount: scores.length, averageRating }, ipAddress: meta.ip, userAgent: meta.userAgent });
+  const assessment = await RoleSkillAssessment.create({ employee: employee._id, role, designation: employee.designation.name, scores, averageRating, submittedAt: new Date() });
+  await writeAudit({ user: userId, action: "ROLE_SKILL_ASSESSMENT_SUBMITTED", entityType: "RoleSkillAssessment", entityId: assessment.id, newValue: { role, skillCount: scores.length, averageRating }, ipAddress: meta.ip, userAgent: meta.userAgent });
   return assessment;
 };
 export const pendingVerifications = async () => EmployeeSkill.find({ verificationStatus: { $in: ["PENDING","REVIEW_REQUIRED"] }, isActive: true }).populate("skill", "name category").populate("employee", "firstName lastName employeeId department").sort({ updatedAt: 1 }).lean();
