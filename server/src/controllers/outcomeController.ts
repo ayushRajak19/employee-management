@@ -1,0 +1,12 @@
+import type { Request, Response } from "express"; import * as service from "../services/outcomeService.js";
+const viewer = (request: Request) => ({ id: request.user!.id, role: request.user!.role });
+export const goals = async (request: Request, response: Response): Promise<void> => { response.json({ success: true, message: "Goals retrieved", data: { items: await service.listGoals(viewer(request)) } }); };
+export const createGoal = async (request: Request, response: Response): Promise<void> => { response.status(201).json({ success: true, message: "Goal created", data: { item: await service.createGoal(request.body, request.user!.id) } }); };
+export const kpis = async (_request: Request, response: Response): Promise<void> => { response.json({ success: true, message: "KPIs retrieved", data: { items: await service.listKpis() } }); };
+export const createKpi = async (request: Request, response: Response): Promise<void> => { response.status(201).json({ success: true, message: "KPI created", data: { item: await service.createKpi(request.body) } }); };
+export const evaluateKpi = async (request: Request, response: Response): Promise<void> => { response.json({ success: true, message: "KPI evaluated", data: { item: await service.evaluateKpi(String(request.params.id), request.body, request.user!.id) } }); };
+export const reviews = async (request: Request, response: Response): Promise<void> => { response.json({ success: true, message: "Reviews retrieved", data: { items: await service.listReviews(viewer(request)) } }); };
+export const createReview = async (request: Request, response: Response): Promise<void> => { response.status(201).json({ success: true, message: "Performance review created", data: { item: await service.createReview(request.body, request.user!.id) } }); };
+export const snapshots = async (request: Request, response: Response): Promise<void> => { response.json({ success: true, message: "Performance snapshots retrieved", data: { items: await service.snapshots(viewer(request)) } }); };
+export const calculate = async (request: Request, response: Response): Promise<void> => { response.json({ success: true, message: "Explainable performance snapshot calculated", data: { item: await service.calculateSnapshot(request.body, request.user!.id) } }); };
+export const template = async (request: Request, response: Response): Promise<void> => { response.status(201).json({ success: true, message: "Performance template created", data: { item: await service.saveTemplate(request.body) } }); };

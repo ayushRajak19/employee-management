@@ -1,0 +1,4 @@
+export interface Thresholds { exceptional: number; strong: number; consistent: number; developing: number }
+export const classifyPerformance = (score: number, thresholds: Thresholds): string => score >= thresholds.exceptional ? "Exceptional" : score >= thresholds.strong ? "Strong Performer" : score >= thresholds.consistent ? "Consistent Performer" : score >= thresholds.developing ? "Developing" : "Needs Support";
+export const onTimeRate = (completed: Array<{ deadline: Date; completionDate?: Date }>): number => completed.length ? completed.filter((item) => item.completionDate && item.completionDate <= item.deadline).length / completed.length * 100 : 0;
+export const boundedAchievement = (actual: number, target: number): number => target === 0 ? 0 : Math.max(0, Math.min(200, actual / target * 100));

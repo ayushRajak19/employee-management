@@ -1,0 +1,5 @@
+import { z } from "zod"; import { TRAINING_STATUSES } from "../models/Training.js"; const objectId = z.string().regex(/^[a-f\d]{24}$/i, "Invalid identifier");
+export const trainingSchema = z.object({ body: z.object({ name: z.string().trim().min(2).max(200), skill: objectId, description: z.string().trim().max(3000).optional(), provider: z.string().trim().max(160).optional(), startDate: z.coerce.date().optional(), completionDate: z.coerce.date().optional() }) });
+export const assignTrainingSchema = z.object({ params: z.object({ id: objectId }), body: z.object({ employee: objectId, status: z.enum(TRAINING_STATUSES).default("ASSIGNED") }) });
+export const updateTrainingSchema = z.object({ params: z.object({ id: objectId }), body: z.object({ status: z.enum(TRAINING_STATUSES), result: z.string().trim().max(1000).optional(), certificateStorageKey: z.string().trim().max(500).optional() }) });
+export const matchingSchema = z.object({ body: z.object({ requirements: z.array(z.object({ skill: objectId, minimumRating: z.number().int().min(1).max(10) })).min(1).max(30), department: objectId.optional(), limit: z.number().int().min(1).max(50).default(10) }) });

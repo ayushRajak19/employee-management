@@ -1,0 +1,7 @@
+import { Router } from "express"; import * as controller from "../controllers/peopleOpsController.js"; import { authenticate, requirePermission } from "../middleware/auth.js"; import { validate } from "../middleware/validate.js"; import { asyncHandler } from "../utils/asyncHandler.js"; import { administratorSchema, leaveReviewSchema, leaveSchema, recognitionSchema, rolePermissionsSchema } from "../validators/peopleOpsValidators.js";
+export const peopleOpsRouter = Router(); peopleOpsRouter.use(authenticate);
+peopleOpsRouter.get("/leaves", asyncHandler(controller.leaves)); peopleOpsRouter.post("/leaves", validate(leaveSchema), asyncHandler(controller.requestLeave)); peopleOpsRouter.patch("/leaves/:id/review", requirePermission("performance.review"), validate(leaveReviewSchema), asyncHandler(controller.reviewLeave));
+peopleOpsRouter.get("/recognition", asyncHandler(controller.recognition)); peopleOpsRouter.post("/recognition", requirePermission("performance.review"), validate(recognitionSchema), asyncHandler(controller.award));
+peopleOpsRouter.get("/roles", requirePermission("settings.manage"), asyncHandler(controller.roles)); peopleOpsRouter.put("/roles/:id/permissions", requirePermission("settings.manage"), validate(rolePermissionsSchema), asyncHandler(controller.permissions));
+peopleOpsRouter.get("/administrators", requirePermission("settings.manage"), asyncHandler(controller.administrators));
+peopleOpsRouter.post("/administrators", requirePermission("settings.manage"), validate(administratorSchema), asyncHandler(controller.createAdministrator));
