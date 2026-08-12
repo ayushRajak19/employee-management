@@ -52,7 +52,16 @@ export const seedOrganization = async (): Promise<void> => {
   }
   const role = await Role.findOne({ name: "SUPER_ADMIN" }).orFail();
   const existing = await User.findOne({ email: env.SUPER_ADMIN_EMAIL.toLowerCase() });
-  if (existing) { existing.name = env.SUPER_ADMIN_NAME; existing.role = role._id; existing.isActive = true; existing.onboardingComplete = true; await existing.save(); console.log("Super Admin metadata updated; password was not overwritten"); }
+  if (existing) {
+    existing.name = env.SUPER_ADMIN_NAME;
+    existing.role = role._id;
+    existing.isActive = true;
+    existing.onboardingComplete = true;
+    existing.forcePasswordChange = false;
+    existing.passwordHash = await bcrypt.hash(env.SUPER_ADMIN_PASSWORD, 12);
+    await existing.save();
+    console.log("Super Admin credentials synchronized");
+  }
   else { await User.create({ name: env.SUPER_ADMIN_NAME, email: env.SUPER_ADMIN_EMAIL, passwordHash: await bcrypt.hash(env.SUPER_ADMIN_PASSWORD, 12), role: role._id, isActive: true, forcePasswordChange: false, onboardingComplete: true }); console.log("Super Admin created"); }
   console.log("Organization presets seeded");
 };
