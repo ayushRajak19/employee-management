@@ -36,17 +36,15 @@ Requirements: Node.js 20+, npm 10+, and MongoDB 7+ (local or Atlas).
 2. Set `MONGODB_URI`, two different random JWT secrets of at least 32 characters, and the initial Super Admin values.
 3. Run `npm install`.
 4. Run `npm run seed` to create permissions, system roles, and the Super Admin.
-5. Optionally run `npm run seed:demo` for the 15-person demonstration organization.
 6. Run `npm run dev` and open `http://localhost:5173`.
 
-The demo seed is idempotent. Its employee password is read from `DEMO_EMPLOYEE_PASSWORD`; every demo user is still required to change that password. There is no registration route, registration API, or sign-up control.
 
 ## Commands
 
 - `npm run dev`, `npm run dev:client`, `npm run dev:server`
 - `npm run build`, `npm start`
 - `npm run typecheck`, `npm run lint`
-- `npm run seed`, `npm run seed:demo`
+- `npm run seed`
 
 ## MongoDB Atlas
 

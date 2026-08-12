@@ -16,7 +16,7 @@
     "pretypecheck": "npm run build -w shared",
     "typecheck": "npm run typecheck -w shared && npm run typecheck -w client && npm run typecheck -w server",
     "seed": "npm run seed -w server",
-    "seed:demo": "npm run seed:demo -w server",
+    "cleanup:demo": "npm run cleanup:demo -w server",
     "test": "npm run test -w server"
   },
   "devDependencies": { "concurrently": "^9.2.0" },

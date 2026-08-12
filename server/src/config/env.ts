@@ -13,7 +13,6 @@ const schema = z.object({
   SMTP_HOST: z.string().optional(), SMTP_PORT: z.coerce.number().int().positive().optional(), SMTP_USER: z.string().optional(), SMTP_PASSWORD: z.string().optional(),
   SUPER_ADMIN_NAME: z.string().optional(), SUPER_ADMIN_EMAIL: z.string().email().optional(),
   SUPER_ADMIN_PASSWORD: z.string().min(12).optional()
-  ,DEMO_EMPLOYEE_PASSWORD: z.string().min(12).optional()
 });
 
 const result = schema.safeParse(process.env);
