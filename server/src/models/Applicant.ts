@@ -4,7 +4,7 @@ export interface ApplicantRecord {
   name: string;
   designation: string;
   originalName: string;
-  storageProvider: "CLOUDINARY";
+  storageProvider: "CLOUDINARY" | "MONGODB";
   storageKey: string;
   format?: string;
   mimeType: string;
@@ -17,7 +17,7 @@ const applicantSchema = new Schema<ApplicantRecord>({
   name: { type: String, required: true, trim: true, maxlength: 120, index: true },
   designation: { type: String, required: true, trim: true, maxlength: 120, index: true },
   originalName: { type: String, required: true, maxlength: 255 },
-  storageProvider: { type: String, enum: ["CLOUDINARY"], required: true },
+  storageProvider: { type: String, enum: ["CLOUDINARY", "MONGODB"], required: true },
   storageKey: { type: String, required: true, unique: true },
   format: String,
   mimeType: { type: String, required: true, maxlength: 120 },
