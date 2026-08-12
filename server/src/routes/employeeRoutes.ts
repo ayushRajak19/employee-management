@@ -12,6 +12,7 @@ employeeRouter.get("/me", requirePermission("employee.view"), asyncHandler(contr
 employeeRouter.patch("/me/onboarding", requirePermission("employee.view"), validate(onboardingSchema), asyncHandler(controller.onboarding));
 employeeRouter.patch("/me/profile", requirePermission("employee.view"), validate(updateMyProfileSchema), asyncHandler(controller.updateMe));
 employeeRouter.post("/me/profile-photo", requirePermission("employee.view"), profilePhotoUpload, asyncHandler(controller.profilePhoto));
+employeeRouter.get("/profile-photos/:key", requirePermission("employee.view"), asyncHandler(controller.viewProfilePhoto));
 employeeRouter.get("/", requirePermission("employee.view"), validate(listEmployeesSchema), asyncHandler(controller.list));
 employeeRouter.post("/", requirePermission("employee.create"), validate(createEmployeeSchema), asyncHandler(controller.create));
 employeeRouter.get("/:id", requirePermission("employee.view"), validate(employeeIdSchema), asyncHandler(controller.profile));
