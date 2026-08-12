@@ -5,7 +5,7 @@ import type { PermissionName, RoleName } from "@mobiusbloom/shared";
 import {
   Activity, BarChart3, BriefcaseBusiness, Building2, CalendarCheck2,
   ChevronLeft, CircleGauge, FileText, GraduationCap, LogOut, Menu,
-  Settings, ShieldCheck, Sparkles, Target, UserCog, UserRound, Users, X,
+  Settings, ShieldCheck, Sparkles, Target, TrendingUp, UserCog, UserRound, Users, X,
 } from "lucide-react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { HeaderSearch } from "@/components/HeaderSearch";
@@ -48,6 +48,8 @@ const groups: { label: string; items: NavItem[] }[] = [
     label: "Performance", items: [
       { label: "Goals & performance", icon: Target, path: "/performance", roles: employeeRole },
       { label: "Goals, KPIs & reviews", icon: Activity, path: "/performance", roles: managementRoles },
+      { label: "My contribution", icon: TrendingUp, path: "/contribution", roles: employeeRole },
+      { label: "Contribution & support", icon: TrendingUp, path: "/contribution", roles: managementRoles },
     ],
   },
   { label: "Development", items: [{ label: "Learning & training", icon: GraduationCap, path: "/development" }] },

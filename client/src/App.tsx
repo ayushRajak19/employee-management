@@ -24,6 +24,7 @@ const PeopleOpsPage = lazy(() => import("@/pages/PeopleOpsPage").then((module) =
 const MyProfilePage = lazy(() => import("@/pages/MyProfilePage").then((module) => ({ default: module.MyProfilePage })));
 const AdministratorsPage = lazy(() => import("@/pages/AdministratorsPage").then((module) => ({ default: module.AdministratorsPage })));
 const AttendancePage = lazy(() => import("@/pages/AttendancePage").then((module) => ({ default: module.AttendancePage })));
+const ContributionPage = lazy(() => import("@/pages/ContributionPage").then((module) => ({ default: module.ContributionPage })));
 
 const PageLoader = () => <div className="space-y-4 p-8" aria-label="Loading page"><Skeleton className="h-9 w-64"/><Skeleton className="h-48 w-full"/><Skeleton className="h-48 w-full"/></div>;
 
@@ -35,7 +36,7 @@ export const App = () => <Suspense fallback={<PageLoader/>}><Routes>
     <Route index element={<DashboardPage/>}/><Route path="me" element={<MyProfilePage/>}/><Route path="employees/:id" element={<EmployeeProfilePage/>}/>
     <Route element={<RoleRoute roles={["SUPER_ADMIN","HR_ADMIN","DEPARTMENT_HEAD","MANAGER"]}/>}> <Route path="employees" element={<EmployeesPage/>}/><Route path="organization" element={<OrganizationPage/>}/><Route path="skill-matrix" element={<SkillMatrixPage/>}/></Route>
     <Route path="skills" element={<SkillsPage/>}/>
-    <Route path="assessments" element={<AssessmentsPage/>}/><Route path="work" element={<WorkPage/>}/><Route path="attendance" element={<AttendancePage/>}/><Route path="performance" element={<PerformancePage/>}/>
+    <Route path="assessments" element={<AssessmentsPage/>}/><Route path="work" element={<WorkPage/>}/><Route path="attendance" element={<AttendancePage/>}/><Route path="performance" element={<PerformancePage/>}/><Route path="contribution" element={<ContributionPage/>}/>
     <Route path="development" element={<DevelopmentPage/>}/><Route path="governance" element={<GovernancePage/>}/><Route element={<RoleRoute roles={["SUPER_ADMIN","EMPLOYEE"]}/>}> <Route path="resumes" element={<ResumesPage/>}/></Route><Route element={<RoleRoute roles={["SUPER_ADMIN","HR_ADMIN"]}/>}> <Route path="applicants" element={<ApplicantsPage/>}/></Route><Route path="people-ops" element={<PeopleOpsPage/>}/><Route element={<RoleRoute roles={["SUPER_ADMIN"]}/>}> <Route path="administrators" element={<AdministratorsPage/>}/></Route>
   </Route></Route>
   <Route path="*" element={<div className="grid min-h-screen place-items-center"><p>Page not found</p></div>}/>
