@@ -1,0 +1,4 @@
+import { Schema, model, type Types } from "mongoose";
+export interface AttendanceOfficeDocument { key: string; name: string; latitude: number; longitude: number; radiusMeters: number; maxAccuracyMeters: number; configuredBy: Types.ObjectId; configuredAt: Date }
+const schema = new Schema<AttendanceOfficeDocument>({ key: { type: String, required: true, unique: true, default: "PRIMARY" }, name: { type: String, required: true, trim: true, maxlength: 200 }, latitude: { type: Number, required: true, min: -90, max: 90 }, longitude: { type: Number, required: true, min: -180, max: 180 }, radiusMeters: { type: Number, required: true, min: 50, max: 5000 }, maxAccuracyMeters: { type: Number, required: true, min: 10, max: 1000 }, configuredBy: { type: Schema.Types.ObjectId, ref: "User", required: true }, configuredAt: { type: Date, default: Date.now } }, { timestamps: true });
+export const AttendanceOffice = model<AttendanceOfficeDocument>("AttendanceOffice", schema);
