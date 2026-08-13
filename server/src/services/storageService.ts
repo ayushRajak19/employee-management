@@ -23,6 +23,16 @@ export const openMongoPrivate = (key: string) => {
   if (!mongoose.isValidObjectId(key)) throw new AppError("Document not found", 404, "DOCUMENT_NOT_FOUND");
   return mongoBucket().openDownloadStream(new mongoose.mongo.ObjectId(key));
 };
+export const deletePrivateObject = async (stored: Pick<StoredObject, "provider" | "key">): Promise<void> => {
+  if (stored.provider === "MONGODB") {
+    if (!mongoose.isValidObjectId(stored.key)) throw new AppError("Document not found", 404, "DOCUMENT_NOT_FOUND");
+    await mongoBucket().delete(new mongoose.mongo.ObjectId(stored.key));
+    return;
+  }
+  configured();
+  const result = await cloudinary.uploader.destroy(stored.key, { resource_type: "raw", type: "authenticated", invalidate: true });
+  if (!['ok', 'not found'].includes(result.result)) throw new AppError("Document could not be deleted from private storage", 502, "STORAGE_DELETE_FAILED");
+};
 export const openMongoProfilePhoto = async (key: string) => {
   if (!mongoose.isValidObjectId(key)) throw new AppError("Profile photo not found", 404, "PROFILE_PHOTO_NOT_FOUND");
   const id = new mongoose.mongo.ObjectId(key); const bucket = mongoBucket();
