@@ -4,7 +4,8 @@ import { notify } from "./notificationService.js";
 import { EmployeeTimeline } from "../models/EmployeeTimeline.js"; import { EmployeeSkill } from "../models/EmployeeSkill.js"; import { Task } from "../models/Task.js"; import { Project } from "../models/Project.js"; import { Goal } from "../models/Goal.js"; import { EmployeeKPI } from "../models/EmployeeKPI.js"; import { PerformanceSnapshot } from "../models/PerformanceSnapshot.js"; import { EmployeeTraining } from "../models/EmployeeTraining.js"; import { Document } from "../models/Document.js"; import { Recognition } from "../models/Recognition.js";
 import { recalculateProfileCompletion } from "./profileCompletionService.js";
 import { RoleSkillAssessment } from "../models/RoleSkillAssessment.js";
-import { profilePhotoUrl, uploadProfilePhoto } from "./storageService.js";
+import { deletePrivateObject, deleteProfilePhoto, profilePhotoUrl, uploadProfilePhoto } from "./storageService.js";
+import { Assessment } from "../models/Assessment.js"; import { AssessmentResult } from "../models/AssessmentResult.js"; import { Attendance } from "../models/Attendance.js"; import { AiEmployeeSummary } from "../models/AiEmployeeSummary.js"; import { ContributionReview } from "../models/ContributionReview.js"; import { ContributionSnapshot } from "../models/ContributionSnapshot.js"; import { DailyTodo } from "../models/DailyTodo.js"; import { LeaveRequest } from "../models/LeaveRequest.js"; import { Notification } from "../models/Notification.js"; import { OneToOne } from "../models/OneToOne.js"; import { PerformanceReview } from "../models/PerformanceReview.js"; import { RefreshSession } from "../models/RefreshSession.js"; import { SkillVerification } from "../models/SkillVerification.js"; import { TaskActivity } from "../models/TaskActivity.js"; import { WeeklyUpdate } from "../models/WeeklyUpdate.js"; import { AuditLog } from "../models/AuditLog.js";
 interface CreateEmployeeInput { firstName: string; lastName: string; officialEmail: string; phone?: string; department: string; team?: string; designation: string; reportingManager?: string; dateOfJoining: Date; employmentType: EmployeeDocument["employmentType"]; officeLocation?: string; role: RoleName; status: EmployeeDocument["status"] }
 const temporaryPassword = () => `Mb!${randomBytes(9).toString("base64url")}7a`;
 const employeeId = () => `MB-${new Date().getFullYear()}-${randomBytes(3).toString("hex").toUpperCase()}`;
@@ -12,7 +13,23 @@ export const createEmployee = async (input: CreateEmployeeInput, actorId: string
   const [department, designation, role] = await Promise.all([Department.findOne({ _id: input.department, isActive: true }), Designation.findOne({ _id: input.designation, isActive: true }), Role.findOne({ name: input.role })]);
   if (!department) throw new AppError("Department not found", 404); if (!designation) throw new AppError("Designation not found", 404); if (!role) throw new AppError("Role not found; run the seed command", 400);
   if (input.team && !await Team.exists({ _id: input.team, department: input.department, isActive: true })) throw new AppError("Team does not belong to the selected department", 422, "INVALID_TEAM");
-  if (await User.exists({ email: input.officialEmail })) throw new AppError("An account already uses this email", 409, "EMAIL_EXISTS");
+  const normalizedEmail = input.officialEmail.trim().toLowerCase();
+  const [existingUser, existingEmployee] = await Promise.all([
+    User.findOne({ email: normalizedEmail }).select("_id isActive").lean(),
+    Employee.findOne({ officialEmail: normalizedEmail }).select("_id isActive").lean()
+  ]);
+  if (existingUser?.isActive || existingEmployee?.isActive) throw new AppError("An active account already uses this email", 409, "EMAIL_EXISTS");
+  if (existingEmployee) {
+    await deactivateEmployee(existingEmployee._id.toString(), actorId);
+  } else if (existingUser) {
+    await Promise.all([
+      RefreshSession.deleteMany({ user: existingUser._id }),
+      Notification.deleteMany({ recipient: existingUser._id }),
+      AuditLog.deleteMany({ user: existingUser._id })
+    ]);
+    await User.deleteOne({ _id: existingUser._id });
+  }
+  input.officialEmail = normalizedEmail;
   const password = temporaryPassword(); const user = await User.create({ name: `${input.firstName} ${input.lastName}`, email: input.officialEmail, passwordHash: await bcrypt.hash(password, 12), role: role._id, isActive: true, forcePasswordChange: true, onboardingComplete: false });
   try { const employee = await Employee.create({ ...input, employeeId: employeeId(), user: user._id }); user.employee = employee._id; await user.save(); await EmployeeTimeline.create({ employee: employee._id, type: "JOINED_COMPANY", title: "Joined company", description: `${employee.firstName} joined as an employee.`, performedBy: actorId, occurredAt: employee.dateOfJoining }); await writeAudit({ user: actorId, action: "EMPLOYEE_CREATED", entityType: "Employee", entityId: employee.id, newValue: { employeeId: employee.employeeId, email: employee.officialEmail, role: input.role }, ipAddress: meta.ip, userAgent: meta.userAgent }); await notify({ recipient: user.id, type: "ACCOUNT_CREATED", title: "Welcome to MobiusBloom Employee", body: "Your employee account is ready. Change your temporary password and complete onboarding.", entityType: "Employee", entityId: employee.id }); return { employee: await employee.populate([{ path: "department", select: "name code" }, { path: "team", select: "name code" }, { path: "designation", select: "name code" }]), temporaryCredentials: { email: input.officialEmail, password } }; }
   catch (error) { await User.deleteOne({ _id: user._id }); throw error; }
@@ -68,8 +85,8 @@ export const updateEmployee = async (id: string, input: EmployeeUpdate, actor: s
   await Promise.all(tracked.filter(([key]) => input[key] !== undefined && String(previous[key] ?? "") !== String(input[key] ?? "")).map(([key, type]) => EmployeeTimeline.create({ employee: employee._id, type, title: `${key} updated`, description: `Previous: ${String(previous[key] ?? "none")}; new: ${String(input[key] ?? "none")}`, performedBy: actor })));
   await writeAudit({ user: actor, action: "EMPLOYEE_UPDATED", entityType: "Employee", entityId: employee.id, oldValue: previous, newValue: input }); return employee.populate("department team designation reportingManager", "name code firstName lastName employeeId");
 };
-export const deactivateEmployee = async (id: string, actor: string) => {
-  const employee = await Employee.findOne({ _id: id, isActive: true });
+export async function deactivateEmployee(id: string, actor: string): Promise<void> {
+  const employee = await Employee.findById(id);
   if (!employee) throw new AppError("Employee not found", 404);
 
   const [actorUser, targetUser, superAdminRole] = await Promise.all([
@@ -84,11 +101,50 @@ export const deactivateEmployee = async (id: string, actor: string) => {
     throw new AppError("A Super Admin account cannot be deleted", 422, "CANNOT_DELETE_SUPER_ADMIN");
   }
 
-  employee.isActive = false;
-  employee.archivedAt = new Date();
-  employee.status = "INACTIVE";
-  await employee.save();
-  await User.updateOne({ _id: employee.user }, { $set: { isActive: false }, $unset: { refreshTokenHash: 1, refreshTokenFamily: 1 } });
-  await EmployeeTimeline.create({ employee: employee._id, type: "EMPLOYEE_DEACTIVATED", title: "Employee deleted", performedBy: actor });
-  await writeAudit({ user: actor, action: "EMPLOYEE_DEACTIVATED", entityType: "Employee", entityId: employee.id, oldValue: { isActive: true }, newValue: { isActive: false, archivedAt: employee.archivedAt } });
-};
+  const employeeId = employee._id;
+  const userId = employee.user;
+  const [employeeSkills, assignedTasks, documents] = await Promise.all([
+    EmployeeSkill.find({ employee: employeeId }).select("_id").lean(),
+    Task.find({ assignedEmployee: employeeId }).select("_id").lean(),
+    Document.find({ employee: employeeId }).select("storageProvider storageKey").lean()
+  ]);
+  const employeeSkillIds = employeeSkills.map((item) => item._id);
+  const taskIds = assignedTasks.map((item) => item._id);
+
+  // Remove private files before their records so a storage failure can be retried safely.
+  await Promise.all([
+    deleteProfilePhoto(employee.profilePhotoKey),
+    ...documents.map((document) => deletePrivateObject({ provider: document.storageProvider, key: document.storageKey }))
+  ]);
+
+  await Promise.all([
+    TaskActivity.deleteMany({ task: { $in: taskIds } }),
+    SkillVerification.deleteMany({ $or: [{ employee: employeeId }, { employeeSkill: { $in: employeeSkillIds } }] }),
+    AssessmentResult.deleteMany({ employee: employeeId }), Assessment.deleteMany({ assignedEmployee: employeeId }),
+    Attendance.deleteMany({ employee: employeeId }), AiEmployeeSummary.deleteMany({ employee: employeeId }),
+    ContributionReview.deleteMany({ employee: employeeId }), ContributionSnapshot.deleteMany({ employee: employeeId }),
+    DailyTodo.deleteMany({ $or: [{ employee: employeeId }, { user: userId }] }), Document.deleteMany({ employee: employeeId }),
+    EmployeeKPI.deleteMany({ employee: employeeId }), EmployeeTimeline.deleteMany({ employee: employeeId }),
+    EmployeeTraining.deleteMany({ employee: employeeId }), Goal.deleteMany({ employee: employeeId }),
+    LeaveRequest.deleteMany({ employee: employeeId }), OneToOne.deleteMany({ employee: employeeId }),
+    PerformanceReview.deleteMany({ employee: employeeId }), PerformanceSnapshot.deleteMany({ employee: employeeId }),
+    Recognition.deleteMany({ employee: employeeId }), RoleSkillAssessment.deleteMany({ employee: employeeId }),
+    WeeklyUpdate.deleteMany({ employee: employeeId }),
+    Notification.deleteMany({ $or: [{ recipient: userId }, { entityType: "Employee", entityId: employee.id }] }),
+    RefreshSession.deleteMany({ user: userId }),
+    AuditLog.deleteMany({ $or: [{ user: userId }, { entityType: "Employee", entityId: employee.id }] })
+  ]);
+
+  await Promise.all([
+    EmployeeSkill.deleteMany({ employee: employeeId }), Task.deleteMany({ _id: { $in: taskIds } }),
+    Task.updateMany({ reviewer: employeeId }, { $unset: { reviewer: 1, qualityRating: 1, reviewComment: 1 } }),
+    Employee.updateMany({ reportingManager: employeeId }, { $unset: { reportingManager: 1 } }),
+    Department.updateMany({ head: employeeId }, { $unset: { head: 1 } }), Team.updateMany({ lead: employeeId }, { $unset: { lead: 1 } }),
+    Project.updateMany({ teamMembers: employeeId }, { $pull: { teamMembers: employeeId } }),
+    Project.updateMany({ projectManager: employeeId }, { $set: { isActive: false, status: "CANCELLED", archivedAt: new Date() }, $pull: { teamMembers: employeeId } })
+  ]);
+
+  await Employee.deleteOne({ _id: employeeId });
+  await User.deleteOne({ _id: userId });
+  await writeAudit({ user: actor, action: "EMPLOYEE_DELETED", entityType: "Employee", entityId: employee.id, oldValue: { employeeId: employee.employeeId, email: employee.officialEmail }, newValue: { permanentlyDeleted: true } });
+}
