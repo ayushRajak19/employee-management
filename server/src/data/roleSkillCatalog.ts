@@ -1,3 +1,5 @@
+import { additionalRoleSkillCatalog } from "./additionalRoleSkillCatalog.js";
+
 export const roleSkillCatalog = [
   {
     "id": "DA-B-001",
@@ -2617,7 +2619,8 @@ export const roleSkillCatalog = [
     "name": "Multi-location administration",
     "tools": "--",
     "description": "Coordinate admin across offices."
-  }
+  },
+  ...additionalRoleSkillCatalog
 ] as const;
 
 export type CatalogRole = typeof roleSkillCatalog[number]["role"];

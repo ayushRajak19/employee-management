@@ -7,6 +7,7 @@ import { User } from "../models/User.js";
 import { Department } from "../models/Department.js";
 import { Team } from "../models/Team.js";
 import { Designation } from "../models/Designation.js";
+import { additionalDesignationPresets } from "../data/additionalRoleSkillCatalog.js";
 
 export const seedOrganization = async (): Promise<void> => {
   if (!env.SUPER_ADMIN_NAME || !env.SUPER_ADMIN_EMAIL || !env.SUPER_ADMIN_PASSWORD) {
@@ -20,6 +21,7 @@ export const seedOrganization = async (): Promise<void> => {
     { name: "Marketing", code: "MARK" },
     { name: "HR", code: "HR" },
     { name: "Operations", code: "OPER" },
+    { name: "Administration", code: "ADMIN" },
   ];
   const departments = new Map<string, InstanceType<typeof Department>>();
   for (const preset of departmentPresets) {
@@ -44,6 +46,7 @@ export const seedOrganization = async (): Promise<void> => {
     { name: "Marketing Specialist", code: "MKT", department: "Marketing", catalogRole: "SaaS Sales (AE)" },
     { name: "HR Executive", code: "HRE", department: "HR", catalogRole: "HR" },
     { name: "Operations Analyst", code: "OPS", department: "Operations", catalogRole: "Admin" },
+    ...additionalDesignationPresets,
   ];
   for (const preset of designationPresets) {
     await Designation.findOneAndUpdate(

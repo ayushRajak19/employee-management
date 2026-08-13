@@ -2,7 +2,7 @@ import { api } from "@/api/client";
 export interface Skill { _id: string; name: string; category: string; description?: string }
 export interface SkillClaim { _id: string; skill: Skill; employee?: { _id: string; firstName: string; lastName: string; employeeId: string }; selfRating: number; verifiedRating?: number; yearsOfExperience: number; verificationStatus: string; evidence: { type: string; url?: string; comment?: string }[] }
 export interface Assessment { _id: string; name: string; skill: Skill; difficulty: string; maximumScore: number; passingScore: number; timeLimitMinutes: number; assignedEmployee: { _id: string; firstName: string; lastName: string; employeeId: string }; score?: number; result?: string }
-export interface CatalogSkill { id: string; role: string; level: string; category: string; name: string; tools: string; description: string }
+export interface CatalogSkill { id: string; role: string; level: string; category: string; name: string; tools: string; description: string; assessmentQuestion?: string }
 export interface RoleSkillScore extends Omit<CatalogSkill, "id" | "role"> { skillId: string; rating: number; implementationNote: string }
 export interface RoleSkillAssessment { _id: string; role: string; designation?: string; scores: RoleSkillScore[]; averageRating: number; submittedAt: string }
 export interface RoleAssessmentData { assignedRole: string; catalog: CatalogSkill[]; assessment: RoleSkillAssessment | null; designation: { name: string; code: string } }

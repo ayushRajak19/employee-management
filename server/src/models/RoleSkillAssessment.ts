@@ -7,6 +7,7 @@ export interface RoleSkillScore {
   name: string;
   tools: string;
   description: string;
+  assessmentQuestion?: string;
   rating: number;
   implementationNote?: string;
 }
@@ -27,6 +28,7 @@ const scoreSchema = new Schema<RoleSkillScore>({
   name: { type: String, required: true, trim: true },
   tools: { type: String, required: true, trim: true },
   description: { type: String, required: true, trim: true },
+  assessmentQuestion: { type: String, trim: true, maxlength: 1000 },
   rating: { type: Number, required: true, min: 1, max: 10 },
   implementationNote: { type: String, trim: true, maxlength: 1000 }
 }, { _id: false });
