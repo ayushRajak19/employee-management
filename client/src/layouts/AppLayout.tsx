@@ -10,6 +10,7 @@ import {
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { HeaderSearch } from "@/components/HeaderSearch";
 import { NotificationsPopover } from "@/components/NotificationsPopover";
+import { AskMobiusFloating } from "@/features/ai/AiWorkspacePanels";
 import { authApi } from "@/features/auth/authApi";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { cn } from "@/lib/cn";
@@ -270,6 +271,7 @@ export const AppLayout = () => {
 
         {/* Page content */}
         <Outlet />
+        <AskMobiusFloating />
       </div>
     </div>
   );
