@@ -8,7 +8,10 @@ const request = async <T>(path: string, init: RequestInit = {}, canRefresh = tru
     if (await refreshPromise) return request<T>(path, init, false);
   }
   const payload = await response.json() as ApiResponse<T>;
-  if (!response.ok || !payload.success) throw new ApiError(payload.message, response.status, payload.errors);
+  if (!response.ok || !payload.success) {
+    const details = Object.entries(payload.errors ?? {}).flatMap(([field, messages]) => messages.map((message) => `${field}: ${message}`));
+    throw new ApiError(details.length ? details.join(". ") : payload.message, response.status, payload.errors);
+  }
   return payload.data as T;
 };
 export const api = { get: <T>(path: string) => request<T>(path), post: <T>(path: string, body?: unknown) => request<T>(path, { method: "POST", body: body === undefined ? undefined : JSON.stringify(body) }), patch: <T>(path: string, body?: unknown) => request<T>(path, { method: "PATCH", body: body === undefined ? undefined : JSON.stringify(body) }), put: <T>(path: string, body?: unknown) => request<T>(path, { method: "PUT", body: body === undefined ? undefined : JSON.stringify(body) }), delete: <T>(path: string) => request<T>(path, { method: "DELETE" }), upload: <T>(path: string, body: FormData) => request<T>(path, { method: "POST", body }) };

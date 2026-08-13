@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { employeeApi, type CreateEmployeeInput } from "@/features/employees/employeeApi";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { organizationApi } from "@/features/organization/organizationApi";
-const initial = (): CreateEmployeeInput => ({ firstName: "", lastName: "", officialEmail: "", phone: "", department: "", team: "", designation: "", dateOfJoining: new Date().toISOString().slice(0, 10), employmentType: "FULL_TIME", officeLocation: "", role: "EMPLOYEE", status: "ONBOARDING" });
+const initial = (): CreateEmployeeInput => ({ firstName: "", lastName: "", officialEmail: "", phone: "", department: "", designation: "", dateOfJoining: new Date().toISOString().slice(0, 10), employmentType: "FULL_TIME", officeLocation: "", role: "EMPLOYEE", status: "ONBOARDING" });
 export const EmployeesPage = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
@@ -29,7 +29,6 @@ export const EmployeesPage = () => {
     const org = useQuery({ queryKey: ["organization"], queryFn: organizationApi.list });
     const create = useMutation({ mutationFn: employeeApi.create, onSuccess: async (data) => { setCredentials(data.temporaryCredentials); setOpen(false); setForm(initial()); await qc.invalidateQueries({ queryKey: ["employees"] }); } });
     const deactivate = useMutation({ mutationFn: (id: string) => employeeApi.deactivate(id), onSuccess: async () => { setDeleteTarget(null); await qc.invalidateQueries({ queryKey: ["employees"] }); } });
-    const teams = org.data?.teams.filter((t) => !form.department || t.department?._id === form.department) ?? [];
     const designations = org.data?.designations.filter((designation) => designation.department?._id === form.department) ?? [];
     const canCreate = user?.permissions.includes("employee.create");
     const canDelete = user?.permissions.includes("employee.deactivate");
@@ -44,9 +43,7 @@ export const EmployeesPage = () => {
 
 <label className="text-sm font-medium">Phone<Input className="mt-2" {...field("phone")}/></label>
 
-<label className="text-sm font-medium">Department<select required className="mt-2 h-11 w-full rounded-xl border bg-white px-3 text-sm" value={form.department} onChange={(event) => setForm({ ...form, department: event.target.value, team: "", designation: "" })}><option value="">Select department</option>{org.data?.departments.map((d) => <option key={d._id} value={d._id}>{d.name}</option>)}</select></label>
-
-<label className="text-sm font-medium">Team<select disabled={!form.department} className="mt-2 h-11 w-full rounded-xl border bg-white px-3 text-sm disabled:bg-slate-50 disabled:text-slate-400" {...field("team")}><option value="">{form.department ? "No team" : "Select department first"}</option>{teams.map((t) => <option key={t._id} value={t._id}>{t.name}</option>)}</select></label>
+<label className="text-sm font-medium">Department<select required className="mt-2 h-11 w-full rounded-xl border bg-white px-3 text-sm" value={form.department} onChange={(event) => setForm({ ...form, department: event.target.value, designation: "" })}><option value="">Select department</option>{org.data?.departments.map((d) => <option key={d._id} value={d._id}>{d.name}</option>)}</select></label>
 
 <label className="text-sm font-medium">Designation<select required disabled={!form.department} className="mt-2 h-11 w-full rounded-xl border bg-white px-3 text-sm disabled:bg-slate-50 disabled:text-slate-400" {...field("designation")}><option value="">{form.department ? "Select designation" : "Select department first"}</option>{designations.map((d) => <option key={d._id} value={d._id}>{d.name}</option>)}</select></label>
 

@@ -22,7 +22,7 @@ export type MyEmployee = EmployeeRow & { onboardingStep: number; professionalSum
 
 export const employeeApi = {
   list: (params: URLSearchParams) => api.get<EmployeeList>(`/api/v1/employees?${params}`),
-  create: (body: CreateEmployeeInput) => api.post<{ employee: EmployeeRow; temporaryCredentials: { email: string; password: string } }>("/api/v1/employees", body),
+  create: (body: CreateEmployeeInput) => api.post<{ employee: EmployeeRow; temporaryCredentials: { email: string; password: string } }>("/api/v1/employees", { ...body, team: body.team || undefined, reportingManager: body.reportingManager || undefined }),
   me: () => api.get<{ employee: MyEmployee }>("/api/v1/employees/me"),
   updateMe: (body: unknown) => api.patch<{ employee: MyEmployee }>("/api/v1/employees/me/profile", body),
   uploadProfilePhoto: (file: File) => { const body = new FormData(); body.append("photo", file); return api.upload<{ employee: MyEmployee }>("/api/v1/employees/me/profile-photo", body); },
