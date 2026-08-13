@@ -1,0 +1,11 @@
+import { Router } from "express";
+import * as controller from "../controllers/todoController.js";
+import { authenticate } from "../middleware/auth.js";
+import { validate } from "../middleware/validate.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { todoCreateSchema, todoDeleteSchema, todoListSchema, todoUpdateSchema } from "../validators/todoValidators.js";
+export const todoRouter = Router(); todoRouter.use(authenticate);
+todoRouter.get("/", validate(todoListSchema), asyncHandler(controller.list));
+todoRouter.post("/", validate(todoCreateSchema), asyncHandler(controller.create));
+todoRouter.patch("/:id", validate(todoUpdateSchema), asyncHandler(controller.update));
+todoRouter.delete("/:id", validate(todoDeleteSchema), asyncHandler(controller.remove));

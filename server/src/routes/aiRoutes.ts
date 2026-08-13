@@ -1,0 +1,16 @@
+import { Router } from "express";
+import rateLimit from "express-rate-limit";
+import * as controller from "../controllers/aiController.js";
+import { authenticate } from "../middleware/auth.js";
+import { validate } from "../middleware/validate.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { assistantSchema, employeeSummarySchema, jokeSchema } from "../validators/aiValidators.js";
+export const aiRouter = Router();
+aiRouter.use(authenticate);
+aiRouter.use(rateLimit({ windowMs: 60_000, limit: 20, standardHeaders: "draft-7", legacyHeaders: false }));
+aiRouter.get("/configuration", asyncHandler(controller.configuration));
+aiRouter.post("/assistant", validate(assistantSchema), asyncHandler(controller.assistant));
+aiRouter.get("/employees/:id/summaries", validate(employeeSummarySchema), asyncHandler(controller.employeeSummaries));
+aiRouter.post("/employees/:id/contribution-summary", validate(employeeSummarySchema), asyncHandler(controller.contributionSummary));
+aiRouter.post("/employees/:id/performance-summary", validate(employeeSummarySchema), asyncHandler(controller.performanceSummary));
+aiRouter.get("/joke", validate(jokeSchema), asyncHandler(controller.joke));

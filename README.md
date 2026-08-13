@@ -11,7 +11,7 @@ MobiusBloom Employee is an independent workforce capability, delivery, growth, a
 - Goals, configurable KPIs, structured reviews, explainable weighted performance snapshots, and historical trends
 - Training, skill growth, workload classification, project-staffing recommendations, recognition, and leave workflows
 - Private document storage, in-app notifications, global search, reports, access audit, role settings, and live role-scoped dashboards
-- Deterministic V1 performance logic. The future AI boundary is recommendation-only and explicitly excludes promotion, termination, salary, and disciplinary decisions.
+- Deterministic performance scoring plus permission-aware AI summaries and assistance. AI remains recommendation-only and explicitly excludes promotion, termination, salary, and disciplinary decisions.
 
 ## Technology
 
@@ -63,6 +63,12 @@ Configure the Cloudinary variables to enable uploads. Files are stored as authen
 5. Point the subdomain DNS record using the value Hostinger supplies and enable HTTPS.
 
 Express serves `client/dist`, retains `/api/v1/*` for REST endpoints, and applies SPA fallback for client routes.
+
+### AI provider configuration
+
+Groq is the default. Set `AI_PROVIDER=groq`, `GROQ_API_KEY`, and optionally `AI_MODEL`. The provider layer also supports OpenAI, OpenRouter, Together, Anthropic, Gemini, and generic OpenAI-compatible APIs through `AI_PROVIDER`, `AI_API_KEY`, `AI_MODEL`, and optional `AI_BASE_URL`. Put keys only in Hostinger environment variables, then redeploy. `AI_COMPANY_KNOWLEDGE` can contain approved policy notes used by Ask Mobius; unanswered policy questions are escalated to HR.
+
+AI requests are rate-limited, role-scoped, and audit logged. Employee contribution and performance summaries are advisory drafts. Daily personal to-dos are private and excluded from performance evidence. Mood Break jokes are safety-constrained and cached to limit provider usage.
 
 ## Security notes
 

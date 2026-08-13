@@ -3,6 +3,8 @@ import { Assessment } from "../models/Assessment.js";
 import { AssessmentResult } from "../models/AssessmentResult.js";
 import { Attendance } from "../models/Attendance.js";
 import { AuditLog } from "../models/AuditLog.js";
+import { AiEmployeeSummary } from "../models/AiEmployeeSummary.js";
+import { DailyTodo } from "../models/DailyTodo.js";
 import { Department } from "../models/Department.js";
 import { Document } from "../models/Document.js";
 import { Employee } from "../models/Employee.js";
@@ -57,6 +59,8 @@ const run = async (): Promise<void> => {
       AssessmentResult.deleteMany({ employee: { $in: employeeIds } }),
       Assessment.deleteMany({ assignedEmployee: { $in: employeeIds } }),
       Attendance.deleteMany({ employee: { $in: employeeIds } }),
+      AiEmployeeSummary.deleteMany({ employee: { $in: employeeIds } }),
+      DailyTodo.deleteMany({ $or: [{ employee: { $in: employeeIds } }, { user: { $in: userIds } }] }),
       Document.deleteMany({ employee: { $in: employeeIds } }),
       EmployeeKPI.deleteMany({ employee: { $in: employeeIds } }),
       EmployeeTimeline.deleteMany({ employee: { $in: employeeIds } }),

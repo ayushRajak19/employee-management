@@ -1,0 +1,10 @@
+import type { Request, Response } from "express";
+import { AppError } from "../utils/AppError.js";
+import * as service from "../services/aiFeatureService.js";
+const viewer = (request: Request) => ({ id: request.user!.id, name: request.user!.name, role: request.user!.role });
+export const configuration = async (_request: Request, response: Response): Promise<void> => { response.json({ success: true, message: "AI configuration retrieved", data: service.configuration() }); };
+export const assistant = async (request: Request, response: Response): Promise<void> => { response.json({ success: true, message: "Assistant response generated", data: await service.askAssistant(request.body.question, viewer(request)) }); };
+export const employeeSummaries = async (request: Request, response: Response): Promise<void> => { response.json({ success: true, message: "AI employee summaries retrieved", data: { items: await service.listEmployeeSummaries(String(request.params.id), viewer(request)) } }); };
+export const contributionSummary = async (request: Request, response: Response): Promise<void> => { response.json({ success: true, message: "Contribution summary generated", data: await service.generateEmployeeSummary(String(request.params.id), "CONTRIBUTION", viewer(request)) }); };
+export const performanceSummary = async (request: Request, response: Response): Promise<void> => { response.json({ success: true, message: "Performance summary generated", data: await service.generateEmployeeSummary(String(request.params.id), "PERFORMANCE", viewer(request)) }); };
+export const joke = async (request: Request, response: Response): Promise<void> => { if (request.user!.role !== "EMPLOYEE") throw new AppError("Mood Break is available in the employee workspace", 403, "FORBIDDEN"); response.json({ success: true, message: "Workplace joke retrieved", data: await service.dailyJoke(Number(request.query.index ?? 0)) }); };
