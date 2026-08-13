@@ -38,6 +38,8 @@ export const seedOrganization = async (): Promise<void> => {
   const designationPresets = [
     { name: "Software Engineer", code: "SWE", department: "IT", catalogRole: "AI/ML Developer" },
     { name: "Senior Engineer", code: "SSE", department: "IT", catalogRole: "AI/ML Developer" },
+    { name: "AI/ML Engineer", code: "AIML", department: "IT", catalogRole: "AI/ML Developer" },
+    { name: "Data Scientist", code: "DS", department: "IT", catalogRole: "Data Analyst" },
     { name: "Sales Executive", code: "SALES", department: "Sales", catalogRole: "SaaS Sales (AE)" },
     { name: "Marketing Specialist", code: "MKT", department: "Marketing", catalogRole: "SaaS Sales (AE)" },
     { name: "HR Executive", code: "HRE", department: "HR", catalogRole: "HR" },
