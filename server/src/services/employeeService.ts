@@ -68,4 +68,27 @@ export const updateEmployee = async (id: string, input: EmployeeUpdate, actor: s
   await Promise.all(tracked.filter(([key]) => input[key] !== undefined && String(previous[key] ?? "") !== String(input[key] ?? "")).map(([key, type]) => EmployeeTimeline.create({ employee: employee._id, type, title: `${key} updated`, description: `Previous: ${String(previous[key] ?? "none")}; new: ${String(input[key] ?? "none")}`, performedBy: actor })));
   await writeAudit({ user: actor, action: "EMPLOYEE_UPDATED", entityType: "Employee", entityId: employee.id, oldValue: previous, newValue: input }); return employee.populate("department team designation reportingManager", "name code firstName lastName employeeId");
 };
-export const deactivateEmployee = async (id: string, actor: string) => { const employee = await Employee.findOne({ _id: id, isActive: true }); if (!employee) throw new AppError("Employee not found", 404); employee.isActive = false; employee.archivedAt = new Date(); employee.status = "INACTIVE"; await employee.save(); await User.updateOne({ _id: employee.user }, { $set: { isActive: false }, $unset: { refreshTokenHash: 1, refreshTokenFamily: 1 } }); await EmployeeTimeline.create({ employee: employee._id, type: "EMPLOYEE_DEACTIVATED", title: "Employee deactivated", performedBy: actor }); await writeAudit({ user: actor, action: "EMPLOYEE_DEACTIVATED", entityType: "Employee", entityId: employee.id, oldValue: { isActive: true }, newValue: { isActive: false, archivedAt: employee.archivedAt } }); };
+export const deactivateEmployee = async (id: string, actor: string) => {
+  const employee = await Employee.findOne({ _id: id, isActive: true });
+  if (!employee) throw new AppError("Employee not found", 404);
+
+  const [actorUser, targetUser, superAdminRole] = await Promise.all([
+    User.findById(actor).select("employee").lean(),
+    User.findById(employee.user).select("role").lean(),
+    Role.findOne({ name: "SUPER_ADMIN" }).select("_id").lean()
+  ]);
+  if (actorUser?.employee?.toString() === employee.id) {
+    throw new AppError("You cannot delete your own employee account", 422, "CANNOT_DELETE_SELF");
+  }
+  if (targetUser && superAdminRole && targetUser.role.toString() === superAdminRole._id.toString()) {
+    throw new AppError("A Super Admin account cannot be deleted", 422, "CANNOT_DELETE_SUPER_ADMIN");
+  }
+
+  employee.isActive = false;
+  employee.archivedAt = new Date();
+  employee.status = "INACTIVE";
+  await employee.save();
+  await User.updateOne({ _id: employee.user }, { $set: { isActive: false }, $unset: { refreshTokenHash: 1, refreshTokenFamily: 1 } });
+  await EmployeeTimeline.create({ employee: employee._id, type: "EMPLOYEE_DEACTIVATED", title: "Employee deleted", performedBy: actor });
+  await writeAudit({ user: actor, action: "EMPLOYEE_DEACTIVATED", entityType: "Employee", entityId: employee.id, oldValue: { isActive: true }, newValue: { isActive: false, archivedAt: employee.archivedAt } });
+};
