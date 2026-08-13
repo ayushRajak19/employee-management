@@ -25,6 +25,7 @@ const MyProfilePage = lazy(() => import("@/pages/MyProfilePage").then((module) =
 const AdministratorsPage = lazy(() => import("@/pages/AdministratorsPage").then((module) => ({ default: module.AdministratorsPage })));
 const AttendancePage = lazy(() => import("@/pages/AttendancePage").then((module) => ({ default: module.AttendancePage })));
 const ContributionPage = lazy(() => import("@/pages/ContributionPage").then((module) => ({ default: module.ContributionPage })));
+const AiWorkspacePage = lazy(() => import("@/pages/AiWorkspacePage").then((module) => ({ default: module.AiWorkspacePage })));
 
 const PageLoader = () => <div className="space-y-4 p-8" aria-label="Loading page"><Skeleton className="h-9 w-64"/><Skeleton className="h-48 w-full"/><Skeleton className="h-48 w-full"/></div>;
 
@@ -33,7 +34,7 @@ export const App = () => <Suspense fallback={<PageLoader/>}><Routes>
   <Route element={<PasswordChangeRoute/>}><Route path="/change-password" element={<ChangePasswordPage/>}/></Route>
   <Route element={<OnboardingRoute/>}><Route path="/onboarding" element={<OnboardingPage/>}/></Route>
   <Route element={<ProtectedRoute/>}><Route element={<AppLayout/>}>
-    <Route index element={<DashboardPage/>}/><Route path="me" element={<MyProfilePage/>}/><Route path="employees/:id" element={<EmployeeProfilePage/>}/>
+    <Route index element={<DashboardPage/>}/><Route path="ai-workspace" element={<AiWorkspacePage/>}/><Route path="me" element={<MyProfilePage/>}/><Route path="employees/:id" element={<EmployeeProfilePage/>}/>
     <Route element={<RoleRoute roles={["SUPER_ADMIN","HR_ADMIN","DEPARTMENT_HEAD","MANAGER"]}/>}> <Route path="employees" element={<EmployeesPage/>}/><Route path="organization" element={<OrganizationPage/>}/><Route path="skill-matrix" element={<SkillMatrixPage/>}/></Route>
     <Route path="skills" element={<SkillsPage/>}/>
     <Route path="assessments" element={<AssessmentsPage/>}/><Route path="work" element={<WorkPage/>}/><Route path="attendance" element={<AttendancePage/>}/><Route path="performance" element={<PerformancePage/>}/><Route path="contribution" element={<ContributionPage/>}/>

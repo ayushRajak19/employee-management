@@ -3,7 +3,7 @@ import logoMark from "@/assets/mobius-mark.png";
 import { useMutation } from "@tanstack/react-query";
 import type { PermissionName, RoleName } from "@mobiusbloom/shared";
 import {
-  Activity, BarChart3, BriefcaseBusiness, Building2, CalendarCheck2,
+  Activity, BarChart3, Bot, BriefcaseBusiness, Building2, CalendarCheck2,
   ChevronLeft, CircleGauge, FileText, GraduationCap, LogOut, Menu,
   Settings, ShieldCheck, Sparkles, Target, TrendingUp, UserCog, UserRound, Users, X,
 } from "lucide-react";
@@ -28,7 +28,10 @@ const superAdminRole: RoleName[] = ["SUPER_ADMIN"];
 const applicantRoles: RoleName[] = ["SUPER_ADMIN", "HR_ADMIN"];
 
 const groups: { label: string; items: NavItem[] }[] = [
-  { label: "Overview", items: [{ label: "Dashboard", icon: CircleGauge, path: "/" }] },
+  { label: "Overview", items: [
+    { label: "Dashboard", icon: CircleGauge, path: "/" },
+    { label: "AI Workspace", icon: Bot, path: "/ai-workspace" },
+  ] },
   { label: "My workspace", items: [{ label: "My profile", icon: UserRound, path: "/me", roles: employeeRole }] },
   {
     label: "People", items: [
