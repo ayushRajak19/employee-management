@@ -1,5 +1,5 @@
 import { useEffect, useState, type ComponentType } from "react";
-import logo from "@/assets/mobius--logo.png";
+import logoMark from "@/assets/mobius-mark.png";
 import { useMutation } from "@tanstack/react-query";
 import type { PermissionName, RoleName } from "@mobiusbloom/shared";
 import {
@@ -118,9 +118,9 @@ export const AppLayout = () => {
       {/* Sidebar header */}
       <div className="flex h-16 items-center border-b px-4 sm:h-20 sm:px-5">
         <img
-          src={logo}
-          alt="Endless Innovation logo"
-          className="h-9 w-9 shrink-0 rounded-xl object-contain"
+          src={logoMark}
+          alt="MobiusBloom Endless Innovation logo"
+          className="h-10 w-8 shrink-0 rounded-lg object-contain"
         />
         {!collapsed && (
           <div className="ml-3 overflow-hidden">
