@@ -18,7 +18,7 @@ export interface Employee360 {
   timeline: { _id: string; type: string; title: string; description?: string; occurredAt: string }[];
   recognition: { _id: string; badge: string; explanation: string }[];
 }
-export type MyEmployee = EmployeeRow & { onboardingStep: number; professionalSummary?: string; previousExperience?: { company: string; role: string; startDate: string }[]; personal?: { personalEmail?: string; address?: string; emergencyContact?: string } };
+export type MyEmployee = EmployeeRow & { onboardingStep: number; professionalSummary?: string; previousExperience?: { company: string; role: string; startDate: string; endDate?: string; summary?: string }[]; personal?: { personalEmail?: string; address?: string; emergencyContact?: string } };
 
 export const employeeApi = {
   list: (params: URLSearchParams) => api.get<EmployeeList>(`/api/v1/employees?${params}`),
