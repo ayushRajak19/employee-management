@@ -1,5 +1,5 @@
 import path from "node:path";
-import pdf from "pdf-parse";
+import pdf from "pdf-parse/lib/pdf-parse.js";
 import { z } from "zod";
 import { Applicant } from "../models/Applicant.js";
 import { ResumeScreening } from "../models/ResumeScreening.js";
