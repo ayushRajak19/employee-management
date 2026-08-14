@@ -43,17 +43,17 @@ export const TaskTrackerPage = () => {
   const openEdit = (item: DailyTodo) => { setDraft({ date: item.date, title: item.title, type: itemType(item), priority: itemPriority(item), durationMinutes: item.durationMinutes ?? 30, deadlineLocal: item.deadline ? new Date(new Date(item.deadline).getTime() - new Date(item.deadline).getTimezoneOffset() * 60_000).toISOString().slice(0, 16) : "" }); setEditing(item); save.reset(); };
 
   return <main className="flex-1 px-4 py-7 sm:px-8 sm:py-9">
-    <div className="mx-auto max-w-[1500px]">
+    <div className="mx-auto flex max-w-[1500px] flex-col">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div><p className="text-sm font-semibold text-brand-700">{employeeView ? "My workspace" : "Employee oversight"}</p><h1 className="mt-1 text-3xl font-bold tracking-tight">{employeeView ? "My task tracker" : "Employee task tracker"}</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">{employeeView ? "Plan and update your day in one structured place. Tracker entries are visible to Super Admin but excluded from performance scoring." : "Read-only visibility into employee-created tracker items. These planning entries are not performance evidence."}</p></div>
         {employeeView && <Button onClick={openNew}><CirclePlus size={17}/> Add task</Button>}
       </div>
 
-      <section className="mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="order-3 mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {[{ label: "Total tasks", value: summary.total, icon: ClipboardList, color: "text-brand-700 bg-brand-50" }, { label: "Open", value: summary.open, icon: Clock3, color: "text-violet-700 bg-violet-50" }, { label: "Completed", value: summary.completed, icon: CheckCircle2, color: "text-emerald-700 bg-emerald-50" }, { label: "Urgent", value: summary.urgent, icon: CalendarClock, color: "text-red-700 bg-red-50" }].map(({ label, value, icon: Icon, color }) => <article className="rounded-2xl border bg-white p-4 shadow-soft" key={label}><div className={cn("grid size-9 place-items-center rounded-xl", color)}><Icon size={17}/></div><p className="mt-3 text-2xl font-bold">{value}</p><p className="text-xs text-slate-400">{label}</p></article>)}
       </section>
 
-      <section className="mt-5 overflow-hidden rounded-2xl border bg-white shadow-soft">
+      <section className="order-2 mt-6 overflow-hidden rounded-2xl border bg-white shadow-soft">
         <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center sm:p-5">
           <div className="flex items-center gap-2"><ClipboardList size={18} className="text-brand-600"/><h2 className="font-semibold">Master task tracker</h2></div>
           <div className="flex flex-col gap-2 sm:ml-auto sm:flex-row">
