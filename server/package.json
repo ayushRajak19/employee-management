@@ -24,6 +24,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.0.0",
     "@types/node": "^24.0.14",
+    "@types/pdf-parse": "^1.1.4",
     "bcrypt": "^6.0.0",
     "cloudinary": "^2.7.0",
     "compression": "^1.8.0",
@@ -42,8 +43,5 @@
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.37.0",
     "zod": "^3.25.76"
-  },
-  "devDependencies": {
-    "@types/pdf-parse": "^1.1.4"
   }
 }
