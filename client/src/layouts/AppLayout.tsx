@@ -3,7 +3,7 @@ import logoMark from "@/assets/mobius-mark.png";
 import { useMutation } from "@tanstack/react-query";
 import type { PermissionName, RoleName } from "@mobiusbloom/shared";
 import {
-  Activity, BarChart3, Bot, BriefcaseBusiness, Building2, CalendarCheck2,
+  Activity, BarChart3, Bot, BrainCircuit, BriefcaseBusiness, Building2, CalendarCheck2,
   ChevronLeft, CircleGauge, FileText, GraduationCap, ListTodo, LogOut, Menu,
   Settings, ShieldCheck, Sparkles, Target, TrendingUp, UserCog, UserRound, Users, X,
 } from "lucide-react";
@@ -66,6 +66,7 @@ const groups: { label: string; items: NavItem[] }[] = [
       { label: "My resume", icon: FileText, path: "/resumes", roles: employeeRole },
       { label: "My documents", icon: FileText, path: "/governance", roles: employeeRole },
       { label: "Applicants", icon: Users, path: "/applicants", roles: applicantRoles },
+      { label: "Resume screener", icon: BrainCircuit, path: "/resume-screener", roles: superAdminRole },
       { label: "Resume library", icon: FileText, path: "/resumes", roles: superAdminRole },
       { label: "Documents & reports", icon: FileText, path: "/governance", roles: managementRoles },
     ],
