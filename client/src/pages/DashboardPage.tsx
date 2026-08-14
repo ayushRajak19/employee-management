@@ -10,7 +10,7 @@ import { DailyTodoPanel, MoodBreakPanel } from "@/features/ai/AiWorkspacePanels"
 import { cn } from "@/lib/cn";
 
 /* ─── Types ─── */
-interface Metric { label: string; value: number | string; detail: string; badges?: string[] }
+interface Metric { label: string; value: number | string; detail: string }
 interface Person { _id: string; firstName: string; lastName: string; employeeId: string }
 interface EmployeeProfileSummary {
   status: string;
@@ -76,18 +76,7 @@ export const DashboardPage = () => {
 
   const firstName = data?.greetingName ?? user?.name.split(" ")[0];
   const employeeView = user?.role === "EMPLOYEE";
-  const metrics = data?.metrics.map((metric, index) =>
-    employeeView && index === 0
-      ? {
-          label: "My employee profile",
-          value: data.employeeProfile?.designation?.name ?? "Role not assigned",
-          detail: data.employeeProfile?.department?.name ?? "Department not assigned",
-          badges: data.employeeProfile
-            ? [data.employeeProfile.employmentType.replaceAll("_", " "), data.employeeProfile.status.replaceAll("_", " ")]
-            : []
-        }
-      : metric
-  );
+  const metrics = data?.metrics;
 
   return (
     <main className="flex-1 overflow-x-clip px-4 py-6 sm:px-8 sm:py-9">
@@ -146,7 +135,7 @@ export const DashboardPage = () => {
                   >
                     <div className="flex min-w-0 items-start justify-between gap-3">
                       <p className="min-w-0 break-words text-sm font-medium text-slate-500">
-                        {metric.label}
+                        {employeeView && index === 0 ? "My employee profile" : metric.label}
                       </p>
                       <div
                         className={cn(
@@ -157,15 +146,29 @@ export const DashboardPage = () => {
                         <AccentIcon size={18} />
                       </div>
                     </div>
-                    <p className="mt-4 break-words text-4xl font-bold tracking-tight text-ink">
-                      {metric.value}
-                    </p>
-                    <p className="mt-2 break-words text-xs leading-5 text-slate-400">
-                      {metric.detail}
-                    </p>
-                    {metric.badges?.length ? <div className="mt-3 flex flex-wrap gap-2">
-                      {metric.badges.map((badge) => <span key={badge} className="rounded-full bg-brand-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-brand-700">{badge}</span>)}
-                    </div> : null}
+                    {employeeView && index === 0 ? <div className="mt-4">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">Assigned designation</p>
+                      <p className="mt-1 break-words text-2xl font-bold leading-tight tracking-tight text-ink">
+                        {data?.employeeProfile?.designation?.name ?? "Not assigned"}
+                      </p>
+                      <div className="mt-4 grid grid-cols-2 gap-3 rounded-xl border border-slate-100 bg-slate-50/80 p-3">
+                        <div className="min-w-0">
+                          <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">Department</p>
+                          <p className="mt-1 truncate text-xs font-semibold text-slate-700">{data?.employeeProfile?.department?.name ?? "Not assigned"}</p>
+                        </div>
+                        <div className="min-w-0 border-l border-slate-200 pl-3">
+                          <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">Employment</p>
+                          <p className="mt-1 truncate text-xs font-semibold capitalize text-slate-700">{data?.employeeProfile?.employmentType.replaceAll("_", " ").toLowerCase() ?? "Not assigned"}</p>
+                        </div>
+                      </div>
+                      <div className="mt-3 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-emerald-700">
+                        <span className="size-2 rounded-full bg-emerald-500"/>
+                        {data?.employeeProfile?.status.replaceAll("_", " ") ?? "Unknown"}
+                      </div>
+                    </div> : <>
+                      <p className="mt-4 break-words text-4xl font-bold tracking-tight text-ink">{metric.value}</p>
+                      <p className="mt-2 break-words text-xs leading-5 text-slate-400">{metric.detail}</p>
+                    </>}
                   </article>
                 );
               })}
