@@ -45,7 +45,7 @@ export const TaskTrackerPage = () => {
   return <main className="flex-1 px-4 py-7 sm:px-8 sm:py-9">
     <div className="mx-auto flex max-w-[1500px] flex-col">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div><p className="text-sm font-semibold text-brand-700">{employeeView ? "My workspace" : "Employee oversight"}</p><h1 className="mt-1 text-3xl font-bold tracking-tight">{employeeView ? "My task tracker" : "Employee task tracker"}</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">{employeeView ? "Plan and update your day in one structured place. Tracker entries are visible to Super Admin but excluded from performance scoring." : "Read-only visibility into employee-created tracker items. These planning entries are not performance evidence."}</p></div>
+        <div><p className="text-sm font-semibold text-brand-700">{employeeView ? "My workspace" : "Employee oversight"}</p><h1 className="mt-1 text-3xl font-bold tracking-tight">{employeeView ? "My task tracker" : "Employee task tracker"}</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">{employeeView ? "Plan and update your day in one structured place. Tracker completion and deadlines appear in Super Admin planning analytics; formal scores still require reviewed evidence." : "Read-only visibility into employee-created planning activity, completion, urgency and overdue signals alongside formal performance evidence."}</p></div>
         {employeeView && <Button onClick={openNew}><CirclePlus size={17}/> Add task</Button>}
       </div>
 

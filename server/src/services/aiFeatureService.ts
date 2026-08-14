@@ -6,6 +6,7 @@ import { ContributionReview } from "../models/ContributionReview.js";
 import { ContributionSnapshot } from "../models/ContributionSnapshot.js";
 import { Employee } from "../models/Employee.js";
 import { WeeklyUpdate } from "../models/WeeklyUpdate.js";
+import { DailyTodo } from "../models/DailyTodo.js";
 import { AppError } from "../utils/AppError.js";
 import { writeAudit } from "./auditService.js";
 import { dashboardSummary } from "./dashboardService.js";
@@ -36,20 +37,21 @@ End with exactly: "Advisory draft — a human reviewer must verify it against th
 export const generateEmployeeSummary = async (employeeId: string, kind: SummaryKind, viewer: Viewer) => {
   managementOnly(viewer);
   const profile = await employee360(employeeId, { id: viewer.id, role: viewer.role });
-  const [contribution, weekly, reviews] = await Promise.all([
+  const [contribution, weekly, reviews, trackerPlanning] = await Promise.all([
     ContributionSnapshot.find({ employee: employeeId }).sort({ calculatedAt: -1 }).limit(6).lean(),
     WeeklyUpdate.find({ employee: employeeId }).sort({ weekStart: -1 }).limit(8).lean(),
-    ContributionReview.find({ employee: employeeId }).sort({ period: -1 }).limit(4).lean()
+    ContributionReview.find({ employee: employeeId }).sort({ period: -1 }).limit(4).lean(),
+    DailyTodo.find({ employee: employeeId }).select("date title type priority durationMinutes deadline status completed").sort({ date: -1, createdAt: -1 }).limit(60).lean()
   ]);
   const evidence = kind === "CONTRIBUTION" ? {
     employee: { name: `${profile.employee.firstName} ${profile.employee.lastName}`, employeeId: profile.employee.employeeId, designation: profile.employee.designation, department: profile.employee.department },
     contributionSnapshots: contribution, weeklyUpdates: weekly,
     tasks: profile.tasks.slice(0, 30).map((task) => ({ id: task.taskId, name: task.name, status: task.status, priority: task.priority, deadline: task.deadline, qualityRating: task.qualityRating })),
-    goals: profile.goals.slice(0, 20), recognition: profile.recognition.slice(0, 12)
+    goals: profile.goals.slice(0, 20), recognition: profile.recognition.slice(0, 12), trackerPlanning
   } : {
     employee: { name: `${profile.employee.firstName} ${profile.employee.lastName}`, employeeId: profile.employee.employeeId, designation: profile.employee.designation, department: profile.employee.department },
     deterministicPerformanceSnapshots: profile.performance.slice(0, 8), contributionSnapshots: contribution,
-    goals: profile.goals.slice(0, 20), kpis: profile.kpis.slice(0, 20), reviews,
+    goals: profile.goals.slice(0, 20), kpis: profile.kpis.slice(0, 20), reviews, trackerPlanning,
     tasks: profile.tasks.slice(0, 30).map((task) => ({ id: task.taskId, name: task.name, status: task.status, deadline: task.deadline, qualityRating: task.qualityRating })),
     training: profile.training.slice(0, 20).map((item) => ({ training: item.training, status: item.status })), verifiedSkills: profile.skills.slice(0, 30).map((item) => ({ skill: item.skill, selfRating: item.selfRating, verifiedRating: item.verifiedRating, verificationStatus: item.verificationStatus }))
   };
