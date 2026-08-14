@@ -6,7 +6,7 @@ import {
 import { api } from "@/api/client";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/features/auth/AuthProvider";
-import { DailyTodoPanel, MoodBreakPanel } from "@/features/ai/AiWorkspacePanels";
+import { MoodBreakPanel } from "@/features/ai/AiWorkspacePanels";
 import { cn } from "@/lib/cn";
 
 /* ─── Types ─── */
@@ -393,11 +393,6 @@ export const DashboardPage = () => {
         </div>
 
         {/* ────── Employee-only panels ────── */}
-        {employeeView && (
-          <div className="mt-6 max-w-3xl animate-fadeInUp anim-delay-5">
-            <DailyTodoPanel />
-          </div>
-        )}
         {employeeView && (
           <div className="mt-5 max-w-2xl animate-fadeInUp anim-delay-6">
             <MoodBreakPanel />

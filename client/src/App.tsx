@@ -26,6 +26,7 @@ const AdministratorsPage = lazy(() => import("@/pages/AdministratorsPage").then(
 const AttendancePage = lazy(() => import("@/pages/AttendancePage").then((module) => ({ default: module.AttendancePage })));
 const ContributionPage = lazy(() => import("@/pages/ContributionPage").then((module) => ({ default: module.ContributionPage })));
 const AiWorkspacePage = lazy(() => import("@/pages/AiWorkspacePage").then((module) => ({ default: module.AiWorkspacePage })));
+const TaskTrackerPage = lazy(() => import("@/pages/TaskTrackerPage").then((module) => ({ default: module.TaskTrackerPage })));
 
 const PageLoader = () => <div className="space-y-4 p-8" aria-label="Loading page"><Skeleton className="h-9 w-64"/><Skeleton className="h-48 w-full"/><Skeleton className="h-48 w-full"/></div>;
 
@@ -38,6 +39,7 @@ export const App = () => <Suspense fallback={<PageLoader/>}><Routes>
     <Route element={<RoleRoute roles={["SUPER_ADMIN","HR_ADMIN","DEPARTMENT_HEAD","MANAGER"]}/>}> <Route path="employees" element={<EmployeesPage/>}/><Route path="organization" element={<OrganizationPage/>}/><Route path="skill-matrix" element={<SkillMatrixPage/>}/></Route>
     <Route path="skills" element={<SkillsPage/>}/>
     <Route path="assessments" element={<AssessmentsPage/>}/><Route path="work" element={<WorkPage/>}/><Route path="attendance" element={<AttendancePage/>}/><Route path="performance" element={<PerformancePage/>}/><Route path="contribution" element={<ContributionPage/>}/>
+    <Route element={<RoleRoute roles={["SUPER_ADMIN","EMPLOYEE"]}/>}> <Route path="task-tracker" element={<TaskTrackerPage/>}/></Route>
     <Route path="development" element={<DevelopmentPage/>}/><Route path="governance" element={<GovernancePage/>}/><Route element={<RoleRoute roles={["SUPER_ADMIN","EMPLOYEE"]}/>}> <Route path="resumes" element={<ResumesPage/>}/></Route><Route element={<RoleRoute roles={["SUPER_ADMIN","HR_ADMIN"]}/>}> <Route path="applicants" element={<ApplicantsPage/>}/></Route><Route path="people-ops" element={<PeopleOpsPage/>}/><Route element={<RoleRoute roles={["SUPER_ADMIN"]}/>}> <Route path="administrators" element={<AdministratorsPage/>}/></Route>
   </Route></Route>
   <Route path="*" element={<div className="grid min-h-screen place-items-center"><p>Page not found</p></div>}/>

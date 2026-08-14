@@ -4,7 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import type { PermissionName, RoleName } from "@mobiusbloom/shared";
 import {
   Activity, BarChart3, Bot, BriefcaseBusiness, Building2, CalendarCheck2,
-  ChevronLeft, CircleGauge, FileText, GraduationCap, LogOut, Menu,
+  ChevronLeft, CircleGauge, FileText, GraduationCap, ListTodo, LogOut, Menu,
   Settings, ShieldCheck, Sparkles, Target, TrendingUp, UserCog, UserRound, Users, X,
 } from "lucide-react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -47,7 +47,11 @@ const groups: { label: string; items: NavItem[] }[] = [
       { label: "Assessments", icon: ShieldCheck, path: "/assessments" },
     ],
   },
-  { label: "Work", items: [{ label: "Tasks & projects", icon: BriefcaseBusiness, path: "/work" }] },
+  { label: "Work", items: [
+    { label: "Tasks & projects", icon: BriefcaseBusiness, path: "/work" },
+    { label: "My task tracker", icon: ListTodo, path: "/task-tracker", roles: employeeRole },
+    { label: "Employee task tracker", icon: ListTodo, path: "/task-tracker", roles: superAdminRole },
+  ] },
   {
     label: "Performance", items: [
       { label: "Goals & performance", icon: Target, path: "/performance", roles: employeeRole },
