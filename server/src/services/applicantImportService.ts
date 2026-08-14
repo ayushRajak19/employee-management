@@ -1,5 +1,4 @@
 import path from "node:path";
-import pdf from "pdf-parse/lib/pdf-parse.js";
 import { z } from "zod";
 import { AppError } from "../utils/AppError.js";
 import { complete } from "./llmService.js";
@@ -22,10 +21,11 @@ const parseJson = (text: string, fileName: string) => {
 };
 
 const fallbackName = (fileName: string) => path.basename(fileName, path.extname(fileName)).replace(/[_-]+/g, " ").replace(/\b(cv|resume)\b/gi, "").replace(/\s+/g, " ").trim();
+const parsePdf = async (buffer: Buffer) => { const { default: pdf } = await import("pdf-parse/lib/pdf-parse.js"); return pdf(buffer); };
 
 const extractDetails = async (file: Express.Multer.File) => {
   if (file.buffer.subarray(0, 5).toString("ascii") !== "%PDF-") throw new AppError(`${file.originalname} is not a valid PDF`, 422, "INVALID_APPLICANT_CV");
-  const parsed = await pdf(file.buffer).catch(() => { throw new AppError(`Text could not be extracted from ${file.originalname}. Upload a text-based PDF.`, 422, "PDF_TEXT_EXTRACTION_FAILED"); });
+  const parsed = await parsePdf(file.buffer).catch(() => { throw new AppError(`Text could not be extracted from ${file.originalname}. Upload a text-based PDF.`, 422, "PDF_TEXT_EXTRACTION_FAILED"); });
   const resumeText = parsed.text.split(String.fromCharCode(0)).join(" ").trim();
   if (resumeText.length < 80) throw new AppError(`${file.originalname} has too little readable text. Scanned PDFs need OCR before upload.`, 422, "PDF_TEXT_TOO_SHORT");
   const generated = await complete({ system, user: `Resume file: ${file.originalname}\n\nResume text:\n${resumeText.slice(0, 24_000)}`, temperature: 0, maxTokens: 300 });

@@ -1,5 +1,4 @@
 import path from "node:path";
-import pdf from "pdf-parse/lib/pdf-parse.js";
 import { z } from "zod";
 import { Applicant } from "../models/Applicant.js";
 import { ResumeScreening } from "../models/ResumeScreening.js";
@@ -12,12 +11,13 @@ const assessmentSchema = z.object({ candidateName: z.string().trim().min(2).max(
 const parseJson = (text: string) => { const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1]; const candidate = fenced ?? text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1); try { return JSON.parse(candidate); } catch { throw new AppError("The AI returned an invalid screening result. Please try again.", 502, "AI_INVALID_RESPONSE"); } };
 const system = `You are a careful resume-to-job-description screening assistant. Evaluate only evidence explicitly present in the supplied resume against the supplied job description. Never infer age, gender, religion, caste, ethnicity, marital status, disability, health, nationality, or other protected traits. Do not use names or contact details as scoring signals. Treat absent information as "not demonstrated", not proof that the candidate lacks it. Required qualifications matter more than preferred ones. Scores must be consistent: STRONG_FIT is 80-100, POTENTIAL_FIT is 60-79, and NOT_FIT is 0-59. Return only one valid JSON object with exactly these keys: candidateName, score, classification, summary, writtenReason, matchedRequirements, missingRequirements, evidence. writtenReason must clearly explain why the candidate is or is not suitable for this particular job. Evidence entries must be short resume-grounded facts. This is advisory screening for human review, never an automated hiring decision.`;
 const fileNameCandidate = (name: string) => path.basename(name, path.extname(name)).replace(/[_-]+/g, " ").replace(/\b(cv|resume)\b/gi, "").trim() || "Unnamed candidate";
+const parsePdf = async (buffer: Buffer) => { const { default: pdf } = await import("pdf-parse/lib/pdf-parse.js"); return pdf(buffer); };
 
 export const runResumeScreening = async (input: { jobTitle: string; jobDescription: string; files: Express.Multer.File[]; actorId: string }) => {
   const results = []; let provider = ""; let model = "";
   for (const file of input.files) {
     if (file.buffer.subarray(0, 5).toString("ascii") !== "%PDF-") throw new AppError(`${file.originalname} is not a valid PDF`, 422, "INVALID_RESUME_FILE");
-    const parsedPdf = await pdf(file.buffer).catch(() => { throw new AppError(`Text could not be extracted from ${file.originalname}. Upload a text-based PDF.`, 422, "PDF_TEXT_EXTRACTION_FAILED"); });
+    const parsedPdf = await parsePdf(file.buffer).catch(() => { throw new AppError(`Text could not be extracted from ${file.originalname}. Upload a text-based PDF.`, 422, "PDF_TEXT_EXTRACTION_FAILED"); });
     const resumeText = parsedPdf.text.split(String.fromCharCode(0)).join(" ").trim();
     if (resumeText.length < 80) throw new AppError(`${file.originalname} has too little readable text. Scanned PDFs need OCR before upload.`, 422, "PDF_TEXT_TOO_SHORT");
     const generated = await complete({ system, user: `Job title: ${input.jobTitle}\n\nJob description:\n${input.jobDescription}\n\nResume file: ${file.originalname}\nResume text:\n${resumeText.slice(0, 24_000)}`, temperature: 0.1, maxTokens: 1_400 }); provider = generated.provider; model = generated.model;
