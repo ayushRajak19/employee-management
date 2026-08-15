@@ -31,9 +31,19 @@ const applicantRoles: RoleName[] = ["SUPER_ADMIN", "HR_ADMIN"];
 const groups: { label: string; items: NavItem[] }[] = [
   { label: "Overview", items: [
     { label: "Dashboard", icon: CircleGauge, path: "/" },
-    { label: "AI Workspace", icon: Bot, path: "/ai-workspace" },
   ] },
-  { label: "My workspace", items: [{ label: "My profile", icon: UserRound, path: "/me", roles: employeeRole }] },
+  {
+    label: "People operations", items: [
+      { label: "My attendance", icon: CalendarCheck2, path: "/attendance", roles: employeeRole },
+      { label: "Attendance register", icon: CalendarCheck2, path: "/attendance", roles: superAdminRole },
+      { label: "Leave & recognition", icon: Users, path: "/people-ops", roles: employeeRole },
+      { label: "People operations", icon: Users, path: "/people-ops", roles: managementRoles },
+    ],
+  },
+  { label: "My workspace", items: [
+    { label: "AI Workspace", icon: Bot, path: "/ai-workspace" },
+    { label: "My profile", icon: UserRound, path: "/me", roles: employeeRole },
+  ] },
   {
     label: "People", items: [
       { label: "Employees", icon: Users, path: "/employees", roles: managementRoles },
@@ -69,14 +79,6 @@ const groups: { label: string; items: NavItem[] }[] = [
       { label: "Resume screener", icon: BrainCircuit, path: "/resume-screener", roles: superAdminRole },
       { label: "Resume library", icon: FileText, path: "/resumes", roles: superAdminRole },
       { label: "Documents & reports", icon: FileText, path: "/governance", roles: managementRoles },
-    ],
-  },
-  {
-    label: "People operations", items: [
-      { label: "My attendance", icon: CalendarCheck2, path: "/attendance", roles: employeeRole },
-      { label: "Attendance register", icon: CalendarCheck2, path: "/attendance", roles: superAdminRole },
-      { label: "Leave & recognition", icon: Users, path: "/people-ops", roles: employeeRole },
-      { label: "People operations", icon: Users, path: "/people-ops", roles: managementRoles },
     ],
   },
   {
