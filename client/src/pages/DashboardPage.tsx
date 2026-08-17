@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import {
-  AlertTriangle, ArrowUpRight, CalendarClock, Clock, ShieldCheck,
+  AlertCircle, AlertTriangle, ArrowUpRight, CalendarClock, Clock, ShieldCheck,
   Sparkles, Trophy, Users, Zap,
 } from "lucide-react";
 import { api } from "@/api/client";
@@ -23,6 +23,14 @@ interface Summary {
   employeeProfile: EmployeeProfileSummary | null;
   metrics: Metric[];
   topPerformers: { employee: Person; score: number; classification: string }[];
+  performanceEvidence: {
+    state: "RANKED" | "ACTION_REQUIRED" | "EMPTY";
+    sufficientCount: number;
+    totalEmployees: number;
+    attentionCount: number;
+    topPerformers: { employee: Person; score: number; classification: string }[];
+    attention: { employee: Person; status: "INSUFFICIENT_EVIDENCE" | "NOT_CALCULATED"; action: string }[];
+  };
   upcomingDeadlines: { id: string; name: string; deadline: string; priority: string; employee: Person }[];
   workloadAttention: { employee: Person; estimatedHours: number; openTasks: number; classification: string }[];
   needsAttention: { employee: Person; score: number; developmentAreas: string[] }[];
@@ -69,7 +77,7 @@ const relativeDeadline = (dateStr: string) => {
 /* ─── Component ─── */
 export const DashboardPage = () => {
   const { user } = useAuth();
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["dashboard", "summary"],
     queryFn: () => api.get<Summary>("/api/v1/dashboard/summary"),
   });
@@ -77,6 +85,7 @@ export const DashboardPage = () => {
   const firstName = data?.greetingName ?? user?.name.split(" ")[0];
   const employeeView = user?.role === "EMPLOYEE";
   const metrics = data?.metrics;
+  const performance = data?.performanceEvidence;
 
   return (
     <main className="flex-1 overflow-x-clip px-4 py-6 sm:px-8 sm:py-9">
@@ -185,16 +194,30 @@ export const DashboardPage = () => {
               </div>
               <div className="min-w-0">
                 <h2 className="break-words font-bold text-ink">
-                  {employeeView ? "My performance evidence" : "Top performance evidence"}
+                  {employeeView ? "My performance evidence" : performance?.state === "RANKED" ? "Top performance evidence" : "Performance evidence needed"}
                 </h2>
                 <p className="break-words text-xs text-slate-400">
-                  Latest explainable snapshot—not a permanent rank.
+                  {performance?.state === "RANKED"
+                    ? `Latest explainable snapshots · ${performance.sufficientCount} of ${performance.totalEmployees} ready`
+                    : "Complete the evidence before comparing performance."}
                 </p>
               </div>
             </div>
             <div className="divide-y">
-              {data?.topPerformers.length ? (
-                data.topPerformers.map((item, index) => (
+              {isLoading ? (
+                <div className="space-y-3 p-5 sm:p-6" aria-label="Loading performance evidence">
+                  {Array.from({ length: 3 }, (_, index) => <Skeleton key={index} className="h-14 rounded-xl" />)}
+                </div>
+              ) : isError ? (
+                <div className="p-8 text-center" role="alert">
+                  <AlertCircle className="mx-auto text-red-500" size={24} />
+                  <p className="mt-3 text-sm font-semibold text-ink">Performance evidence could not be loaded</p>
+                  <p className="mt-1 text-xs text-slate-500">Other dashboard information may also be unavailable.</p>
+                  <button type="button" onClick={() => void refetch()} className="mt-4 rounded-lg bg-brand-600 px-4 py-2 text-xs font-semibold text-white hover:bg-brand-700">Try again</button>
+                </div>
+              ) : performance?.state === "RANKED" && performance.topPerformers.length ? (
+                <>
+                {performance.topPerformers.map((item, index) => (
                   <div
                     className="animate-slideInRight group/row flex min-w-0 items-center gap-4 p-5 transition-colors duration-200 hover:bg-slate-50/70 sm:p-6"
                     style={{ animationDelay: `${0.1 + index * 0.07}s` }}
@@ -222,13 +245,27 @@ export const DashboardPage = () => {
                           style={{ width: `${Math.min(item.score, 100)}%` }}
                         />
                       </div>
-                      <p className="text-lg font-bold text-brand-700">{item.score}%</p>
+                      <p className="text-lg font-bold text-brand-700">{Math.round(item.score)}%</p>
                     </div>
+                  </div>
+                ))}
+                {performance.attentionCount > 0 && <div className="flex items-center gap-2 bg-amber-50 px-5 py-3 text-xs text-amber-800 sm:px-6"><AlertTriangle size={14} className="shrink-0"/><span>{performance.attentionCount} {performance.attentionCount === 1 ? "employee needs" : "employees need"} more evidence and {performance.attentionCount === 1 ? "is" : "are"} excluded from ranking.</span></div>}
+                </>
+              ) : performance?.attention.length ? (
+                performance.attention.map((item) => (
+                  <div className="flex min-w-0 items-start gap-4 p-5 sm:p-6" key={item.employee._id}>
+                    <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-amber-100 text-amber-700"><AlertTriangle size={16}/></span>
+                    <div className="min-w-0 flex-1">
+                      <p className="break-words text-sm font-semibold text-ink">{item.employee.firstName} {item.employee.lastName}</p>
+                      <p className="mt-0.5 text-xs font-medium text-amber-700">{item.status === "NOT_CALCULATED" ? "Snapshot not calculated" : "More evidence required"}</p>
+                      <p className="mt-1 break-words text-xs leading-5 text-slate-500">{item.action}</p>
+                    </div>
+                    <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-600">Not ranked</span>
                   </div>
                 ))
               ) : (
                 <p className="p-10 text-center text-sm text-slate-400">
-                  No performance snapshots yet.
+                  No employees are available in your scope.
                 </p>
               )}
             </div>
