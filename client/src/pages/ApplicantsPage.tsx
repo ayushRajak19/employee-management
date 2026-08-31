@@ -7,7 +7,12 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { governanceApi, type ApplicantItem } from "@/features/governance/governanceApi";
 
 const formatSize = (bytes: number) => bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
-const categoryOf = (item: ApplicantItem) => item.jobCategory?.trim() || item.designation?.trim() || "General uploads";
+const normalizeCategory = (value?: string) => {
+  const cleaned = value?.normalize("NFKC").replace(/[\u200B-\u200D\uFEFF]/g, "").replace(/\s+/g, " ").trim();
+  if (!cleaned) return "General Uploads";
+  return cleaned.toLocaleLowerCase().replace(/(^|[\s/(&-])\p{L}/gu, (letter) => letter.toLocaleUpperCase());
+};
+const categoryOf = (item: ApplicantItem) => normalizeCategory(item.jobCategory || item.designation);
 const uniqueValues = (items: ApplicantItem[], key: "city" | "state") => [...new Set(items.map((item) => item[key]?.trim()).filter((value): value is string => Boolean(value)))].sort((a, b) => a.localeCompare(b));
 
 export const ApplicantsPage = () => {
