@@ -6,6 +6,7 @@ export interface ApplicantRecord {
   jobCategory?: string;
   city?: string;
   state?: string;
+  matchScore?: number;
   originalName: string;
   storageProvider: "CLOUDINARY" | "MONGODB";
   storageKey: string;
@@ -22,6 +23,7 @@ const applicantSchema = new Schema<ApplicantRecord>({
   jobCategory: { type: String, trim: true, maxlength: 160, index: true },
   city: { type: String, trim: true, maxlength: 120, index: true },
   state: { type: String, trim: true, maxlength: 120, index: true },
+  matchScore: { type: Number, min: 0, max: 100 },
   originalName: { type: String, required: true, maxlength: 255 },
   storageProvider: { type: String, enum: ["CLOUDINARY", "MONGODB"], required: true },
   storageKey: { type: String, required: true, unique: true },

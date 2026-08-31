@@ -24,7 +24,7 @@ export const runResumeScreening = async (input: { jobTitle: string; jobDescripti
     const assessment = assessmentSchema.safeParse(parseJson(generated.text)); if (!assessment.success) throw new AppError(`The screening result for ${file.originalname} was incomplete. Please try again.`, 502, "AI_INVALID_RESPONSE");
     const normalized = { ...assessment.data, candidateName: assessment.data.candidateName || fileNameCandidate(file.originalname), score: Math.round(assessment.data.score), classification: (assessment.data.score >= 80 ? "STRONG_FIT" : assessment.data.score >= 60 ? "POTENTIAL_FIT" : "NOT_FIT") as "STRONG_FIT" | "POTENTIAL_FIT" | "NOT_FIT" };
     const stored = await uploadApplicantPrivate(file.buffer, file.originalname, file.mimetype);
-    const applicant = await Applicant.create({ name: normalized.candidateName, designation: input.jobTitle, jobCategory: input.jobTitle, city: normalized.city ?? undefined, state: normalized.state ?? undefined, originalName: file.originalname, storageProvider: stored.provider, storageKey: stored.key, format: stored.format, mimeType: file.mimetype, size: stored.size, uploadedBy: input.actorId });
+    const applicant = await Applicant.create({ name: normalized.candidateName, designation: input.jobTitle, jobCategory: input.jobTitle, city: normalized.city ?? undefined, state: normalized.state ?? undefined, matchScore: normalized.score, originalName: file.originalname, storageProvider: stored.provider, storageKey: stored.key, format: stored.format, mimeType: file.mimetype, size: stored.size, uploadedBy: input.actorId });
     results.push({ applicant: applicant._id, ...normalized });
   }
   results.sort((a, b) => b.score - a.score);
