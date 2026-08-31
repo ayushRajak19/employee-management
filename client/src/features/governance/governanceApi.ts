@@ -1,7 +1,7 @@
 import { api } from "@/api/client";
 export interface DocumentItem { _id: string; employee: { firstName: string; lastName: string; employeeId: string }; category: string; originalName: string; mimeType: string; size: number; createdAt: string }
 export interface ResumeItem { _id: string; employee: { _id: string; firstName: string; lastName: string; employeeId: string; department?: { _id: string; name: string; code: string }; designation?: { name: string } }; originalName: string; size: number; createdAt: string; uploadedBy?: { name: string } }
-export interface ApplicantItem { _id: string; name: string; designation: string; originalName: string; size: number; createdAt: string; uploadedBy?: { name: string; email: string } }
+export interface ApplicantItem { _id: string; name: string; designation: string; jobCategory?: string; city?: string; state?: string; originalName: string; size: number; createdAt: string; uploadedBy?: { name: string; email: string } }
 export type FitClassification = "STRONG_FIT" | "POTENTIAL_FIT" | "NOT_FIT";
 export interface ScreeningResult { applicant: string; candidateName: string; score: number; classification: FitClassification; summary: string; writtenReason: string; matchedRequirements: string[]; missingRequirements: string[]; evidence: string[] }
 export interface ResumeScreeningItem { _id: string; jobTitle: string; jobDescription: string; status: "COMPLETED"; results: ScreeningResult[]; provider: string; model: string; createdAt: string; createdBy?: { name: string; email: string } }

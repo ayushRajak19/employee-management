@@ -6,10 +6,12 @@ import { createApplicant } from "./governanceService.js";
 
 const detailsSchema = z.object({
   candidateName: z.string().trim().min(2).max(120),
-  designation: z.string().trim().min(2).max(120)
+  designation: z.string().trim().min(2).max(120),
+  city: z.string().trim().max(120).nullish().transform((value) => value ?? null),
+  state: z.string().trim().max(120).nullish().transform((value) => value ?? null)
 });
 
-const system = `Extract basic applicant details from resume text. Return only one valid JSON object with exactly these keys: candidateName and designation. candidateName must be the person's full name as written in the resume. designation must be their most recent or most clearly demonstrated professional role, not a company name and not a list of skills. Do not infer protected or sensitive characteristics. Do not add facts that are absent from the resume.`;
+const system = `Extract basic applicant details from resume text. Return only one valid JSON object with exactly these keys: candidateName, designation, city, state. candidateName must be the person's full name as written in the resume. designation must be their most recent or most clearly demonstrated professional role, not a company name and not a list of skills. city and state must come from the candidate's current/contact address or clearly stated current location; use null when not stated. Do not infer protected or sensitive characteristics. Do not add facts that are absent from the resume.`;
 
 const parseJson = (text: string, fileName: string) => {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1];
@@ -31,7 +33,7 @@ const extractDetails = async (file: Express.Multer.File) => {
   const generated = await complete({ system, user: `Resume file: ${file.originalname}\n\nResume text:\n${resumeText.slice(0, 24_000)}`, temperature: 0, maxTokens: 300 });
   const details = detailsSchema.safeParse(parseJson(generated.text, file.originalname));
   if (!details.success) throw new AppError(`AI returned incomplete applicant details for ${file.originalname}. Please try again.`, 502, "AI_INVALID_RESPONSE");
-  return { name: details.data.candidateName || fallbackName(file.originalname), designation: details.data.designation };
+  return { name: details.data.candidateName || fallbackName(file.originalname), designation: details.data.designation, jobCategory: "General uploads", city: details.data.city ?? undefined, state: details.data.state ?? undefined };
 };
 
 export const importApplicantResumes = async (files: Express.Multer.File[], actorId: string) => {
