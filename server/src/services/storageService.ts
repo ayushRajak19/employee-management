@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto"; import { Readable } from "node:stream"; import mongoose from "mongoose"; import { v2 as cloudinary } from "cloudinary"; import { env } from "../config/env.js"; import { AppError } from "../utils/AppError.js";
+import { randomUUID } from "node:crypto"; import path from "node:path"; import { Readable } from "node:stream"; import mongoose from "mongoose"; import { v2 as cloudinary } from "cloudinary"; import { env } from "../config/env.js"; import { AppError } from "../utils/AppError.js";
 export interface StoredObject { provider: "CLOUDINARY" | "MONGODB"; key: string; format?: string; size: number }
 const configured = () => { if (!env.CLOUDINARY_CLOUD_NAME || !env.CLOUDINARY_API_KEY || !env.CLOUDINARY_API_SECRET) throw new AppError("Private document storage is not configured", 503, "STORAGE_UNAVAILABLE"); cloudinary.config({ cloud_name: env.CLOUDINARY_CLOUD_NAME, api_key: env.CLOUDINARY_API_KEY, api_secret: env.CLOUDINARY_API_SECRET, secure: true }); };
 const uploadCloudinaryPrivate = async (buffer: Buffer, folder: string): Promise<StoredObject> => { configured(); return new Promise((resolve, reject) => { const stream = cloudinary.uploader.upload_stream({ resource_type: "raw", type: "authenticated", folder, public_id: randomUUID(), overwrite: false }, (error, result) => { if (error || !result) reject(new AppError("Document upload failed", 502, "STORAGE_UPLOAD_FAILED")); else resolve({ provider: "CLOUDINARY", key: result.public_id, format: result.format, size: result.bytes }); }); stream.end(buffer); }); };
@@ -36,7 +36,7 @@ export const deleteProfilePhoto = async (key?: string): Promise<void> => {
 };
 export const uploadApplicantPrivate = async (buffer: Buffer, originalName: string, mimeType: string): Promise<StoredObject> => {
   const stored = await uploadPrivate(buffer, "mobiusbloom-employee/applicants", { originalName, mimeType, category: "APPLICANT_CV" });
-  return stored.provider === "MONGODB" ? { ...stored, format: "pdf" } : stored;
+  return stored.provider === "MONGODB" ? { ...stored, format: path.extname(originalName).slice(1).toLowerCase() || undefined } : stored;
 };
 export const openMongoPrivate = (key: string) => {
   if (!mongoose.isValidObjectId(key)) throw new AppError("Document not found", 404, "DOCUMENT_NOT_FOUND");
