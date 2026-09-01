@@ -44,6 +44,16 @@ const overlap = (left: string, right: string) => {
   return [...a].filter((word) => b.has(word)).length / Math.max(a.size, b.size);
 };
 const containsAny = (text: string, phrases: readonly string[]) => phrases.some((phrase) => text.includes(normalize(phrase)));
+const PROSPECTIVE_COMPLETION_PHRASES = [
+  "have to complete", "need to complete", "must complete", "have to finish", "need to finish", "complete by", "finish by",
+  "पूरा करना है", "खत्म करना है", "সম্পন্ন করতে হবে", "শেষ করতে হবে", "முடிக்க வேண்டும்", "பூர்த்தி செய்ய வேண்டும்",
+  "పూర్తి చేయాలి", "ముగించాలి", "पूर्ण करायचे", "પૂર્ણ કરવાનું", "ಪೂರ್ಣಗೊಳಿಸಬೇಕು", "പൂർത്തിയാക്കണം", "ਪੂਰਾ ਕਰਨਾ ਹੈ", "مکمل کرنا ہے"
+] as const;
+const ASSIGNMENT_PHRASES = [
+  "got a task", "got one task", "received a task", "task from", "assigned me", "assigned to me", "asked me to", "told me to", "gave me a task",
+  "मुझे काम मिला", "मुझे टास्क मिला", "काम सौंपा", "আমাকে কাজ দিয়েছে", "எனக்கு பணி கொடுத்த", "నాకు పని ఇచ్చారు",
+  "मला काम दिले", "મને કામ આપ્યું", "ನನಗೆ ಕೆಲಸ ನೀಡಿದರು", "എനിക്ക് ജോലി നൽകി", "ਮੈਨੂੰ ਕੰਮ ਦਿੱਤਾ", "مجھے کام دیا"
+] as const;
 const STATUS_PHRASES = {
   complete: ["complete", "completed", "finished", "done", "submitted", "पूरा", "पूर्ण", "समाप्त", "खत्म", "हो गया", "সম্পন্ন", "শেষ", "முடித்த", "முடிந்தது", "பூர்த்தி", "పూర్తి", "పూర్తయింది", "ముగిసింది", "पूर्ण केले", "संपले", "પૂર્ણ", "સમાપ્ત", "ಪೂರ್ಣ", "ಮುಗಿದಿದೆ", "ಪೂರ್ಣವಾಗಿದೆ", "പൂർത്തിയായി", "കഴിഞ്ഞു", "ਪੂਰਾ", "ਮੁਕੰਮਲ", "ਮੁਕੰਮਲ ਹੋਇਆ", "مکمل", "ختم", "ہو گیا"],
   start: ["start", "started", "begin", "in progress", "शुरू", "आरंभ", "চালু", "শুরু", "தொடங்கு", "ஆரம்பம்", "ప్రారంభ", "सुरू", "શરૂ", "ಪ್ರಾರಂಭ", "തുടങ്ങി", "ਸ਼ੁਰੂ", "شروع"],
@@ -53,37 +63,47 @@ const STATUS_PHRASES = {
 } as const;
 export const detectVoiceStatusIntent = (transcript: string): keyof typeof STATUS_PHRASES | undefined => {
   const text = normalize(transcript);
+  if (containsAny(text, PROSPECTIVE_COMPLETION_PHRASES)) return undefined;
   return containsAny(text, STATUS_PHRASES.complete) ? "complete" : containsAny(text, STATUS_PHRASES.blocked) ? "blocked" : containsAny(text, STATUS_PHRASES.reopen) ? "reopen" : containsAny(text, STATUS_PHRASES.cancel) ? "cancel" : containsAny(text, STATUS_PHRASES.start) ? "start" : undefined;
 };
 
-const upcomingWeekday = (weekday: number) => {
-  const date = new Date(); date.setHours(17, 0, 0, 0);
-  let difference = (weekday - date.getDay() + 7) % 7; if (difference === 0) difference = 7;
-  date.setDate(date.getDate() + difference); return date;
+export const detectVoiceAction = (transcript: string): VoiceDraft["action"] => {
+  const text = normalize(transcript);
+  return containsAny(text, ASSIGNMENT_PHRASES) || containsAny(text, PROSPECTIVE_COMPLETION_PHRASES) ? "CREATE_TASK" : detectVoiceStatusIntent(text) ? "UPDATE_STATUS" : "CREATE_TASK";
 };
 
-const parseDeadline = (transcript: string) => {
-  const text = normalize(transcript); const date = new Date(); date.setHours(17, 0, 0, 0);
-  if (text.includes("day after tomorrow") || text.includes("परसों")) date.setDate(date.getDate() + 2);
-  else if (text.includes("tomorrow") || text.includes("kal") || text.includes("कल")) date.setDate(date.getDate() + 1);
-  else if (text.includes("today") || text.includes("आज")) { /* keep today */ }
+export const parseVoiceDeadline = (transcript: string, timezoneOffsetMinutes = 0, now = new Date()) => {
+  const text = normalize(transcript);
+  const localNow = new Date(now.getTime() - timezoneOffsetMinutes * 60_000);
+  const date = new Date(localNow); date.setUTCHours(17, 0, 0, 0);
+  let hasExplicitDate = false;
+  if (text.includes("day after tomorrow") || text.includes("परसों")) { date.setUTCDate(date.getUTCDate() + 2); hasExplicitDate = true; }
+  else if (text.includes("tomorrow") || text.includes("kal") || text.includes("कल")) { date.setUTCDate(date.getUTCDate() + 1); hasExplicitDate = true; }
+  else if (text.includes("today") || text.includes("आज")) { hasExplicitDate = true; }
   else {
     const weekdays = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
     const weekday = weekdays.findIndex((item) => text.includes(item));
-    if (weekday >= 0) return upcomingWeekday(weekday).toISOString();
+    if (weekday >= 0) { const difference = (weekday - date.getUTCDay() + 7) % 7 || 7; date.setUTCDate(date.getUTCDate() + difference); hasExplicitDate = true; }
     const iso = text.match(/\b(20\d{2})-(\d{1,2})-(\d{1,2})\b/);
-    if (iso) { const parsed = new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]), 17); if (!Number.isNaN(parsed.getTime())) return parsed.toISOString(); }
-    else date.setDate(date.getDate() + 1);
+    if (iso) { date.setUTCFullYear(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3])); hasExplicitDate = true; }
   }
-  return date.toISOString();
+  const time = transcript.match(/\b(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)\b/i) ?? transcript.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/);
+  if (time) {
+    let hour = Number(time[1]); const minute = Number(time[2] ?? 0); const meridiem = time[3]?.toLowerCase().replaceAll(".", "");
+    if (meridiem === "pm" && hour < 12) hour += 12; if (meridiem === "am" && hour === 12) hour = 0;
+    date.setUTCHours(hour, minute, 0, 0);
+    if (!hasExplicitDate && date.getTime() <= localNow.getTime()) date.setUTCDate(date.getUTCDate() + 1);
+  } else if (!hasExplicitDate) date.setUTCDate(date.getUTCDate() + 1);
+  return new Date(date.getTime() + timezoneOffsetMinutes * 60_000).toISOString();
 };
 
 const extractTaskName = (transcript: string) => {
   let name = transcript.trim().replace(/[.!?]+$/, "");
-  const markers = [/(?:my|the|a) task is to\s+/i, /task (?:of|to|called)\s+/i, /(?:create|add) (?:a )?(?:new )?task (?:to|for|called)?\s*/i];
+  const markers = [/(?:my|the|a) task is to\s+/i, /(?:i\s+)?(?:have|need) to\s+/i, /(?:manager|lead|supervisor|boss|.+?)\s+(?:asked|told) me to\s+/i, /(?:assigned me|assigned to me)\s+/i, /task (?:of|to|called)\s+/i, /(?:create|add) (?:a )?(?:new )?task (?:to|for|called)?\s*/i];
   for (const marker of markers) { const match = name.match(marker); if (match?.index !== undefined) { name = name.slice(match.index + match[0].length); break; } }
   name = name
-    .replace(/\s+(?:by|before|due(?: on)?|deadline(?: is)?)\s+(?:today|tomorrow|day after tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|20\d{2}-\d{1,2}-\d{1,2}).*$/i, "")
+    .replace(/^(?:complete|finish|do|prepare|submit)\s+/i, "")
+    .replace(/\s+(?:by|before|due(?: on)?|deadline(?: is)?)\s+(?:(?:today|tomorrow|day after tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|20\d{2}-\d{1,2}-\d{1,2})\b|\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)).*$/i, "")
     .replace(/\s+(?:with\s+)?(?:low|medium|high|critical)\s+priority.*$/i, "")
     .replace(/\s+estimated\s+(?:at\s+)?\d+(?:\.\d+)?\s*hours?.*$/i, "")
     .replace(/^assign\s+[a-z][a-z\s'-]{1,80}?\s+(?:the\s+)?(?:task\s+)?(?:of|to)\s+/i, "")
@@ -103,6 +123,18 @@ const detectComplexity = (text: string): VoiceDraft["complexity"] => text.includ
 const hourUnits = ["hour", "hours", "hr", "hrs", "घंटा", "घंटे", "तास", "மணி", "గంట", "గంటలు", "કલાક", "ಗಂಟೆ", "മണിക്കൂർ", "گھنٹہ", "گھنٹے"];
 const numberWords: Array<[number, string[]]> = [[1, ["one", "एक", "এক", "ஒன்று", "ఒక", "एक", "એક", "ಒಂದು", "ഒന്ന്", "ਇੱਕ", "ایک"]], [2, ["two", "दो", "দুই", "இரண்டு", "రెండు", "दोन", "બે", "ಎರಡು", "രണ്ട്", "ਦੋ", "دو"]], [3, ["three", "तीन", "তিন", "மூன்று", "మూడు", "तीन", "ત્રણ", "ಮೂರು", "മൂന്ന്", "ਤਿੰਨ", "تین"]], [4, ["four", "चार", "চার", "நான்கு", "నాలుగు", "चार", "ચાર", "ನಾಲ್ಕು", "നാല്", "ਚਾਰ", "چار"]], [5, ["five", "पांच", "पाँच", "পাঁচ", "ஐந்து", "ఐదు", "पाच", "પાંચ", "ಐದು", "അഞ്ച്", "ਪੰਜ", "پانچ"]], [6, ["six", "छह", "ছয়", "ஆறு", "ఆరు", "सहा", "છ", "ಆರು", "ആറ്", "ਛੇ", "چھ"]], [7, ["seven", "सात", "সাত", "ஏழு", "ఏడు", "सात", "સાત", "ಏಳು", "ഏഴ്", "ਸੱਤ", "سات"]], [8, ["eight", "आठ", "আট", "எட்டு", "ఎనిమిది", "आठ", "આઠ", "ಎಂಟು", "എട്ട്", "ਅੱਠ", "آٹھ"]], [9, ["nine", "नौ", "নয়", "ஒன்பது", "తొమ్మిది", "नऊ", "નવ", "ಒಂಬತ್ತು", "ഒൻപത്", "ਨੌਂ", "نو"]], [10, ["ten", "दस", "দশ", "பத்து", "పది", "दहा", "દસ", "ಹತ್ತು", "പത്ത്", "ਦਸ", "دس"]]];
 export const detectVoiceHours = (transcript: string) => { const text = normalize(transcript); if (!containsAny(text, hourUnits)) return 1; const numeric = text.match(/\b(\d+(?:\.\d+)?)\b/u); if (numeric) return Number(numeric[1]); return numberWords.find(([, variants]) => containsAny(text, variants))?.[0] ?? 1; };
+export const detectMentionedVoiceHours = (transcript: string) => containsAny(normalize(transcript), hourUnits) ? detectVoiceHours(transcript) : undefined;
+
+export const extractVoiceAssigner = (transcript: string) => {
+  const patterns = [
+    /assigned by\s+(?:the\s+)?(.+?)(?=\s+(?:that|to|by|before|due|with)\b|[.!?]|$)/i,
+    /(?:task|work) from\s+(?:the\s+)?(.+?)(?=\s+(?:that|to|which|by|before|due|with)\b|[.!?]|$)/i,
+    /(?:my\s+)?(.+?)\s+(?:asked|told) me to\b/i
+  ];
+  for (const pattern of patterns) { const value = transcript.match(pattern)?.[1]?.trim(); if (value) return value.replace(/^the\s+/i, "").slice(0, 120); }
+  const role = transcript.match(/\b(manager|team lead|lead|supervisor|boss)\b/i)?.[1];
+  return role ? role.replace(/\b\w/g, (letter) => letter.toUpperCase()) : undefined;
+};
 
 type TranscriptionResult = { text: string; language?: string; languageProbability?: number; durationSeconds?: number };
 
@@ -160,34 +192,33 @@ const loadOptions = async (actor: Actor) => {
   return { projects, employees, tasks };
 };
 
-const buildDraft = (transcript: string, actor: Actor, options: Awaited<ReturnType<typeof loadOptions>>) => {
+const buildDraft = (transcript: string, actor: Actor, options: Awaited<ReturnType<typeof loadOptions>>, timezoneOffsetMinutes = 0) => {
   const text = normalize(transcript);
   const statusIntent = detectVoiceStatusIntent(text);
   const exactTask = options.tasks.find((task) => task.detail && text.includes(normalize(task.detail)));
   const scoredTask = options.tasks.map((task) => ({ task, score: overlap(transcript, task.label) })).sort((a, b) => b.score - a.score)[0];
   const eligibleTasks = statusIntent === "complete" ? options.tasks.filter((item) => !["COMPLETED", "CANCELLED"].includes(item.status ?? "")) : options.tasks;
   const task = exactTask ?? (scoredTask && scoredTask.score >= 0.25 ? scoredTask.task : eligibleTasks.length === 1 ? eligibleTasks[0] : undefined);
-  if (statusIntent) {
+  if (detectVoiceAction(transcript) === "UPDATE_STATUS" && statusIntent) {
     let status: TaskDocument["status"] = statusIntent === "blocked" ? "BLOCKED" : statusIntent === "reopen" ? "REOPENED" : statusIntent === "cancel" ? "CANCELLED" : statusIntent === "start" ? "IN_PROGRESS" : "IN_REVIEW";
     if (statusIntent === "complete" && task?.status === "IN_REVIEW" && actor.role !== "EMPLOYEE") status = "COMPLETED";
-    const draft: VoiceDraft = { action: "UPDATE_STATUS", task: task?.id, status, actualHours: detectVoiceHours(text), completionNote: transcript, blockerReason: "OTHER", blockerComment: status === "BLOCKED" ? transcript : undefined };
+    const draft: VoiceDraft = { action: "UPDATE_STATUS", task: task?.id, status, actualHours: detectMentionedVoiceHours(text), completionNote: transcript, blockerReason: "OTHER", blockerComment: status === "BLOCKED" ? transcript : undefined };
     return { draft, confidence: Math.min(0.98, 0.55 + (exactTask ? 0.35 : task ? 0.2 : 0)) };
   }
   const project = findMention(transcript, options.projects) ?? (options.projects.length === 1 ? options.projects[0] : undefined);
   const employee = actor.role === "EMPLOYEE" ? options.employees[0] : findMention(transcript, options.employees);
-  const assignerMatch = transcript.match(/assigned by\s+(.+?)(?=\s+(?:by|before|due|with)\b|[.!?]|$)/i);
   const draft: VoiceDraft = {
     action: "CREATE_TASK", name: extractTaskName(transcript), description: transcript, project: project?.id,
-    assignedEmployee: employee?.id, verbalAssigner: assignerMatch?.[1]?.trim() || (actor.role === "EMPLOYEE" ? "Voice self-report" : undefined),
-    priority: detectPriority(text), complexity: detectComplexity(text), estimatedHours: detectVoiceHours(text), deadline: parseDeadline(transcript)
+    assignedEmployee: employee?.id, verbalAssigner: extractVoiceAssigner(transcript) || (actor.role === "EMPLOYEE" ? "Manager (voice-reported)" : undefined),
+    priority: detectPriority(text), complexity: detectComplexity(text), estimatedHours: detectMentionedVoiceHours(text) ?? 1, deadline: parseVoiceDeadline(transcript, timezoneOffsetMinutes)
   };
   let confidence = 0.35; if (draft.name && draft.name !== "Voice-created task") confidence += 0.2; if (project) confidence += 0.2; if (employee) confidence += 0.15; if (/today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|20\d{2}-/.test(text)) confidence += 0.1;
   return { draft, confidence: Math.min(0.98, confidence) };
 };
 
-export const createPreview = async (transcript: string, actor: Actor, metadata: { language?: string; durationSeconds?: number } = {}) => {
+export const createPreview = async (transcript: string, actor: Actor, metadata: { language?: string; durationSeconds?: number; timezoneOffsetMinutes?: number } = {}) => {
   const cleanTranscript = transcript.trim(); if (cleanTranscript.length < 2) throw new AppError("Say or type a task command", 422, "EMPTY_TRANSCRIPT");
-  const options = await loadOptions(actor); const { draft, confidence } = buildDraft(cleanTranscript, actor, options);
+  const options = await loadOptions(actor); const { draft, confidence } = buildDraft(cleanTranscript, actor, options, metadata.timezoneOffsetMinutes);
   const command = await VoiceCommand.create({ actor: actor.id, actorRole: actor.role, transcript: cleanTranscript, language: metadata.language, durationSeconds: metadata.durationSeconds, intent: draft.action, confidence, status: "TRANSCRIBED", draft });
   return { command: { id: command.id, transcript: command.transcript, language: command.language, durationSeconds: command.durationSeconds, confidence, status: command.status }, draft, options };
 };
@@ -205,9 +236,10 @@ export const confirmCommand = async (id: string, draft: VoiceDraft, actor: Actor
       task = await createTask({ name: draft.name!, description: draft.description, project: draft.project!, assignedEmployee: draft.assignedEmployee, priority: draft.priority ?? "MEDIUM", complexity: draft.complexity ?? "MEDIUM", estimatedHours: draft.estimatedHours ?? 1, deadline: new Date(draft.deadline!) }, actor.id);
     }
   } else {
-    const current = await Task.findById(draft.task!).select("status"); if (!current) throw new AppError("Task not found", 404);
-    if (draft.status === "IN_REVIEW" && ["NOT_STARTED", "BLOCKED"].includes(current.status)) await transitionTask(draft.task!, { status: "IN_PROGRESS", actualHours: draft.actualHours }, actor);
-    task = await transitionTask(draft.task!, { status: draft.status!, actualHours: draft.actualHours, completionNote: draft.completionNote, blockerReason: draft.status === "BLOCKED" ? (draft.blockerReason ?? "OTHER") : undefined, blockerComment: draft.blockerComment, blockerExternal: false }, actor);
+    const current = await Task.findById(draft.task!).select("status startDate"); if (!current) throw new AppError("Task not found", 404);
+    const trackedHours = draft.actualHours ?? (draft.status === "IN_REVIEW" && current.startDate ? Math.max(0.01, Number(((Date.now() - current.startDate.getTime()) / 3_600_000).toFixed(2))) : undefined);
+    if (draft.status === "IN_REVIEW" && ["NOT_STARTED", "BLOCKED"].includes(current.status)) await transitionTask(draft.task!, { status: "IN_PROGRESS", actualHours: trackedHours }, actor);
+    task = await transitionTask(draft.task!, { status: draft.status!, actualHours: trackedHours, completionNote: draft.completionNote, blockerReason: draft.status === "BLOCKED" ? (draft.blockerReason ?? "OTHER") : undefined, blockerComment: draft.blockerComment, blockerExternal: false }, actor);
   }
   command.intent = draft.action; command.draft = draft; command.task = task._id; command.status = "CONFIRMED"; await command.save();
   await writeAudit({ user: actor.id, action: "VOICE_TASK_COMMAND_CONFIRMED", entityType: "VoiceCommand", entityId: command.id, newValue: { intent: draft.action, transcript: command.transcript, task: task.id } });
