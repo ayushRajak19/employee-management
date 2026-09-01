@@ -89,12 +89,14 @@ const detectPriority = (text: string): VoiceDraft["priority"] => text.includes("
 const detectComplexity = (text: string): VoiceDraft["complexity"] => text.includes("very hard") ? "VERY_HARD" : text.includes("hard") || text.includes("complex") ? "HARD" : text.includes("easy") || text.includes("simple") ? "EASY" : "MEDIUM";
 const detectHours = (text: string) => Number(text.match(/(\d+(?:\.\d+)?)\s*hours?/)?.[1] ?? 1);
 
-const transcribeProcess = (audioPath: string) => new Promise<{ text: string; language?: string; languageProbability?: number; durationSeconds?: number }>((resolve, reject) => {
+type TranscriptionResult = { text: string; language?: string; languageProbability?: number; durationSeconds?: number };
+
+const runTranscribeProcess = (pythonCommand: string, audioPath: string) => new Promise<TranscriptionResult>((resolve, reject) => {
   const dirname = path.dirname(fileURLToPath(import.meta.url));
   const script = path.resolve(dirname, "../../scripts/transcribe_audio.py");
   const args = [script, audioPath, "--model", env.VOICE_WHISPER_MODEL, "--device", env.VOICE_WHISPER_DEVICE, "--compute-type", env.VOICE_WHISPER_COMPUTE_TYPE];
   if (env.VOICE_WHISPER_LANGUAGE) args.push("--language", env.VOICE_WHISPER_LANGUAGE);
-  const child = spawn(env.VOICE_PYTHON_COMMAND, args, { windowsHide: true });
+  const child = spawn(pythonCommand, args, { windowsHide: true });
   let stdout = ""; let stderr = ""; let settled = false;
   const timeout = setTimeout(() => { child.kill(); if (!settled) { settled = true; reject(new AppError("Local voice transcription timed out", 504, "VOICE_TIMEOUT")); } }, env.VOICE_TRANSCRIPTION_TIMEOUT_MS);
   child.stdout.on("data", (chunk: Buffer) => { stdout += chunk.toString(); if (stdout.length > 1_000_000) child.kill(); });
@@ -110,6 +112,20 @@ const transcribeProcess = (audioPath: string) => new Promise<{ text: string; lan
     } catch { reject(new AppError(stderr.trim() || "Local transcription returned an invalid response", 503, "VOICE_TRANSCRIPTION_FAILED")); }
   });
 });
+
+const transcribeProcess = async (audioPath: string): Promise<TranscriptionResult> => {
+  const commands = [...new Set([env.VOICE_PYTHON_COMMAND, process.platform === "win32" ? "py" : "python3", "python3", "python"])];
+  let lastError: unknown;
+  for (const command of commands) {
+    try { return await runTranscribeProcess(command, audioPath); }
+    catch (error) {
+      lastError = error;
+      const message = error instanceof Error ? error.message : "";
+      if (!message.includes("ENOENT") && !message.includes("not installed")) throw error;
+    }
+  }
+  throw lastError ?? new AppError("No Python voice runtime is available", 503, "VOICE_ENGINE_UNAVAILABLE");
+};
 
 export const transcribeAudio = async (file: Express.Multer.File) => {
   const directory = await mkdtemp(path.join(tmpdir(), "mobius-voice-"));
