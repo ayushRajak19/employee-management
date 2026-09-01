@@ -36,5 +36,6 @@ All business entities use timestamps. Employee, Department, Team, Designation, S
 - **Document**: owner, category, storage provider/key, MIME type, size, uploader and authorization metadata. No public object URL is stored.
 - **Notification**: recipient, type, title/body, entity reference, read state and delivery channels.
 - **AuditLog**: actor, action, entity, old/new value and request metadata. Application code exposes no update/delete route.
+- **VoiceCommand**: actor/role, transcript, language, duration, interpreted intent, confidence, editable structured draft, lifecycle status and resulting task reference. Raw audio is deleted after local transcription.
 
 Primary query indexes include unique email/employeeId/code, employee/period, employee/skill, department/team, task assignee/status/deadline, project/status, notification recipient/read/createdAt and audit entity/id/createdAt.
