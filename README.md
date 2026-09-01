@@ -8,6 +8,7 @@ MobiusBloom Employee is an independent workforce capability, delivery, growth, a
 - Dynamic organization structure, employee lifecycle administration, Employee 360 profiles, and career timelines
 - Skill claims, private evidence, independent verification, assessments, role gaps, and organization heatmaps
 - Projects, task Kanban, validated transitions, blocker tracking, time/quality/rework metrics, and immutable activity history
+- Local voice-to-task capture for employees and superadmins, with editable transcripts, task assignment/status commands, and organization-level voice audit history
 - Goals, configurable KPIs, structured reviews, explainable weighted performance snapshots, and historical trends
 - Training, skill growth, workload classification, project-staffing recommendations, recognition, and leave workflows
 - Private document storage, in-app notifications, global search, reports, access audit, role settings, and live role-scoped dashboards
@@ -37,6 +38,17 @@ Requirements: Node.js 20+, npm 10+, and MongoDB 7+ (local or Atlas).
 3. Run `npm install`.
 4. Run `npm run seed` to create permissions, system roles, and the Super Admin.
 6. Run `npm run dev` and open `http://localhost:5173`.
+
+### Free local voice transcription
+
+Voice tasks use `faster-whisper` on the application server, so there is no per-minute transcription fee and recorded audio is not retained after transcription.
+
+1. Install Python 3.10 or newer.
+2. Run `python -m pip install -r server/requirements-voice.txt`.
+3. Keep the default multilingual `small` model, or configure `VOICE_WHISPER_MODEL`, `VOICE_WHISPER_DEVICE`, `VOICE_WHISPER_COMPUTE_TYPE`, and optional `VOICE_WHISPER_LANGUAGE` in `.env`.
+4. The model downloads to the server's local Hugging Face cache on first use. Production hosting must provide persistent storage and enough memory for the selected model.
+
+Employees can create self-reported tasks or update their own task status from the Work page. Superadmins can assign work, update tasks, and review voice-command history across the organization. Every transcript becomes an editable preview before it is applied, and confirmed commands are also written to the audit log.
 
 
 ## Commands
