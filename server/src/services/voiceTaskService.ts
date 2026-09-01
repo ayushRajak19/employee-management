@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Employee } from "../models/Employee.js";
-import type { TaskDocument } from "../models/Task.js";
+import { Task, type TaskDocument } from "../models/Task.js";
 import { VoiceCommand } from "../models/VoiceCommand.js";
 import { env } from "../config/env.js";
 import { AppError } from "../utils/AppError.js";
@@ -26,6 +26,7 @@ type VoiceDraft = {
   deadline?: string;
   task?: string;
   status?: TaskDocument["status"];
+  actualHours?: number;
   completionNote?: string;
   blockerReason?: NonNullable<TaskDocument["blocker"]>["reason"];
   blockerComment?: string;
@@ -41,6 +42,18 @@ const words = (value: string) => new Set(normalize(value).split(" ").filter((wor
 const overlap = (left: string, right: string) => {
   const a = words(left); const b = words(right); if (!a.size || !b.size) return 0;
   return [...a].filter((word) => b.has(word)).length / Math.max(a.size, b.size);
+};
+const containsAny = (text: string, phrases: readonly string[]) => phrases.some((phrase) => text.includes(normalize(phrase)));
+const STATUS_PHRASES = {
+  complete: ["complete", "completed", "finished", "done", "submitted", "पूरा", "पूर्ण", "समाप्त", "खत्म", "हो गया", "সম্পন্ন", "শেষ", "முடித்த", "முடிந்தது", "பூர்த்தி", "పూర్తి", "పూర్తయింది", "ముగిసింది", "पूर्ण केले", "संपले", "પૂર્ણ", "સમાપ્ત", "ಪೂರ್ಣ", "ಮುಗಿದಿದೆ", "ಪೂರ್ಣವಾಗಿದೆ", "പൂർത്തിയായി", "കഴിഞ്ഞു", "ਪੂਰਾ", "ਮੁਕੰਮਲ", "ਮੁਕੰਮਲ ਹੋਇਆ", "مکمل", "ختم", "ہو گیا"],
+  start: ["start", "started", "begin", "in progress", "शुरू", "आरंभ", "চালু", "শুরু", "தொடங்கு", "ஆரம்பம்", "ప్రారంభ", "सुरू", "શરૂ", "ಪ್ರಾರಂಭ", "തുടങ്ങി", "ਸ਼ੁਰੂ", "شروع"],
+  blocked: ["block", "blocked", "stuck", "waiting", "रुका", "अटका", "बाधित", "আটকে", "தடை", "சிக்கி", "ఆగిపోయింది", "अडकले", "અટક્યું", "ಸಿಲುಕಿದೆ", "തടസ്സം", "ਅਟਕਿਆ", "رکا", "پھنسا"],
+  reopen: ["reopen", "open again", "फिर खोल", "दोबारा खोल", "আবার খুল", "மீண்டும் திற", "మళ్లీ తెర", "पुन्हा उघड", "ફરી ખોલ", "ಮತ್ತೆ ತೆರ", "വീണ്ടും തുറ", "ਦੁਬਾਰਾ ਖੋਲ੍ਹ", "دوبارہ کھول"],
+  cancel: ["cancel", "cancelled", "रद्द", "বাতিল", "ரத்து", "రద్దు", "रद्द करा", "રદ", "ರದ್ದು", "റദ്ദാക്ക", "ਰੱਦ", "منسوخ"]
+} as const;
+export const detectVoiceStatusIntent = (transcript: string): keyof typeof STATUS_PHRASES | undefined => {
+  const text = normalize(transcript);
+  return containsAny(text, STATUS_PHRASES.complete) ? "complete" : containsAny(text, STATUS_PHRASES.blocked) ? "blocked" : containsAny(text, STATUS_PHRASES.reopen) ? "reopen" : containsAny(text, STATUS_PHRASES.cancel) ? "cancel" : containsAny(text, STATUS_PHRASES.start) ? "start" : undefined;
 };
 
 const upcomingWeekday = (weekday: number) => {
@@ -87,15 +100,18 @@ const findMention = <T extends { label: string }>(transcript: string, options: T
 
 const detectPriority = (text: string): VoiceDraft["priority"] => text.includes("critical") || text.includes("urgent") ? "CRITICAL" : text.includes("high priority") ? "HIGH" : text.includes("low priority") ? "LOW" : "MEDIUM";
 const detectComplexity = (text: string): VoiceDraft["complexity"] => text.includes("very hard") ? "VERY_HARD" : text.includes("hard") || text.includes("complex") ? "HARD" : text.includes("easy") || text.includes("simple") ? "EASY" : "MEDIUM";
-const detectHours = (text: string) => Number(text.match(/(\d+(?:\.\d+)?)\s*hours?/)?.[1] ?? 1);
+const hourUnits = ["hour", "hours", "hr", "hrs", "घंटा", "घंटे", "तास", "மணி", "గంట", "గంటలు", "કલાક", "ಗಂಟೆ", "മണിക്കൂർ", "گھنٹہ", "گھنٹے"];
+const numberWords: Array<[number, string[]]> = [[1, ["one", "एक", "এক", "ஒன்று", "ఒక", "एक", "એક", "ಒಂದು", "ഒന്ന്", "ਇੱਕ", "ایک"]], [2, ["two", "दो", "দুই", "இரண்டு", "రెండు", "दोन", "બે", "ಎರಡು", "രണ്ട്", "ਦੋ", "دو"]], [3, ["three", "तीन", "তিন", "மூன்று", "మూడు", "तीन", "ત્રણ", "ಮೂರು", "മൂന്ന്", "ਤਿੰਨ", "تین"]], [4, ["four", "चार", "চার", "நான்கு", "నాలుగు", "चार", "ચાર", "ನಾಲ್ಕು", "നാല്", "ਚਾਰ", "چار"]], [5, ["five", "पांच", "पाँच", "পাঁচ", "ஐந்து", "ఐదు", "पाच", "પાંચ", "ಐದು", "അഞ്ച്", "ਪੰਜ", "پانچ"]], [6, ["six", "छह", "ছয়", "ஆறு", "ఆరు", "सहा", "છ", "ಆರು", "ആറ്", "ਛੇ", "چھ"]], [7, ["seven", "सात", "সাত", "ஏழு", "ఏడు", "सात", "સાત", "ಏಳು", "ഏഴ്", "ਸੱਤ", "سات"]], [8, ["eight", "आठ", "আট", "எட்டு", "ఎనిమిది", "आठ", "આઠ", "ಎಂಟು", "എട്ട്", "ਅੱਠ", "آٹھ"]], [9, ["nine", "नौ", "নয়", "ஒன்பது", "తొమ్మిది", "नऊ", "નવ", "ಒಂಬತ್ತು", "ഒൻപത്", "ਨੌਂ", "نو"]], [10, ["ten", "दस", "দশ", "பத்து", "పది", "दहा", "દસ", "ಹತ್ತು", "പത്ത്", "ਦਸ", "دس"]]];
+export const detectVoiceHours = (transcript: string) => { const text = normalize(transcript); if (!containsAny(text, hourUnits)) return 1; const numeric = text.match(/\b(\d+(?:\.\d+)?)\b/u); if (numeric) return Number(numeric[1]); return numberWords.find(([, variants]) => containsAny(text, variants))?.[0] ?? 1; };
 
 type TranscriptionResult = { text: string; language?: string; languageProbability?: number; durationSeconds?: number };
 
-const runTranscribeProcess = (pythonCommand: string, audioPath: string) => new Promise<TranscriptionResult>((resolve, reject) => {
+const runTranscribeProcess = (pythonCommand: string, audioPath: string, requestedLanguage?: string) => new Promise<TranscriptionResult>((resolve, reject) => {
   const dirname = path.dirname(fileURLToPath(import.meta.url));
   const script = path.resolve(dirname, "../../scripts/transcribe_audio.py");
   const args = [script, audioPath, "--model", env.VOICE_WHISPER_MODEL, "--device", env.VOICE_WHISPER_DEVICE, "--compute-type", env.VOICE_WHISPER_COMPUTE_TYPE];
-  if (env.VOICE_WHISPER_LANGUAGE) args.push("--language", env.VOICE_WHISPER_LANGUAGE);
+  const language = requestedLanguage && requestedLanguage !== "auto" ? requestedLanguage.split("-").at(0)?.toLowerCase() : env.VOICE_WHISPER_LANGUAGE;
+  if (language) args.push("--language", language);
   const child = spawn(pythonCommand, args, { windowsHide: true });
   let stdout = ""; let stderr = ""; let settled = false;
   const timeout = setTimeout(() => { child.kill(); if (!settled) { settled = true; reject(new AppError("Local voice transcription timed out", 504, "VOICE_TIMEOUT")); } }, env.VOICE_TRANSCRIPTION_TIMEOUT_MS);
@@ -113,11 +129,11 @@ const runTranscribeProcess = (pythonCommand: string, audioPath: string) => new P
   });
 });
 
-const transcribeProcess = async (audioPath: string): Promise<TranscriptionResult> => {
+const transcribeProcess = async (audioPath: string, requestedLanguage?: string): Promise<TranscriptionResult> => {
   const commands = [...new Set([env.VOICE_PYTHON_COMMAND, process.platform === "win32" ? "py" : "python3", "python3", "python"])];
   let lastError: unknown;
   for (const command of commands) {
-    try { return await runTranscribeProcess(command, audioPath); }
+    try { return await runTranscribeProcess(command, audioPath, requestedLanguage); }
     catch (error) {
       lastError = error;
       const message = error instanceof Error ? error.message : "";
@@ -127,10 +143,10 @@ const transcribeProcess = async (audioPath: string): Promise<TranscriptionResult
   throw lastError ?? new AppError("No Python voice runtime is available", 503, "VOICE_ENGINE_UNAVAILABLE");
 };
 
-export const transcribeAudio = async (file: Express.Multer.File) => {
+export const transcribeAudio = async (file: Express.Multer.File, requestedLanguage?: string) => {
   const directory = await mkdtemp(path.join(tmpdir(), "mobius-voice-"));
   const audioPath = path.join(directory, `recording${audioExtensions[file.mimetype] ?? ".webm"}`);
-  try { await writeFile(audioPath, file.buffer); return await transcribeProcess(audioPath); }
+  try { await writeFile(audioPath, file.buffer); return await transcribeProcess(audioPath, requestedLanguage); }
   finally { await rm(directory, { recursive: true, force: true }); }
 };
 
@@ -145,15 +161,17 @@ const loadOptions = async (actor: Actor) => {
 };
 
 const buildDraft = (transcript: string, actor: Actor, options: Awaited<ReturnType<typeof loadOptions>>) => {
-  const text = normalize(transcript); const statusWords = /(complete|completed|finished|done|start|started|progress|block|blocked|reopen|cancel|पूरा|पूर्ण|शुरू|रोक|रद्द)/;
+  const text = normalize(transcript);
+  const statusIntent = detectVoiceStatusIntent(text);
   const exactTask = options.tasks.find((task) => task.detail && text.includes(normalize(task.detail)));
   const scoredTask = options.tasks.map((task) => ({ task, score: overlap(transcript, task.label) })).sort((a, b) => b.score - a.score)[0];
-  const task = exactTask ?? (scoredTask && scoredTask.score >= 0.35 ? scoredTask.task : undefined);
-  if (statusWords.test(text) && task) {
-    let status: TaskDocument["status"] = text.includes("block") || text.includes("रोक") ? "BLOCKED" : text.includes("reopen") ? "REOPENED" : text.includes("cancel") || text.includes("रद्द") ? "CANCELLED" : text.includes("start") || text.includes("progress") || text.includes("शुरू") ? "IN_PROGRESS" : "IN_REVIEW";
-    if ((text.includes("complete") || text.includes("finished") || text.includes("done")) && task.status === "IN_REVIEW" && actor.role !== "EMPLOYEE") status = "COMPLETED";
-    const draft: VoiceDraft = { action: "UPDATE_STATUS", task: task.id, status, completionNote: transcript, blockerReason: "OTHER", blockerComment: status === "BLOCKED" ? transcript : undefined };
-    return { draft, confidence: Math.min(0.98, 0.65 + (exactTask ? 0.25 : (scoredTask?.score ?? 0))) };
+  const eligibleTasks = statusIntent === "complete" ? options.tasks.filter((item) => !["COMPLETED", "CANCELLED"].includes(item.status ?? "")) : options.tasks;
+  const task = exactTask ?? (scoredTask && scoredTask.score >= 0.25 ? scoredTask.task : eligibleTasks.length === 1 ? eligibleTasks[0] : undefined);
+  if (statusIntent) {
+    let status: TaskDocument["status"] = statusIntent === "blocked" ? "BLOCKED" : statusIntent === "reopen" ? "REOPENED" : statusIntent === "cancel" ? "CANCELLED" : statusIntent === "start" ? "IN_PROGRESS" : "IN_REVIEW";
+    if (statusIntent === "complete" && task?.status === "IN_REVIEW" && actor.role !== "EMPLOYEE") status = "COMPLETED";
+    const draft: VoiceDraft = { action: "UPDATE_STATUS", task: task?.id, status, actualHours: detectVoiceHours(text), completionNote: transcript, blockerReason: "OTHER", blockerComment: status === "BLOCKED" ? transcript : undefined };
+    return { draft, confidence: Math.min(0.98, 0.55 + (exactTask ? 0.35 : task ? 0.2 : 0)) };
   }
   const project = findMention(transcript, options.projects) ?? (options.projects.length === 1 ? options.projects[0] : undefined);
   const employee = actor.role === "EMPLOYEE" ? options.employees[0] : findMention(transcript, options.employees);
@@ -161,7 +179,7 @@ const buildDraft = (transcript: string, actor: Actor, options: Awaited<ReturnTyp
   const draft: VoiceDraft = {
     action: "CREATE_TASK", name: extractTaskName(transcript), description: transcript, project: project?.id,
     assignedEmployee: employee?.id, verbalAssigner: assignerMatch?.[1]?.trim() || (actor.role === "EMPLOYEE" ? "Voice self-report" : undefined),
-    priority: detectPriority(text), complexity: detectComplexity(text), estimatedHours: detectHours(text), deadline: parseDeadline(transcript)
+    priority: detectPriority(text), complexity: detectComplexity(text), estimatedHours: detectVoiceHours(text), deadline: parseDeadline(transcript)
   };
   let confidence = 0.35; if (draft.name && draft.name !== "Voice-created task") confidence += 0.2; if (project) confidence += 0.2; if (employee) confidence += 0.15; if (/today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|20\d{2}-/.test(text)) confidence += 0.1;
   return { draft, confidence: Math.min(0.98, confidence) };
@@ -187,7 +205,9 @@ export const confirmCommand = async (id: string, draft: VoiceDraft, actor: Actor
       task = await createTask({ name: draft.name!, description: draft.description, project: draft.project!, assignedEmployee: draft.assignedEmployee, priority: draft.priority ?? "MEDIUM", complexity: draft.complexity ?? "MEDIUM", estimatedHours: draft.estimatedHours ?? 1, deadline: new Date(draft.deadline!) }, actor.id);
     }
   } else {
-    task = await transitionTask(draft.task!, { status: draft.status!, completionNote: draft.completionNote, blockerReason: draft.status === "BLOCKED" ? (draft.blockerReason ?? "OTHER") : undefined, blockerComment: draft.blockerComment, blockerExternal: false }, actor);
+    const current = await Task.findById(draft.task!).select("status"); if (!current) throw new AppError("Task not found", 404);
+    if (draft.status === "IN_REVIEW" && ["NOT_STARTED", "BLOCKED"].includes(current.status)) await transitionTask(draft.task!, { status: "IN_PROGRESS", actualHours: draft.actualHours }, actor);
+    task = await transitionTask(draft.task!, { status: draft.status!, actualHours: draft.actualHours, completionNote: draft.completionNote, blockerReason: draft.status === "BLOCKED" ? (draft.blockerReason ?? "OTHER") : undefined, blockerComment: draft.blockerComment, blockerExternal: false }, actor);
   }
   command.intent = draft.action; command.draft = draft; command.task = task._id; command.status = "CONFIRMED"; await command.save();
   await writeAudit({ user: actor.id, action: "VOICE_TASK_COMMAND_CONFIRMED", entityType: "VoiceCommand", entityId: command.id, newValue: { intent: draft.action, transcript: command.transcript, task: task.id } });
