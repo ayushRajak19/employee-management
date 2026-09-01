@@ -48,7 +48,9 @@ Voice tasks use `faster-whisper` on the application server, so there is no per-m
 3. Keep the default multilingual `small` model, or configure `VOICE_WHISPER_MODEL`, `VOICE_WHISPER_DEVICE`, `VOICE_WHISPER_COMPUTE_TYPE`, and optional `VOICE_WHISPER_LANGUAGE` in `.env`.
 4. The model downloads to the server's local Hugging Face cache on first use. Production hosting must provide persistent storage and enough memory for the selected model.
 
-Employees can create self-reported tasks or update their own task status from the Work page. Superadmins can assign work, update tasks, and review voice-command history across the organization. Every transcript becomes an editable preview before it is applied, and confirmed commands are also written to the audit log.
+Employees can create self-reported tasks, update status, or complete work from the Work page. Completion commands prefill the matching task, actual hours, and completion note before moving the task into review. Superadmins can assign work, update tasks, and review voice-command history across the organization. Every transcript becomes an editable preview before it is applied, and confirmed commands are also written to the audit log.
+
+The voice interface supports automatic detection plus explicit selection for English, Hindi, Bengali, Tamil, Telugu, Marathi, Gujarati, Kannada, Malayalam, Punjabi, and Urdu. Multilingual status phrases are interpreted without a paid NLP API; when task-title matching is uncertain, the employee selects the correct task from their permitted list before confirmation.
 
 
 ## Commands
