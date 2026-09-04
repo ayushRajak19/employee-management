@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { env } from "../config/env.js";
 import { EmailDelivery } from "../models/EmailDelivery.js";
 import { EmailEnrollment } from "../models/EmailEnrollment.js";
@@ -12,6 +13,7 @@ type BrevoResponse = { messageId?: string; code?: string; message?: string };
 type WebhookInput = { event?: string; email?: string; reason?: string; ts_event?: number; ts?: number; "message-id"?: string };
 
 const configured = () => Boolean(env.BREVO_API_KEY && env.BREVO_SENDER_EMAIL);
+const webhookToken = env.BREVO_WEBHOOK_TOKEN || createHash("sha256").update(`brevo-webhook:${env.JWT_ACCESS_SECRET}`).digest("hex");
 const requireConfiguration = () => {
   if (!configured()) throw new AppError("Brevo is not configured on the server", 503, "BREVO_NOT_CONFIGURED");
 };
@@ -57,7 +59,7 @@ export const configuration = () => ({
   senderEmail: env.BREVO_SENDER_EMAIL || null,
   senderName: env.BREVO_SENDER_NAME,
   replyToEmail: env.BREVO_REPLY_TO_EMAIL || env.BREVO_SENDER_EMAIL || null,
-  webhookConfigured: Boolean(env.BREVO_WEBHOOK_TOKEN),
+  webhookConfigured: configured(),
   webhookUrl: `${env.CLIENT_URL}/api/v1/email-automation/webhooks/brevo`,
   dailyLimit: env.EMAIL_AUTOMATION_DAILY_LIMIT,
 });
@@ -67,7 +69,6 @@ export const testConnection = async () => {
 };
 export const registerWebhook = async () => {
   requireConfiguration();
-  if (!env.BREVO_WEBHOOK_TOKEN) throw new AppError("Set BREVO_WEBHOOK_TOKEN before registering the webhook", 503, "WEBHOOK_TOKEN_MISSING");
   const url = `${env.CLIENT_URL}/api/v1/email-automation/webhooks/brevo`;
   const existing = await brevoRequest<{ webhooks?: { id: number; url: string; type: string }[] }>("/webhooks?type=transactional&sort=desc");
   const match = existing.webhooks?.find((webhook) => webhook.url === url && webhook.type === "transactional");
@@ -75,7 +76,7 @@ export const registerWebhook = async () => {
   const created = await brevoRequest<{ id: number }>("/webhooks", { method: "POST", body: JSON.stringify({
     url, type: "transactional", description: "MobiusBloom email automation events", batched: false,
     events: ["request", "delivered", "hardBounce", "softBounce", "blocked", "spam", "invalid", "deferred", "click", "opened", "uniqueOpened", "unsubscribed"],
-    headers: [{ key: "x-brevo-webhook-token", value: env.BREVO_WEBHOOK_TOKEN }],
+    headers: [{ key: "x-brevo-webhook-token", value: webhookToken }],
   }) });
   return { id: created.id, created: true };
 };
@@ -161,8 +162,7 @@ export const updateContactStatus = async (id: string, status: VendorContactDocum
 
 const webhookStatus: Record<string, string> = { request: "REQUESTED", sent: "SENT", delivered: "DELIVERED", opened: "OPENED", unique_opened: "OPENED", click: "CLICKED", hard_bounce: "BOUNCED", soft_bounce: "DEFERRED", deferred: "DEFERRED", blocked: "BLOCKED", invalid_email: "INVALID", spam: "SPAM", unsubscribed: "UNSUBSCRIBED" };
 export const handleWebhook = async (input: WebhookInput, token?: string) => {
-  if (!env.BREVO_WEBHOOK_TOKEN) throw new AppError("Brevo webhook security is not configured", 503, "WEBHOOK_NOT_CONFIGURED");
-  if (token !== env.BREVO_WEBHOOK_TOKEN) throw new AppError("Invalid webhook token", 401, "INVALID_WEBHOOK_TOKEN");
+  if (token !== webhookToken) throw new AppError("Invalid webhook token", 401, "INVALID_WEBHOOK_TOKEN");
   const event = String(input.event || "unknown").replace(/[A-Z]/g, (character) => `_${character.toLowerCase()}`).toLowerCase();
   const rawMessageId = String(input["message-id"] || "");
   const messageIds = [rawMessageId, rawMessageId.replace(/^<|>$/g, ""), `<${rawMessageId.replace(/^<|>$/g, "")}>`];
