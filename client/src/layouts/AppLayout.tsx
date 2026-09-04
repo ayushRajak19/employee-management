@@ -5,7 +5,7 @@ import type { PermissionName, RoleName } from "@mobiusbloom/shared";
 import {
   Activity, BarChart3, Bot, BrainCircuit, BriefcaseBusiness, Building2, CalendarCheck2,
   ChevronLeft, CircleGauge, FileText, GraduationCap, ListTodo, LogOut, Menu,
-  Settings, ShieldCheck, Sparkles, Target, TrendingUp, UserCog, UserRound, Users, X,
+  MailPlus, Settings, ShieldCheck, Sparkles, Target, TrendingUp, UserCog, UserRound, Users, X,
 } from "lucide-react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { HeaderSearch } from "@/components/HeaderSearch";
@@ -84,6 +84,7 @@ const groups: { label: string; items: NavItem[] }[] = [
   {
     label: "Administration", items: [
       { label: "Administrators", icon: UserCog, path: "/administrators", roles: superAdminRole },
+      { label: "Email automation", icon: MailPlus, path: "/email-automation", roles: superAdminRole },
       { label: "Access & audit", icon: ShieldCheck, path: "/governance", permission: "audit.view" },
       { label: "Settings", icon: Settings, path: "/people-ops", permission: "settings.manage" },
     ],
