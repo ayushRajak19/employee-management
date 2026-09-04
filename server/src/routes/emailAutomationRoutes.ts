@@ -14,6 +14,7 @@ emailAutomationRouter.post("/connection/test", asyncHandler(controller.checkConn
 emailAutomationRouter.post("/connection/webhook", asyncHandler(controller.registerWebhook));
 emailAutomationRouter.post("/test-email", validate(testEmailSchema), asyncHandler(controller.sendTest));
 emailAutomationRouter.get("/summary", asyncHandler(controller.getSummary));
+emailAutomationRouter.get("/deliveries", asyncHandler(controller.getDeliveries));
 emailAutomationRouter.get("/workflows", asyncHandler(controller.getWorkflows));
 emailAutomationRouter.post("/workflows", validate(createWorkflowSchema), asyncHandler(controller.createWorkflow));
 emailAutomationRouter.patch("/workflows/:id", validate(updateWorkflowSchema), asyncHandler(controller.updateWorkflow));

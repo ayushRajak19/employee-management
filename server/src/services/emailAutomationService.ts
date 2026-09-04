@@ -11,6 +11,7 @@ type WorkflowInput = Pick<EmailWorkflowDocument, "name" | "audience" | "subject"
 type ContactInput = Pick<VendorContactDocument, "name" | "companyName" | "email" | "source" | "consentAt">;
 type BrevoResponse = { messageId?: string; code?: string; message?: string };
 type WebhookInput = { event?: string; email?: string; reason?: string; ts_event?: number; ts?: number; "message-id"?: string };
+type BrevoEmailEvent = { date?: string; email?: string; event?: string; messageId?: string; reason?: string };
 
 const configured = () => Boolean(env.BREVO_API_KEY && env.BREVO_SENDER_EMAIL);
 const webhookToken = env.BREVO_WEBHOOK_TOKEN || createHash("sha256").update(`brevo-webhook:${env.JWT_ACCESS_SECRET}`).digest("hex");
@@ -69,14 +70,18 @@ export const testConnection = async () => {
 };
 export const registerWebhook = async () => {
   requireConfiguration();
-  const url = `${env.CLIENT_URL}/api/v1/email-automation/webhooks/brevo`;
-  const existing = await brevoRequest<{ webhooks?: { id: number; url: string; type: string }[] }>("/webhooks?type=transactional&sort=desc");
-  const match = existing.webhooks?.find((webhook) => webhook.url === url && webhook.type === "transactional");
-  if (match) return { id: match.id, created: false };
+  const baseUrl = `${env.CLIENT_URL}/api/v1/email-automation/webhooks/brevo`;
+  const url = `${baseUrl}?token=${encodeURIComponent(webhookToken)}`;
+  try {
+    const existing = await brevoRequest<{ webhooks?: { id: number; url: string; type: string }[] }>("/webhooks?type=transactional&sort=desc");
+    const match = existing.webhooks?.find((webhook) => webhook.url === url && webhook.type === "transactional");
+    if (match) return { id: match.id, created: false };
+  } catch (error) {
+    console.warn("Could not read existing Brevo webhooks; attempting a fresh registration", error);
+  }
   const created = await brevoRequest<{ id: number }>("/webhooks", { method: "POST", body: JSON.stringify({
     url, type: "transactional", description: "MobiusBloom email automation events", batched: false,
     events: ["request", "delivered", "hardBounce", "softBounce", "blocked", "spam", "invalid", "deferred", "click", "opened", "uniqueOpened", "unsubscribed"],
-    headers: [{ key: "x-brevo-webhook-token", value: webhookToken }],
   }) });
   return { id: created.id, created: true };
 };
@@ -86,15 +91,38 @@ export const sendTest = async (recipient: string) => {
   return { messageId };
 };
 
+const normalizeMessageId = (value: string) => value.replace(/^<|>$/g, "");
+const normalizeEvent = (value: string) => value.replace(/[A-Z]/g, (character) => `_${character.toLowerCase()}`).toLowerCase();
+export const syncDeliveryEvents = async () => {
+  const report = await brevoRequest<{ events?: BrevoEmailEvent[] }>("/smtp/statistics/events?days=30&limit=500&sort=desc");
+  let updated = 0;
+  for (const item of report.events ?? []) {
+    if (!item.messageId || !item.event) continue;
+    const rawId = normalizeMessageId(item.messageId);
+    const event = normalizeEvent(item.event);
+    const occurredAt = item.date && !Number.isNaN(Date.parse(item.date)) ? new Date(item.date) : new Date();
+    const delivery = await EmailDelivery.findOne({ providerMessageId: { $in: [rawId, `<${rawId}>`] } }).select("_id events");
+    if (!delivery || delivery.events.some((record) => record.type === event && record.occurredAt.getTime() === occurredAt.getTime())) continue;
+    await EmailDelivery.updateOne({ _id: delivery._id }, { $set: { status: webhookStatus[event] || event.toUpperCase(), lastEventAt: occurredAt }, $push: { events: { type: event, occurredAt, reason: item.reason } } });
+    if (item.email && ["hard_bounce", "blocked", "invalid_email", "spam", "unsubscribed"].includes(event)) {
+      await suppressContact(item.email, event);
+    }
+    updated += 1;
+  }
+  return { updated };
+};
 export const summary = async () => {
-  const [workflows, active, contacts, sent, delivered, opened, clicked, replies] = await Promise.all([
+  if (configured()) await syncDeliveryEvents().catch((error: unknown) => console.warn("Brevo delivery activity sync failed", error));
+  const [workflows, active, contacts, accepted, delivered, opened, clicked, bounced, replies] = await Promise.all([
     EmailWorkflow.countDocuments(), EmailWorkflow.countDocuments({ status: "ACTIVE" }), VendorContact.countDocuments(),
     EmailDelivery.countDocuments({ step: { $gte: 0 } }), EmailDelivery.countDocuments({ "events.type": "delivered" }),
     EmailDelivery.countDocuments({ "events.type": "opened" }), EmailDelivery.countDocuments({ "events.type": "click" }),
+    EmailDelivery.countDocuments({ status: { $in: ["BOUNCED", "BLOCKED", "INVALID", "SPAM"] } }),
     VendorContact.countDocuments({ status: "REPLIED" }),
   ]);
-  return { workflows, active, contacts, sent, delivered, opened, clicked, replies };
+  return { workflows, active, contacts, accepted, sent: accepted, delivered, opened, clicked, bounced, replies };
 };
+export const listDeliveries = () => EmailDelivery.find().select("recipientEmail subject status lastEventAt createdAt step").sort({ createdAt: -1 }).limit(50).lean();
 export const listWorkflows = () => EmailWorkflow.find().sort({ createdAt: -1 }).lean();
 export const createWorkflow = async (input: WorkflowInput, actor: string) => {
   const item = await EmailWorkflow.create({ ...input, createdBy: actor });
@@ -161,17 +189,20 @@ export const updateContactStatus = async (id: string, status: VendorContactDocum
 };
 
 const webhookStatus: Record<string, string> = { request: "REQUESTED", sent: "SENT", delivered: "DELIVERED", opened: "OPENED", unique_opened: "OPENED", click: "CLICKED", hard_bounce: "BOUNCED", soft_bounce: "DEFERRED", deferred: "DEFERRED", blocked: "BLOCKED", invalid_email: "INVALID", spam: "SPAM", unsubscribed: "UNSUBSCRIBED" };
+const suppressContact = async (email: string, event: string) => {
+  const status = event === "hard_bounce" || event === "invalid_email" ? "BOUNCED" : event === "unsubscribed" ? "UNSUBSCRIBED" : "BLOCKED";
+  const contact = await VendorContact.findOneAndUpdate({ email: email.toLowerCase() }, { $set: { status } }, { new: true });
+  if (contact) await EmailEnrollment.updateMany({ contact: contact._id, status: { $in: ["PENDING", "PROCESSING"] } }, { $set: { status: "STOPPED" } });
+};
 export const handleWebhook = async (input: WebhookInput, token?: string) => {
   if (token !== webhookToken) throw new AppError("Invalid webhook token", 401, "INVALID_WEBHOOK_TOKEN");
-  const event = String(input.event || "unknown").replace(/[A-Z]/g, (character) => `_${character.toLowerCase()}`).toLowerCase();
+  const event = normalizeEvent(String(input.event || "unknown"));
   const rawMessageId = String(input["message-id"] || "");
   const messageIds = [rawMessageId, rawMessageId.replace(/^<|>$/g, ""), `<${rawMessageId.replace(/^<|>$/g, "")}>`];
   const occurredAt = new Date((input.ts_event || input.ts || Date.now() / 1000) * 1000);
   const delivery = await EmailDelivery.findOneAndUpdate({ providerMessageId: { $in: messageIds } }, { $set: { status: webhookStatus[event] || event.toUpperCase(), lastEventAt: occurredAt }, $push: { events: { type: event, occurredAt, reason: input.reason } } }, { new: true });
   if (input.email && ["hard_bounce", "blocked", "invalid_email", "spam", "unsubscribed"].includes(event)) {
-    const status = event === "hard_bounce" || event === "invalid_email" ? "BOUNCED" : event === "unsubscribed" ? "UNSUBSCRIBED" : "BLOCKED";
-    const contact = await VendorContact.findOneAndUpdate({ email: input.email.toLowerCase() }, { $set: { status } }, { new: true });
-    if (contact) await EmailEnrollment.updateMany({ contact: contact._id, status: { $in: ["PENDING", "PROCESSING"] } }, { $set: { status: "STOPPED" } });
+    await suppressContact(input.email, event);
   }
   return { matched: Boolean(delivery) };
 };
@@ -223,7 +254,11 @@ export const runEmailAutomationCycle = async () => {
 export const initializeEmailAutomation = async () => {
   if (!configured()) { console.warn("Brevo email automation is not configured"); return; }
   await testConnection();
-  const webhook = await registerWebhook();
-  console.log(`Brevo email automation connected; webhook ${webhook.created ? "created" : "ready"}`);
+  try {
+    const webhook = await registerWebhook();
+    console.log(`Brevo email automation connected; webhook ${webhook.created ? "created" : "ready"}`);
+  } catch (error) {
+    console.warn("Brevo connected, but automatic webhook registration failed; delivery polling remains active", error);
+  }
   await runEmailAutomationCycle();
 };
