@@ -220,3 +220,10 @@ export const runEmailAutomationCycle = async () => {
   }
   finally { cycleRunning = false; }
 };
+export const initializeEmailAutomation = async () => {
+  if (!configured()) { console.warn("Brevo email automation is not configured"); return; }
+  await testConnection();
+  const webhook = await registerWebhook();
+  console.log(`Brevo email automation connected; webhook ${webhook.created ? "created" : "ready"}`);
+  await runEmailAutomationCycle();
+};
