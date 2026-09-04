@@ -3,6 +3,7 @@ import { createApp } from "./app.js";
 import { connectDatabase, disconnectDatabase } from "./config/database.js";
 import { env } from "./config/env.js";
 import { seedOrganization } from "./jobs/seedSuperAdmin.js";
+import { runEmailAutomationCycle } from "./services/emailAutomationService.js";
 
 const start = async (): Promise<void> => {
   const server = createServer(createApp());
@@ -13,6 +14,7 @@ const start = async (): Promise<void> => {
       await connectDatabase();
       console.log("MongoDB connected");
       await seedOrganization();
+      void runEmailAutomationCycle();
     } catch (error: unknown) {
       console.error("MongoDB connection failed; retrying in 15 seconds", error);
       databaseRetry = setTimeout(() => void connectWithRetry(), 15_000);
@@ -20,7 +22,8 @@ const start = async (): Promise<void> => {
     }
   };
   void connectWithRetry();
-  const shutdown = (signal: string) => { console.log(`${signal} received; shutting down`); if (databaseRetry) clearTimeout(databaseRetry); server.close(() => { void disconnectDatabase().finally(() => process.exit(0)); }); setTimeout(() => process.exit(1), 10_000).unref(); };
+  const automationTimer = setInterval(() => void runEmailAutomationCycle(), 60_000); automationTimer.unref();
+  const shutdown = (signal: string) => { console.log(`${signal} received; shutting down`); if (databaseRetry) clearTimeout(databaseRetry); clearInterval(automationTimer); server.close(() => { void disconnectDatabase().finally(() => process.exit(0)); }); setTimeout(() => process.exit(1), 10_000).unref(); };
   process.on("SIGTERM", () => shutdown("SIGTERM")); process.on("SIGINT", () => shutdown("SIGINT"));
 };
 
