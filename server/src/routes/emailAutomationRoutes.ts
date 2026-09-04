@@ -1,0 +1,25 @@
+import { Router } from "express";
+import * as controller from "../controllers/emailAutomationController.js";
+import { authenticate } from "../middleware/auth.js";
+import { validate } from "../middleware/validate.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { contactStatusSchema, contactsSchema, createWorkflowSchema, testEmailSchema, updateWorkflowSchema, workflowIdSchema } from "../validators/emailAutomationValidators.js";
+
+export const emailAutomationRouter = Router();
+emailAutomationRouter.post("/webhooks/brevo", asyncHandler(controller.brevoWebhook));
+emailAutomationRouter.get("/unsubscribe/:token", asyncHandler(controller.unsubscribe));
+emailAutomationRouter.use(authenticate);
+emailAutomationRouter.get("/configuration", asyncHandler(controller.getConfiguration));
+emailAutomationRouter.post("/connection/test", asyncHandler(controller.checkConnection));
+emailAutomationRouter.post("/connection/webhook", asyncHandler(controller.registerWebhook));
+emailAutomationRouter.post("/test-email", validate(testEmailSchema), asyncHandler(controller.sendTest));
+emailAutomationRouter.get("/summary", asyncHandler(controller.getSummary));
+emailAutomationRouter.get("/workflows", asyncHandler(controller.getWorkflows));
+emailAutomationRouter.post("/workflows", validate(createWorkflowSchema), asyncHandler(controller.createWorkflow));
+emailAutomationRouter.patch("/workflows/:id", validate(updateWorkflowSchema), asyncHandler(controller.updateWorkflow));
+emailAutomationRouter.delete("/workflows/:id", validate(workflowIdSchema), asyncHandler(controller.deleteWorkflow));
+emailAutomationRouter.post("/workflows/:id/activate", validate(workflowIdSchema), asyncHandler(controller.activateWorkflow));
+emailAutomationRouter.post("/workflows/:id/pause", validate(workflowIdSchema), asyncHandler(controller.pauseWorkflow));
+emailAutomationRouter.get("/contacts", asyncHandler(controller.getContacts));
+emailAutomationRouter.post("/contacts", validate(contactsSchema), asyncHandler(controller.addContacts));
+emailAutomationRouter.patch("/contacts/:id/status", validate(contactStatusSchema), asyncHandler(controller.setContactStatus));

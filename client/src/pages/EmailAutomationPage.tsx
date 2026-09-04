@@ -1,157 +1,41 @@
-import { useMemo, useState } from "react";
-import {
-  ArrowRight, CheckCircle2, ChevronRight, Clock3, GitBranch, Mail,
-  MailPlus, MoreHorizontal, Pause, Play, Plus, Send, Sparkles, Users, X,
-} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { CheckCircle2, Clock3, GitBranch, Mail, MailPlus, Pause, Play, Plus, RefreshCw, Send, Trash2, Upload, UserCheck, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { useAuth } from "@/features/auth/AuthProvider";
+import { emailAutomationApi, type EmailWorkflowItem, type VendorInput } from "@/features/emailAutomation/emailAutomationApi";
 import { cn } from "@/lib/cn";
 
-type WorkflowStatus = "DRAFT" | "ACTIVE" | "PAUSED";
-type Workflow = {
-  id: string;
-  name: string;
-  audience: string;
-  subject: string;
-  message: string;
-  delayDays: number;
-  followUp: boolean;
-  status: WorkflowStatus;
-  createdAt: string;
-};
-
-const storageKey = "mobius-email-automation-workflows";
-const brevoConnected = import.meta.env.VITE_BREVO_ENABLED === "true";
-
-const blankForm = {
-  name: "Vendor introduction sequence",
-  audience: "Approved vendor contacts",
-  subject: "A partnership opportunity for {{company_name}}",
-  message: "Hi {{vendor_name}},\n\nI’m reaching out from {{our_company}} to explore a potential partnership with {{company_name}}.",
-  delayDays: 3,
-  followUp: true,
-};
-
-const readWorkflows = (): Workflow[] => {
-  try {
-    const value = window.localStorage.getItem(storageKey);
-    return value ? JSON.parse(value) as Workflow[] : [];
-  } catch {
-    return [];
-  }
-};
-
-const persist = (items: Workflow[]) => window.localStorage.setItem(storageKey, JSON.stringify(items));
-
-const StepCard = ({ icon: Icon, eyebrow, title, detail, tone = "violet" }: {
-  icon: typeof Mail;
-  eyebrow: string;
-  title: string;
-  detail: string;
-  tone?: "violet" | "blue" | "amber" | "emerald";
-}) => {
-  const tones = {
-    violet: "bg-violet-50 text-violet-700 ring-violet-100",
-    blue: "bg-blue-50 text-blue-700 ring-blue-100",
-    amber: "bg-amber-50 text-amber-700 ring-amber-100",
-    emerald: "bg-emerald-50 text-emerald-700 ring-emerald-100",
-  };
-  return <div className="relative rounded-2xl border bg-white p-4 shadow-sm sm:p-5">
-    <div className="flex items-start gap-3">
-      <div className={cn("grid size-10 shrink-0 place-items-center rounded-xl ring-1", tones[tone])}><Icon size={18}/></div>
-      <div className="min-w-0"><p className="text-[10px] font-semibold uppercase tracking-[.14em] text-slate-400">{eyebrow}</p><p className="mt-1 text-sm font-semibold text-slate-800">{title}</p><p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">{detail}</p></div>
-    </div>
-  </div>;
-};
+const blankForm = { name: "Vendor introduction sequence", audience: "Approved vendor contacts", subject: "A partnership opportunity for {{company_name}}", message: "Hi {{vendor_name}},\n\nI’m reaching out from {{our_company}} to explore a potential partnership with {{company_name}}.", delayDays: 3, followUp: true, followUpSubject: "Following up: {{company_name}} partnership", followUpMessage: "Hi {{vendor_name}},\n\nI wanted to follow up on my previous message. Please let me know if a partnership is relevant for your team." };
+const StepCard = ({ icon: Icon, eyebrow, title, detail, tone = "violet" }: { icon: typeof Mail; eyebrow: string; title: string; detail: string; tone?: "violet" | "blue" | "amber" | "emerald" }) => { const tones = { violet: "bg-violet-50 text-violet-700", blue: "bg-blue-50 text-blue-700", amber: "bg-amber-50 text-amber-700", emerald: "bg-emerald-50 text-emerald-700" }; return <div className="rounded-2xl border bg-white p-5 shadow-sm"><div className="flex items-start gap-3"><div className={cn("grid size-10 shrink-0 place-items-center rounded-xl", tones[tone])}><Icon size={18}/></div><div className="min-w-0"><p className="text-[10px] font-semibold uppercase tracking-[.14em] text-slate-400">{eyebrow}</p><p className="mt-1 text-sm font-semibold text-slate-800">{title}</p><p className="mt-1 whitespace-pre-line text-xs leading-5 text-slate-500">{detail}</p></div></div></div>; };
+const parseContacts = (value: string, consentAt: string): VendorInput[] => value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((line, index) => { const [name, companyName, email, source] = line.split(",").map((part) => part.trim()); if (!name || !companyName || !email || !source) throw new Error(`Row ${index + 1} must contain name, company, email, and source`); return { name, companyName, email, source, consentAt }; });
 
 export const EmailAutomationPage = () => {
-  const [workflows, setWorkflows] = useState<Workflow[]>(readWorkflows);
-  const [selectedId, setSelectedId] = useState<string | null>(() => readWorkflows()[0]?.id ?? null);
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState(blankForm);
-  const [notice, setNotice] = useState<string | null>(null);
-  const selected = workflows.find((item) => item.id === selectedId) ?? null;
-  const activeCount = workflows.filter((item) => item.status === "ACTIVE").length;
-  const summary = useMemo(() => [
-    { label: "Workflows", value: workflows.length, icon: GitBranch, tone: "bg-violet-50 text-violet-700" },
-    { label: "Active", value: activeCount, icon: Play, tone: "bg-emerald-50 text-emerald-700" },
-    { label: "Emails sent", value: 0, icon: Send, tone: "bg-blue-50 text-blue-700" },
-    { label: "Replies", value: 0, icon: Mail, tone: "bg-amber-50 text-amber-700" },
-  ], [activeCount, workflows.length]);
-
-  const updateStatus = (workflow: Workflow) => {
-    if (!brevoConnected && workflow.status !== "ACTIVE") {
-      setNotice("Connect Brevo on the server before activating a workflow.");
-      return;
-    }
-    const status: WorkflowStatus = workflow.status === "ACTIVE" ? "PAUSED" : "ACTIVE";
-    const next = workflows.map((item) => item.id === workflow.id ? { ...item, status } : item);
-    setWorkflows(next);
-    persist(next);
-    setNotice(status === "ACTIVE" ? "Workflow activated." : "Workflow paused.");
-  };
-
-  const createWorkflow = () => {
-    const workflow: Workflow = {
-      ...form,
-      id: crypto.randomUUID(),
-      status: "DRAFT",
-      createdAt: new Date().toISOString(),
-    };
-    const next = [workflow, ...workflows];
-    setWorkflows(next);
-    setSelectedId(workflow.id);
-    persist(next);
-    setOpen(false);
-    setForm(blankForm);
-    setNotice("Workflow draft created.");
-  };
+  const queryClient = useQueryClient(); const { user } = useAuth();
+  const [tab, setTab] = useState<"workflows" | "contacts" | "settings">("workflows"); const [selectedId, setSelectedId] = useState<string | null>(null); const [workflowOpen, setWorkflowOpen] = useState(false); const [contactsOpen, setContactsOpen] = useState(false); const [form, setForm] = useState(blankForm); const [contactRows, setContactRows] = useState(""); const [consentAt, setConsentAt] = useState(new Date().toISOString().slice(0, 10)); const [consentConfirmed, setConsentConfirmed] = useState(false); const [testRecipient, setTestRecipient] = useState(user?.email ?? ""); const [notice, setNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
+  const configuration = useQuery({ queryKey: ["email-automation", "configuration"], queryFn: emailAutomationApi.configuration }); const summary = useQuery({ queryKey: ["email-automation", "summary"], queryFn: emailAutomationApi.summary, refetchInterval: 30_000 }); const workflows = useQuery({ queryKey: ["email-automation", "workflows"], queryFn: emailAutomationApi.workflows }); const contacts = useQuery({ queryKey: ["email-automation", "contacts"], queryFn: emailAutomationApi.contacts }); const selected = workflows.data?.items.find((item) => item._id === selectedId) ?? workflows.data?.items[0] ?? null;
+  useEffect(() => { if (!selectedId && workflows.data?.items[0]) setSelectedId(workflows.data.items[0]._id); }, [selectedId, workflows.data?.items]);
+  const refresh = async () => { await Promise.all([queryClient.invalidateQueries({ queryKey: ["email-automation", "summary"] }), queryClient.invalidateQueries({ queryKey: ["email-automation", "workflows"] }), queryClient.invalidateQueries({ queryKey: ["email-automation", "contacts"] })]); }; const showError = (error: Error) => setNotice({ tone: "error", text: error.message });
+  const create = useMutation({ mutationFn: emailAutomationApi.createWorkflow, onSuccess: async (data) => { setSelectedId(data.item._id); setWorkflowOpen(false); setForm(blankForm); setNotice({ tone: "success", text: "Workflow draft saved to the database." }); await refresh(); }, onError: showError });
+  const activate = useMutation({ mutationFn: (workflow: EmailWorkflowItem) => workflow.status === "ACTIVE" ? emailAutomationApi.pauseWorkflow(workflow._id) : emailAutomationApi.activateWorkflow(workflow._id), onSuccess: async (data) => { setNotice({ tone: "success", text: data.item.status === "ACTIVE" ? "Workflow activated. Eligible vendors are queued for sending." : "Workflow paused." }); await refresh(); }, onError: showError });
+  const remove = useMutation({ mutationFn: emailAutomationApi.deleteWorkflow, onSuccess: async () => { setSelectedId(null); setNotice({ tone: "success", text: "Workflow deleted." }); await refresh(); }, onError: showError });
+  const importContacts = useMutation({ mutationFn: (items: VendorInput[]) => emailAutomationApi.addContacts(items), onSuccess: async (data) => { setContactsOpen(false); setContactRows(""); setConsentConfirmed(false); setNotice({ tone: "success", text: `${data.created} contacts created and ${data.updated} updated.` }); await refresh(); }, onError: showError });
+  const contactStatus = useMutation({ mutationFn: ({ id, status }: { id: string; status: "ACTIVE" | "REPLIED" }) => emailAutomationApi.setContactStatus(id, status), onSuccess: refresh, onError: showError });
+  const checkConnection = useMutation({ mutationFn: emailAutomationApi.checkConnection, onSuccess: (data) => setNotice({ tone: "success", text: `Brevo connection verified${data.companyName ? ` for ${data.companyName}` : ""}.` }), onError: showError }); const sendTest = useMutation({ mutationFn: () => emailAutomationApi.sendTest(testRecipient), onSuccess: () => { setNotice({ tone: "success", text: `Test email accepted for ${testRecipient}.` }); void refresh(); }, onError: showError });
+  const stats = useMemo(() => [{ label: "Workflows", value: summary.data?.workflows ?? 0, icon: GitBranch, tone: "bg-violet-50 text-violet-700" }, { label: "Active", value: summary.data?.active ?? 0, icon: Play, tone: "bg-emerald-50 text-emerald-700" }, { label: "Emails sent", value: summary.data?.sent ?? 0, icon: Send, tone: "bg-blue-50 text-blue-700" }, { label: "Replies", value: summary.data?.replies ?? 0, icon: Mail, tone: "bg-amber-50 text-amber-700" }], [summary.data]);
 
   return <main className="flex-1 px-5 py-8 sm:px-8"><div className="mx-auto max-w-[1280px]">
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-      <div><p className="text-sm font-medium text-brand-700">Super Admin · Automation</p><h1 className="mt-1 text-3xl font-semibold">Email automation</h1><p className="mt-2 max-w-2xl text-sm text-slate-500">Build vendor outreach journeys with triggers, delays, conditions, and personalized email steps.</p></div>
-      <Button onClick={() => setOpen(true)}><Plus size={16}/> New workflow</Button>
-    </div>
-
-    {notice && <div className="mt-5 flex items-center rounded-xl border bg-white px-4 py-3 text-sm text-slate-600 shadow-sm"><CheckCircle2 size={16} className="mr-2 text-brand-600"/><span>{notice}</span><button className="ml-auto text-slate-400" onClick={() => setNotice(null)} aria-label="Dismiss"><X size={15}/></button></div>}
-
-    <section className="mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      {summary.map(({ label, value, icon: Icon, tone }) => <div key={label} className="rounded-2xl border bg-white p-5 shadow-soft"><div className="flex items-center"><div className={cn("grid size-10 place-items-center rounded-xl", tone)}><Icon size={18}/></div><p className="ml-auto text-2xl font-semibold">{value}</p></div><p className="mt-4 text-xs font-medium text-slate-500">{label}</p></div>)}
-    </section>
-
-    <section className="mt-5 overflow-hidden rounded-2xl border bg-white shadow-soft">
-      <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
-        <div className="grid size-11 place-items-center rounded-2xl bg-[#0b996e]/10 text-[#087958]"><MailPlus size={20}/></div>
-        <div><div className="flex items-center gap-2"><h2 className="font-semibold">Brevo delivery</h2><span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", brevoConnected ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700")}>{brevoConnected ? "CONNECTED" : "SETUP REQUIRED"}</span></div><p className="mt-1 text-xs text-slate-500">{brevoConnected ? "The delivery service is enabled. Workflows can be activated." : "Add the Brevo API key, verify a sender, and configure delivery webhooks before activation."}</p></div>
-        <div className="sm:ml-auto"><Button variant="secondary" onClick={() => setNotice("Brevo credentials must be stored in the server environment, never in this browser.")}>Connection guide <ArrowRight size={15}/></Button></div>
-      </div>
-    </section>
-
-    <div className="mt-5 grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
-      <section className="overflow-hidden rounded-2xl border bg-white shadow-soft">
-        <div className="flex items-center border-b p-5"><div><h2 className="font-semibold">Workflows</h2><p className="mt-1 text-xs text-slate-400">Select a workflow to inspect its journey</p></div></div>
-        {workflows.length === 0 ? <div className="px-6 py-12 text-center"><div className="mx-auto grid size-12 place-items-center rounded-2xl bg-violet-50 text-violet-600"><GitBranch size={21}/></div><p className="mt-4 text-sm font-semibold">No workflows yet</p><p className="mx-auto mt-2 max-w-[240px] text-xs leading-5 text-slate-500">Create your first vendor outreach sequence. It will remain a draft until Brevo is connected.</p><Button className="mt-5" variant="secondary" onClick={() => setOpen(true)}><Plus size={15}/> Create workflow</Button></div> : <div className="divide-y">{workflows.map((workflow) => <button key={workflow.id} className={cn("flex w-full items-center gap-3 p-4 text-left transition hover:bg-slate-50", selectedId === workflow.id && "bg-brand-50/60")} onClick={() => setSelectedId(workflow.id)}><div className="grid size-10 shrink-0 place-items-center rounded-xl bg-violet-50 text-violet-700"><Mail size={17}/></div><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{workflow.name}</p><p className="mt-1 truncate text-xs text-slate-400">{workflow.audience}</p></div><span className={cn("rounded-full px-2 py-1 text-[9px] font-bold", workflow.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : workflow.status === "PAUSED" ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-500")}>{workflow.status}</span><ChevronRight size={15} className="text-slate-300"/></button>)}</div>}
-      </section>
-
-      <section className="min-h-[430px] overflow-hidden rounded-2xl border bg-white shadow-soft">
-        {!selected ? <div className="grid min-h-[430px] place-items-center p-8 text-center"><div><Sparkles className="mx-auto text-slate-300" size={28}/><p className="mt-3 text-sm font-medium text-slate-500">Your workflow canvas will appear here</p></div></div> : <><div className="flex flex-col gap-3 border-b p-5 sm:flex-row sm:items-center"><div className="min-w-0"><p className="truncate font-semibold">{selected.name}</p><p className="mt-1 text-xs text-slate-400">Created {new Date(selected.createdAt).toLocaleDateString()}</p></div><div className="flex gap-2 sm:ml-auto"><Button variant="ghost" className="px-3" aria-label="More workflow options"><MoreHorizontal size={17}/></Button><Button variant="secondary" onClick={() => updateStatus(selected)}>{selected.status === "ACTIVE" ? <Pause size={15}/> : <Play size={15}/>} {selected.status === "ACTIVE" ? "Pause" : "Activate"}</Button></div></div>
-          <div className="bg-slate-50/70 p-5 sm:p-7"><div className="mx-auto max-w-xl space-y-3">
-            <StepCard icon={Users} eyebrow="Trigger" title="Vendor enters audience" detail={selected.audience} tone="violet"/>
-            <div className="mx-auto h-6 w-px bg-violet-200"/>
-            <StepCard icon={Mail} eyebrow="Action" title={selected.subject} detail={selected.message} tone="blue"/>
-            {selected.followUp && <><div className="mx-auto h-6 w-px bg-violet-200"/><StepCard icon={Clock3} eyebrow="Delay" title={`Wait ${selected.delayDays} day${selected.delayDays === 1 ? "" : "s"}`} detail="Continue only if the vendor has not replied." tone="amber"/><div className="mx-auto h-6 w-px bg-violet-200"/><StepCard icon={GitBranch} eyebrow="Condition" title="Has the vendor replied?" detail="Stop the sequence on reply; otherwise send a polite follow-up." tone="emerald"/></>}
-          </div></div></>}
-      </section>
-    </div>
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-sm font-medium text-brand-700">Super Admin · Automation</p><h1 className="mt-1 text-3xl font-semibold">Email automation</h1><p className="mt-2 max-w-2xl text-sm text-slate-500">Manage consented vendors and run personalized Brevo outreach sequences.</p></div><div className="flex gap-2"><Button variant="secondary" onClick={() => setContactsOpen(true)}><Upload size={16}/> Import vendors</Button><Button onClick={() => setWorkflowOpen(true)}><Plus size={16}/> New workflow</Button></div></div>
+    {notice && <div className={cn("mt-5 flex items-center rounded-xl border px-4 py-3 text-sm", notice.tone === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-red-200 bg-red-50 text-red-700")}><CheckCircle2 size={16} className="mr-2"/><span>{notice.text}</span><button className="ml-auto" onClick={() => setNotice(null)} aria-label="Dismiss"><X size={15}/></button></div>}
+    <section className="mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{stats.map(({ label, value, icon: Icon, tone }) => <div key={label} className="rounded-2xl border bg-white p-5 shadow-soft"><div className="flex items-center"><div className={cn("grid size-10 place-items-center rounded-xl", tone)}><Icon size={18}/></div><p className="ml-auto text-2xl font-semibold">{value}</p></div><p className="mt-4 text-xs font-medium text-slate-500">{label}</p></div>)}</section>
+    <section className="mt-5 rounded-2xl border bg-white p-2 shadow-soft"><div className="flex flex-wrap gap-1">{(["workflows", "contacts", "settings"] as const).map((item) => <button key={item} onClick={() => setTab(item)} className={cn("rounded-xl px-4 py-2.5 text-sm font-semibold capitalize", tab === item ? "bg-brand-50 text-brand-700" : "text-slate-500 hover:bg-slate-50")}>{item}{item === "contacts" && ` (${summary.data?.contacts ?? 0})`}</button>)}</div></section>
+    {tab === "workflows" && <div className="mt-5 grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]"><section className="overflow-hidden rounded-2xl border bg-white shadow-soft"><div className="border-b p-5"><h2 className="font-semibold">Workflows</h2><p className="mt-1 text-xs text-slate-400">Stored securely in MongoDB</p></div>{workflows.isLoading ? <p className="p-8 text-center text-sm text-slate-400">Loading workflows…</p> : workflows.data?.items.length ? <div className="divide-y">{workflows.data.items.map((workflow) => <button key={workflow._id} className={cn("flex w-full items-center gap-3 p-4 text-left hover:bg-slate-50", selected?._id === workflow._id && "bg-brand-50/60")} onClick={() => setSelectedId(workflow._id)}><div className="grid size-10 shrink-0 place-items-center rounded-xl bg-violet-50 text-violet-700"><Mail size={17}/></div><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{workflow.name}</p><p className="mt-1 truncate text-xs text-slate-400">{workflow.audience}</p></div><span className={cn("rounded-full px-2 py-1 text-[9px] font-bold", workflow.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : workflow.status === "PAUSED" ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-500")}>{workflow.status}</span></button>)}</div> : <div className="p-10 text-center"><GitBranch className="mx-auto text-slate-300"/><p className="mt-3 text-sm font-semibold">No database workflows</p><Button className="mt-5" variant="secondary" onClick={() => setWorkflowOpen(true)}><Plus size={15}/> Create one</Button></div>}</section>
+      <section className="min-h-[430px] overflow-hidden rounded-2xl border bg-white shadow-soft">{!selected ? <div className="grid min-h-[430px] place-items-center text-sm text-slate-400">Select or create a workflow</div> : <><div className="flex flex-col gap-3 border-b p-5 sm:flex-row sm:items-center"><div><p className="font-semibold">{selected.name}</p><p className="mt-1 text-xs text-slate-400">Created {new Date(selected.createdAt).toLocaleDateString()}</p></div><div className="flex gap-2 sm:ml-auto"><Button variant="ghost" className="px-3 text-red-600" disabled={selected.status === "ACTIVE" || remove.isPending} onClick={() => remove.mutate(selected._id)}><Trash2 size={16}/></Button><Button variant="secondary" disabled={activate.isPending} onClick={() => activate.mutate(selected)}>{selected.status === "ACTIVE" ? <Pause size={15}/> : <Play size={15}/>} {selected.status === "ACTIVE" ? "Pause" : "Activate"}</Button></div></div><div className="bg-slate-50/70 p-7"><div className="mx-auto max-w-xl space-y-3"><StepCard icon={Users} eyebrow="Trigger" title="Eligible vendor enters audience" detail={selected.audience}/><div className="mx-auto h-6 w-px bg-violet-200"/><StepCard icon={Mail} eyebrow="Email" title={selected.subject} detail={selected.message} tone="blue"/>{selected.followUp && <><div className="mx-auto h-6 w-px bg-violet-200"/><StepCard icon={Clock3} eyebrow="Delay" title={`Wait ${selected.delayDays} day${selected.delayDays === 1 ? "" : "s"}`} detail="Continue only while the vendor remains active." tone="amber"/><div className="mx-auto h-6 w-px bg-violet-200"/><StepCard icon={GitBranch} eyebrow="Condition" title="Stop after reply or opt-out" detail={selected.followUpMessage || "Send a polite follow-up if no reply is recorded."} tone="emerald"/></>}</div></div></>}</section></div>}
+    {tab === "contacts" && <section className="mt-5 overflow-hidden rounded-2xl border bg-white shadow-soft"><div className="flex items-center border-b p-5"><div><h2 className="font-semibold">Vendor contacts</h2><p className="mt-1 text-xs text-slate-400">Only active, consented contacts enter workflows</p></div><Button className="ml-auto" variant="secondary" onClick={() => setContactsOpen(true)}><Upload size={15}/> Import</Button></div>{contacts.data?.items.length ? <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left"><thead className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-400"><tr><th className="px-5 py-3">Vendor</th><th className="px-5 py-3">Email</th><th className="px-5 py-3">Source</th><th className="px-5 py-3">Status</th><th className="px-5 py-3">Action</th></tr></thead><tbody className="divide-y">{contacts.data.items.map((contact) => <tr key={contact._id}><td className="px-5 py-4"><p className="text-sm font-semibold">{contact.name}</p><p className="text-xs text-slate-400">{contact.companyName}</p></td><td className="px-5 py-4 text-sm text-slate-600">{contact.email}</td><td className="px-5 py-4 text-xs text-slate-500">{contact.source}</td><td className="px-5 py-4"><span className={cn("rounded-full px-2.5 py-1 text-[10px] font-semibold", contact.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600")}>{contact.status}</span></td><td className="px-5 py-4">{contact.status === "ACTIVE" ? <Button className="h-9 px-3" variant="ghost" onClick={() => contactStatus.mutate({ id: contact._id, status: "REPLIED" })}><UserCheck size={14}/> Mark replied</Button> : contact.status === "REPLIED" ? <Button className="h-9 px-3" variant="ghost" onClick={() => contactStatus.mutate({ id: contact._id, status: "ACTIVE" })}><RefreshCw size={14}/> Reactivate</Button> : <span className="text-xs text-slate-400">Suppressed</span>}</td></tr>)}</tbody></table></div> : <div className="p-12 text-center"><Users className="mx-auto text-slate-300"/><p className="mt-3 text-sm font-semibold">No vendors imported</p><p className="mt-1 text-xs text-slate-500">Import contacts before activating a workflow.</p></div>}</section>}
+    {tab === "settings" && <div className="mt-5 grid gap-5 lg:grid-cols-2"><section className="rounded-2xl border bg-white p-6 shadow-soft"><div className="flex items-start"><div className="grid size-11 place-items-center rounded-xl bg-emerald-50 text-emerald-700"><MailPlus size={20}/></div><div className="ml-3"><div className="flex items-center gap-2"><h2 className="font-semibold">Brevo connection</h2><span className={cn("rounded-full px-2 py-0.5 text-[10px] font-bold", configuration.data?.configured ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700")}>{configuration.data?.configured ? "CONFIGURED" : "SETUP REQUIRED"}</span></div><p className="mt-1 text-xs text-slate-500">{configuration.data?.senderName} · {configuration.data?.senderEmail || "No sender configured"}</p></div></div><div className="mt-6 space-y-3 text-sm"><div className="flex justify-between rounded-xl bg-slate-50 p-3"><span className="text-slate-500">Reply-to</span><span className="font-medium">{configuration.data?.replyToEmail || "Not set"}</span></div><div className="flex justify-between rounded-xl bg-slate-50 p-3"><span className="text-slate-500">Webhook security</span><span className="font-medium">{configuration.data?.webhookConfigured ? "Enabled" : "Token missing"}</span></div></div><Button className="mt-5" variant="secondary" disabled={!configuration.data?.configured || checkConnection.isPending} onClick={() => checkConnection.mutate()}><RefreshCw size={15}/> Test API connection</Button></section><section className="rounded-2xl border bg-white p-6 shadow-soft"><h2 className="font-semibold">Send a test email</h2><p className="mt-1 text-xs leading-5 text-slate-500">This sends one real message through the configured Brevo account.</p><label className="mt-5 block text-sm font-medium">Recipient<Input type="email" className="mt-2" value={testRecipient} onChange={(event) => setTestRecipient(event.target.value)}/></label><Button className="mt-4" disabled={!configuration.data?.configured || !testRecipient || sendTest.isPending} onClick={() => sendTest.mutate()}><Send size={15}/> {sendTest.isPending ? "Sending…" : "Send test"}</Button></section><section className="rounded-2xl border bg-white p-6 shadow-soft lg:col-span-2"><h2 className="font-semibold">Delivery webhook</h2><p className="mt-1 text-xs leading-5 text-slate-500">In Brevo, create a transactional webhook for sent, delivered, opened, clicked, bounced, blocked, spam, invalid-email, and unsubscribe events. Use this endpoint and include your configured token as the <code>x-brevo-webhook-token</code> header.</p><div className="mt-4 overflow-x-auto rounded-xl bg-slate-900 px-4 py-3 font-mono text-xs text-slate-100">{configuration.data?.webhookUrl}</div></section></div>}
   </div>
-
-  {open && <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-ink/35 p-4 backdrop-blur-sm"><form className="my-6 w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl" onSubmit={(event) => { event.preventDefault(); createWorkflow(); }}><div className="flex items-start"><div><h2 className="text-xl font-semibold">Create vendor workflow</h2><p className="mt-1 text-sm text-slate-500">Start with a safe draft, then connect Brevo before activation.</p></div><button type="button" aria-label="Close" className="ml-auto grid size-9 place-items-center rounded-lg text-slate-400 hover:bg-slate-100" onClick={() => setOpen(false)}><X size={17}/></button></div>
-    <div className="mt-6 grid gap-4 sm:grid-cols-2"><label className="block text-sm font-medium">Workflow name<Input required minLength={3} className="mt-2" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })}/></label><label className="block text-sm font-medium">Audience<Input required className="mt-2" value={form.audience} onChange={(event) => setForm({ ...form, audience: event.target.value })}/></label></div>
-    <label className="mt-4 block text-sm font-medium">Email subject<Input required className="mt-2" value={form.subject} onChange={(event) => setForm({ ...form, subject: event.target.value })}/></label>
-    <label className="mt-4 block text-sm font-medium">Message<textarea required rows={6} className="mt-2 w-full resize-y rounded-xl border bg-white px-3 py-3 text-sm leading-6" value={form.message} onChange={(event) => setForm({ ...form, message: event.target.value })}/></label>
-    <div className="mt-4 flex flex-col gap-4 rounded-xl bg-slate-50 p-4 sm:flex-row sm:items-center"><label className="flex items-center gap-3 text-sm font-medium"><input type="checkbox" className="size-4" checked={form.followUp} onChange={(event) => setForm({ ...form, followUp: event.target.checked })}/> Add reply-aware follow-up</label>{form.followUp && <label className="flex items-center gap-2 text-sm text-slate-600 sm:ml-auto">Wait<Input type="number" min={1} max={30} className="h-9 w-20" value={form.delayDays} onChange={(event) => setForm({ ...form, delayDays: Number(event.target.value) })}/> days</label>}</div>
-    <p className="mt-4 text-xs leading-5 text-slate-500">Use only vendor contacts you are permitted to email. Variables such as <code className="rounded bg-slate-100 px-1 py-0.5">{"{{vendor_name}}"}</code> and <code className="rounded bg-slate-100 px-1 py-0.5">{"{{company_name}}"}</code> will be personalized when sending is connected.</p>
-    <div className="mt-6 flex justify-end gap-2"><Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancel</Button><Button>Create draft</Button></div>
-  </form></div>}
+  {workflowOpen && <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-ink/35 p-4 backdrop-blur-sm"><form className="my-6 w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl" onSubmit={(event) => { event.preventDefault(); create.mutate(form); }}><div className="flex items-start"><div><h2 className="text-xl font-semibold">Create vendor workflow</h2><p className="mt-1 text-sm text-slate-500">The workflow remains a draft until you activate it.</p></div><button type="button" className="ml-auto text-slate-400" onClick={() => setWorkflowOpen(false)}><X/></button></div><div className="mt-6 grid gap-4 sm:grid-cols-2"><label className="text-sm font-medium">Workflow name<Input required className="mt-2" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })}/></label><label className="text-sm font-medium">Audience label<Input required className="mt-2" value={form.audience} onChange={(event) => setForm({ ...form, audience: event.target.value })}/></label></div><label className="mt-4 block text-sm font-medium">First email subject<Input required className="mt-2" value={form.subject} onChange={(event) => setForm({ ...form, subject: event.target.value })}/></label><label className="mt-4 block text-sm font-medium">First email<textarea required rows={4} className="mt-2 w-full rounded-xl border p-3 text-sm" value={form.message} onChange={(event) => setForm({ ...form, message: event.target.value })}/></label><div className="mt-4 rounded-xl bg-slate-50 p-4"><label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" checked={form.followUp} onChange={(event) => setForm({ ...form, followUp: event.target.checked })}/> Send a follow-up</label>{form.followUp && <div className="mt-4 space-y-4"><label className="flex items-center gap-2 text-sm">Wait <Input type="number" min={1} max={90} className="h-9 w-20" value={form.delayDays} onChange={(event) => setForm({ ...form, delayDays: Number(event.target.value) })}/> days</label><label className="block text-sm font-medium">Follow-up subject<Input className="mt-2" value={form.followUpSubject} onChange={(event) => setForm({ ...form, followUpSubject: event.target.value })}/></label><label className="block text-sm font-medium">Follow-up message<textarea rows={3} className="mt-2 w-full rounded-xl border bg-white p-3 text-sm" value={form.followUpMessage} onChange={(event) => setForm({ ...form, followUpMessage: event.target.value })}/></label></div>}</div><p className="mt-4 text-xs text-slate-500">Supported variables: {"{{vendor_name}}"}, {"{{company_name}}"}, and {"{{our_company}}"}.</p><div className="mt-6 flex justify-end gap-2"><Button type="button" variant="ghost" onClick={() => setWorkflowOpen(false)}>Cancel</Button><Button disabled={create.isPending}>Save draft</Button></div></form></div>}
+  {contactsOpen && <div className="fixed inset-0 z-50 grid place-items-center bg-ink/35 p-4 backdrop-blur-sm"><form className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl" onSubmit={(event) => { event.preventDefault(); try { importContacts.mutate(parseContacts(contactRows, new Date(`${consentAt}T00:00:00`).toISOString())); } catch (error) { showError(error as Error); } }}><div className="flex items-start"><div><h2 className="text-xl font-semibold">Import vendor contacts</h2><p className="mt-1 text-sm text-slate-500">Enter one contact per line.</p></div><button type="button" className="ml-auto text-slate-400" onClick={() => setContactsOpen(false)}><X/></button></div><label className="mt-6 block text-sm font-medium">Contacts<textarea required rows={8} placeholder="Jane Smith, Acme Supplies, jane@acme.com, Existing vendor relationship" className="mt-2 w-full rounded-xl border p-3 font-mono text-sm" value={contactRows} onChange={(event) => setContactRows(event.target.value)}/></label><p className="mt-2 text-xs text-slate-500">Format: name, company, email, source</p><label className="mt-4 block text-sm font-medium">Consent or relationship date<Input required type="date" max={new Date().toISOString().slice(0, 10)} className="mt-2" value={consentAt} onChange={(event) => setConsentAt(event.target.value)}/></label><label className="mt-4 flex items-start gap-3 rounded-xl bg-amber-50 p-4 text-sm leading-5 text-amber-900"><input required type="checkbox" className="mt-1 size-4" checked={consentConfirmed} onChange={(event) => setConsentConfirmed(event.target.checked)}/><span>I confirm these contacts consented to this communication or have an appropriate existing business relationship. This is not a purchased, scraped, rented, or borrowed list.</span></label><div className="mt-6 flex justify-end gap-2"><Button type="button" variant="ghost" onClick={() => setContactsOpen(false)}>Cancel</Button><Button disabled={!consentConfirmed || importContacts.isPending}><Upload size={15}/> Import contacts</Button></div></form></div>}
   </main>;
 };
