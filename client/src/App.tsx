@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { OnboardingRoute, PasswordChangeRoute, PlatformRoute, ProtectedRoute, RoleRoute } from "@/routes/ProtectedRoute";
 
 const LoginPage = lazy(() => import("@/pages/LoginPage").then((module) => ({ default: module.LoginPage })));
+const RegisterPage = lazy(() => import("@/pages/RegisterPage").then((module) => ({ default: module.RegisterPage })));
 const ChangePasswordPage = lazy(() => import("@/pages/ChangePasswordPage").then((module) => ({ default: module.ChangePasswordPage })));
 const OnboardingPage = lazy(() => import("@/pages/OnboardingPage").then((module) => ({ default: module.OnboardingPage })));
 const DashboardPage = lazy(() => import("@/pages/DashboardPage").then((module) => ({ default: module.DashboardPage })));
@@ -35,6 +36,7 @@ const PageLoader = () => <div className="space-y-4 p-8" aria-label="Loading page
 
 export const App = () => <Suspense fallback={<PageLoader/>}><Routes>
   <Route path="/login" element={<LoginPage/>}/>
+  <Route path="/register" element={<RegisterPage/>}/>
   <Route element={<PasswordChangeRoute/>}><Route path="/change-password" element={<ChangePasswordPage/>}/></Route>
   <Route element={<OnboardingRoute/>}><Route path="/onboarding" element={<OnboardingPage/>}/></Route>
   <Route element={<ProtectedRoute/>}><Route element={<AppLayout/>}>

@@ -18,9 +18,9 @@ interface CreateTenantInput {
 const publicFields = "name slug status plan activatedAt createdAt updatedAt";
 export const listTenants = () => Tenant.find().select(publicFields).sort({ createdAt: -1 }).lean();
 
-export const createTenant = async (input: CreateTenantInput, actorId: string) => {
+export const createTenant = async (input: CreateTenantInput, actorId?: string) => {
   let tenant = await Tenant.findOne({ slug: input.slug });
-  if (tenant && tenant.status !== "PROVISIONING") throw new AppError("That organization ID is already in use", 409, "TENANT_EXISTS");
+  if (tenant && (!actorId || tenant.status !== "PROVISIONING")) throw new AppError("That organization ID is already in use", 409, "TENANT_EXISTS");
   if (!tenant) tenant = await Tenant.create({ name: input.name, slug: input.slug, plan: input.plan, status: "PROVISIONING", createdBy: actorId });
 
   await runWithTenant(tenant._id, async () => {
@@ -43,7 +43,7 @@ export const createTenant = async (input: CreateTenantInput, actorId: string) =>
         passwordHash: await bcrypt.hash(input.temporaryPassword, 12),
         role: role._id,
         isActive: true,
-        forcePasswordChange: true,
+        forcePasswordChange: Boolean(actorId),
         onboardingComplete: true,
       });
     }
