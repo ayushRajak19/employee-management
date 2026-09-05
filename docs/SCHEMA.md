@@ -1,6 +1,6 @@
 # MongoDB schema blueprint
 
-All business entities use timestamps. Employee, Department, Team, Designation, Skill, Project and Task use `isActive`, `archivedAt` or `deletedAt` rather than destructive deletion. API services accept explicit field allowlists to prevent mass assignment.
+All business entities use timestamps and an immutable `tenantId`. Employee, Department, Team, Designation, Skill, Project and Task use `isActive`, `archivedAt` or `deletedAt` rather than destructive deletion. API services accept explicit field allowlists to prevent mass assignment. Business uniqueness and query indexes lead with `tenantId`; TTL indexes remain single-field.
 
 ## Identity and organization
 

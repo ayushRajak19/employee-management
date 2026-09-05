@@ -1,4 +1,5 @@
-import { Schema, model, type Types } from "mongoose";
+import { Schema, type Types } from "mongoose";
+import { tenantModel } from "../tenancy/tenantModel.js";
 
 export const BLOCKER_CATEGORIES = ["APPROVAL", "CLIENT", "DEPENDENCY", "REQUIREMENTS", "ACCESS", "TECHNICAL", "CAPACITY", "OTHER"] as const;
 
@@ -37,4 +38,4 @@ const schema = new Schema<WeeklyUpdateDocument>({
 }, { timestamps: true });
 
 schema.index({ employee: 1, weekStart: 1 }, { unique: true });
-export const WeeklyUpdate = model<WeeklyUpdateDocument>("WeeklyUpdate", schema);
+export const WeeklyUpdate = tenantModel<WeeklyUpdateDocument>("WeeklyUpdate", schema);

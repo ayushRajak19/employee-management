@@ -17,6 +17,10 @@
     "typecheck": "npm run typecheck -w shared && npm run typecheck -w client && npm run typecheck -w server",
     "seed": "npm run seed -w server",
     "cleanup:demo": "npm run cleanup:demo -w server",
+    "backup": "npm run backup -w server --",
+    "preflight:tenants": "npm run preflight:tenants -w server",
+    "verify:preservation": "npm run verify:preservation -w server --",
+    "migrate:tenants": "npm run migrate:tenants -w server --",
     "test": "npm run test -w server"
   },
   "devDependencies": { "concurrently": "^9.2.0" },

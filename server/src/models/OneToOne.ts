@@ -1,4 +1,5 @@
-import { Schema, model, type Types } from "mongoose";
+import { Schema, type Types } from "mongoose";
+import { tenantModel } from "../tenancy/tenantModel.js";
 
 export interface OneToOneDocument {
   employee: Types.ObjectId;
@@ -35,4 +36,4 @@ const schema = new Schema<OneToOneDocument>({
 }, { timestamps: true });
 
 schema.index({ employee: 1, meetingDate: -1 });
-export const OneToOne = model<OneToOneDocument>("OneToOne", schema);
+export const OneToOne = tenantModel<OneToOneDocument>("OneToOne", schema);

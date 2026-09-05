@@ -2,7 +2,7 @@ import { lazy, Suspense } from "react";
 import { Route, Routes } from "react-router-dom";
 import { AppLayout } from "@/layouts/AppLayout";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { OnboardingRoute, PasswordChangeRoute, ProtectedRoute, RoleRoute } from "@/routes/ProtectedRoute";
+import { OnboardingRoute, PasswordChangeRoute, PlatformRoute, ProtectedRoute, RoleRoute } from "@/routes/ProtectedRoute";
 
 const LoginPage = lazy(() => import("@/pages/LoginPage").then((module) => ({ default: module.LoginPage })));
 const ChangePasswordPage = lazy(() => import("@/pages/ChangePasswordPage").then((module) => ({ default: module.ChangePasswordPage })));
@@ -29,6 +29,7 @@ const AttendancePage = lazy(() => import("@/pages/AttendancePage").then((module)
 const ContributionPage = lazy(() => import("@/pages/ContributionPage").then((module) => ({ default: module.ContributionPage })));
 const AiWorkspacePage = lazy(() => import("@/pages/AiWorkspacePage").then((module) => ({ default: module.AiWorkspacePage })));
 const TaskTrackerPage = lazy(() => import("@/pages/TaskTrackerPage").then((module) => ({ default: module.TaskTrackerPage })));
+const TenantsPage = lazy(() => import("@/pages/TenantsPage").then((module) => ({ default: module.TenantsPage })));
 
 const PageLoader = () => <div className="space-y-4 p-8" aria-label="Loading page"><Skeleton className="h-9 w-64"/><Skeleton className="h-48 w-full"/><Skeleton className="h-48 w-full"/></div>;
 
@@ -42,7 +43,7 @@ export const App = () => <Suspense fallback={<PageLoader/>}><Routes>
     <Route path="skills" element={<SkillsPage/>}/>
     <Route path="assessments" element={<AssessmentsPage/>}/><Route path="work" element={<WorkPage/>}/><Route path="attendance" element={<AttendancePage/>}/><Route path="performance" element={<PerformancePage/>}/><Route path="contribution" element={<ContributionPage/>}/>
     <Route element={<RoleRoute roles={["SUPER_ADMIN","EMPLOYEE"]}/>}> <Route path="task-tracker" element={<TaskTrackerPage/>}/></Route>
-    <Route path="development" element={<DevelopmentPage/>}/><Route path="governance" element={<GovernancePage/>}/><Route element={<RoleRoute roles={["SUPER_ADMIN","EMPLOYEE"]}/>}> <Route path="resumes" element={<ResumesPage/>}/></Route><Route element={<RoleRoute roles={["SUPER_ADMIN","HR_ADMIN"]}/>}> <Route path="applicants" element={<ApplicantsPage/>}/></Route><Route path="people-ops" element={<PeopleOpsPage/>}/><Route element={<RoleRoute roles={["SUPER_ADMIN"]}/>}> <Route path="resume-screener" element={<ResumeScreenerPage/>}/><Route path="administrators" element={<AdministratorsPage/>}/><Route path="email-automation" element={<EmailAutomationPage/>}/></Route>
+    <Route path="development" element={<DevelopmentPage/>}/><Route path="governance" element={<GovernancePage/>}/><Route element={<RoleRoute roles={["SUPER_ADMIN","EMPLOYEE"]}/>}> <Route path="resumes" element={<ResumesPage/>}/></Route><Route element={<RoleRoute roles={["SUPER_ADMIN","HR_ADMIN"]}/>}> <Route path="applicants" element={<ApplicantsPage/>}/></Route><Route path="people-ops" element={<PeopleOpsPage/>}/><Route element={<RoleRoute roles={["SUPER_ADMIN"]}/>}> <Route path="resume-screener" element={<ResumeScreenerPage/>}/><Route path="administrators" element={<AdministratorsPage/>}/><Route path="email-automation" element={<EmailAutomationPage/>}/></Route><Route element={<PlatformRoute/>}><Route path="platform/tenants" element={<TenantsPage/>}/></Route>
   </Route></Route>
   <Route path="*" element={<div className="grid min-h-screen place-items-center"><p>Page not found</p></div>}/>
 </Routes></Suspense>;

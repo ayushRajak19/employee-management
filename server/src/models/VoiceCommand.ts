@@ -1,4 +1,5 @@
-import { Schema, model, type Types } from "mongoose";
+import { Schema, type Types } from "mongoose";
+import { tenantModel } from "../tenancy/tenantModel.js";
 
 export const VOICE_INTENTS = ["CREATE_TASK", "UPDATE_STATUS"] as const;
 export const VOICE_COMMAND_STATUSES = ["TRANSCRIBED", "CONFIRMED", "CANCELLED", "FAILED"] as const;
@@ -33,4 +34,4 @@ const schema = new Schema<VoiceCommandDocument>({
 
 schema.index({ actor: 1, createdAt: -1 });
 schema.index({ status: 1, createdAt: -1 });
-export const VoiceCommand = model<VoiceCommandDocument>("VoiceCommand", schema);
+export const VoiceCommand = tenantModel<VoiceCommandDocument>("VoiceCommand", schema);

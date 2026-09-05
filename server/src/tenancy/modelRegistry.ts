@@ -1,0 +1,51 @@
+// Import every tenant-scoped model before migrations run. This guarantees that
+// the migration and index reconciler cover collections not reached by a route
+// during a particular deployment.
+import "../models/AiContentCache.js";
+import "../models/AiEmployeeSummary.js";
+import "../models/Applicant.js";
+import "../models/Assessment.js";
+import "../models/AssessmentResult.js";
+import "../models/Attendance.js";
+import "../models/AttendanceOffice.js";
+import "../models/AuditLog.js";
+import "../models/ContributionReview.js";
+import "../models/ContributionSnapshot.js";
+import "../models/DailyTodo.js";
+import "../models/Department.js";
+import "../models/Designation.js";
+import "../models/Document.js";
+import "../models/EmailDelivery.js";
+import "../models/EmailEnrollment.js";
+import "../models/EmailWorkflow.js";
+import "../models/Employee.js";
+import "../models/EmployeeKPI.js";
+import "../models/EmployeeSkill.js";
+import "../models/EmployeeTimeline.js";
+import "../models/EmployeeTraining.js";
+import "../models/Goal.js";
+import "../models/JobDescription.js";
+import "../models/KPI.js";
+import "../models/LeaveRequest.js";
+import "../models/Notification.js";
+import "../models/OneToOne.js";
+import "../models/PerformanceReview.js";
+import "../models/PerformanceSnapshot.js";
+import "../models/PerformanceTemplate.js";
+import "../models/Project.js";
+import "../models/Recognition.js";
+import "../models/RefreshSession.js";
+import "../models/ResumeScreening.js";
+import "../models/Role.js";
+import "../models/RoleSkillAssessment.js";
+import "../models/Skill.js";
+import "../models/SkillVerification.js";
+import "../models/Task.js";
+import "../models/TaskActivity.js";
+import "../models/Team.js";
+import "../models/Training.js";
+import "../models/User.js";
+import "../models/VendorContact.js";
+import "../models/VoiceCommand.js";
+import "../models/WeeklyUpdate.js";
+

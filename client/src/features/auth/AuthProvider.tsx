@@ -8,7 +8,11 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const queryClient = useQueryClient();
   const query = useQuery({ queryKey: ["auth", "me"], queryFn: authApi.me, retry: false, staleTime: 60_000 });
-  const setUser = (user: SessionUser | null) => queryClient.setQueryData(["auth", "me"], user ? { user } : null);
+  const setUser = (user: SessionUser | null) => {
+    const current = queryClient.getQueryData<{ user: SessionUser } | null>(["auth", "me"]);
+    if (!user || (current?.user.tenantId && current.user.tenantId !== user.tenantId)) queryClient.clear();
+    queryClient.setQueryData(["auth", "me"], user ? { user } : null);
+  };
   return <AuthContext.Provider value={{ user: query.data?.user ?? null, isLoading: query.isLoading, setUser }}>{children}</AuthContext.Provider>;
 };
 export const useAuth = () => { const value = useContext(AuthContext); if (!value) throw new Error("useAuth must be used inside AuthProvider"); return value; };

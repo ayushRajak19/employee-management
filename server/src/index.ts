@@ -6,28 +6,31 @@ import { seedOrganization } from "./jobs/seedSuperAdmin.js";
 import { initializeEmailAutomation, runEmailAutomationCycle } from "./services/emailAutomationService.js";
 
 const start = async (): Promise<void> => {
+  // Do not accept traffic until tenant migration, indexes and baseline roles are ready.
+  const { defaultTenantId } = await connectDatabase();
+  console.log("MongoDB connected and tenant migration verified");
+  await seedOrganization(defaultTenantId);
+
   const server = createServer(createApp());
   server.listen(env.PORT, () => console.log(`MobiusBloom Employee listening on port ${env.PORT}`));
-  let databaseRetry: NodeJS.Timeout | undefined;
-  const connectWithRetry = async (): Promise<void> => {
-    try {
-      await connectDatabase();
-      console.log("MongoDB connected");
-      await seedOrganization();
-      void initializeEmailAutomation().catch((error: unknown) => console.error("Brevo email automation initialization failed", error));
-    } catch (error: unknown) {
-      console.error("MongoDB connection failed; retrying in 15 seconds", error);
-      databaseRetry = setTimeout(() => void connectWithRetry(), 15_000);
-      databaseRetry.unref();
-    }
-  };
-  void connectWithRetry();
+  void initializeEmailAutomation().catch((error: unknown) => console.error("Brevo email automation initialization failed", error));
   const automationTimer = setInterval(() => void runEmailAutomationCycle(), 60_000); automationTimer.unref();
-  const shutdown = (signal: string) => { console.log(`${signal} received; shutting down`); if (databaseRetry) clearTimeout(databaseRetry); clearInterval(automationTimer); server.close(() => { void disconnectDatabase().finally(() => process.exit(0)); }); setTimeout(() => process.exit(1), 10_000).unref(); };
-  process.on("SIGTERM", () => shutdown("SIGTERM")); process.on("SIGINT", () => shutdown("SIGINT"));
+
+  let shuttingDown = false;
+  const shutdown = (signal: string) => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.log(`${signal} received; shutting down`);
+    clearInterval(automationTimer);
+    server.close(() => { void disconnectDatabase().finally(() => process.exit(0)); });
+    setTimeout(() => process.exit(1), 10_000).unref();
+  };
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
 };
 
 void start().catch((error: unknown) => {
   console.error("MobiusBloom Employee failed to start", error);
-  process.exit(1);
+  void disconnectDatabase().finally(() => process.exit(1));
 });
+

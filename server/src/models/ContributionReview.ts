@@ -1,4 +1,5 @@
-import { Schema, model, type Types } from "mongoose";
+import { Schema, type Types } from "mongoose";
+import { tenantModel } from "../tenancy/tenantModel.js";
 
 export const CONTRIBUTION_AREAS = ["delivery", "quality", "reliability", "impact", "collaboration", "growth"] as const;
 export type ContributionArea = typeof CONTRIBUTION_AREAS[number];
@@ -50,4 +51,4 @@ const schema = new Schema<ContributionReviewDocument>({
 }, { timestamps: true });
 
 schema.index({ employee: 1, period: 1 }, { unique: true });
-export const ContributionReview = model<ContributionReviewDocument>("ContributionReview", schema);
+export const ContributionReview = tenantModel<ContributionReviewDocument>("ContributionReview", schema);

@@ -1,8 +1,9 @@
-import { Schema, model, type Types } from "mongoose";
+import { Schema, type Types } from "mongoose";
+import { tenantModel } from "../tenancy/tenantModel.js";
 export const ATTENDANCE_STATUSES = ["PRESENT", "LATE", "HALF_DAY"] as const;
 interface LocationProof { latitude: number; longitude: number; accuracy: number; distanceMeters: number; recordedAt: Date }
 export interface AttendanceDocument { employee: Types.ObjectId; department: Types.ObjectId; dateKey: string; status: typeof ATTENDANCE_STATUSES[number]; checkInAt: Date; checkInLocation: LocationProof; checkOutAt?: Date; checkOutLocation?: LocationProof; workedMinutes: number; isActive: boolean }
 const locationSchema = new Schema<LocationProof>({ latitude: { type: Number, required: true }, longitude: { type: Number, required: true }, accuracy: { type: Number, required: true }, distanceMeters: { type: Number, required: true }, recordedAt: { type: Date, required: true } }, { _id: false });
 const schema = new Schema<AttendanceDocument>({ employee: { type: Schema.Types.ObjectId, ref: "Employee", required: true, index: true }, department: { type: Schema.Types.ObjectId, ref: "Department", required: true, index: true }, dateKey: { type: String, required: true, index: true }, status: { type: String, enum: ATTENDANCE_STATUSES, required: true }, checkInAt: { type: Date, required: true }, checkInLocation: { type: locationSchema, required: true }, checkOutAt: Date, checkOutLocation: locationSchema, workedMinutes: { type: Number, min: 0, default: 0 }, isActive: { type: Boolean, default: true, index: true } }, { timestamps: true });
 schema.index({ employee: 1, dateKey: 1 }, { unique: true }); schema.index({ department: 1, dateKey: 1 });
-export const Attendance = model<AttendanceDocument>("Attendance", schema);
+export const Attendance = tenantModel<AttendanceDocument>("Attendance", schema);

@@ -1,4 +1,5 @@
-import { Schema, model, type Types } from "mongoose";
+import { Schema, type Types } from "mongoose";
+import { tenantModel } from "../tenancy/tenantModel.js";
 export const EMPLOYMENT_TYPES = ["FULL_TIME", "PART_TIME", "CONTRACT", "INTERN", "CONSULTANT"] as const;
 export const EMPLOYEE_STATUSES = ["ACTIVE", "ONBOARDING", "ON_LEAVE", "INACTIVE"] as const;
 export interface ExperienceItem { company: string; role: string; startDate: Date; endDate?: Date; summary?: string }
@@ -19,4 +20,4 @@ const schema = new Schema<EmployeeDocument>({
   onboardingStep: { type: Number, min: 1, max: 8, default: 1 }, profileCompletion: { type: Number, min: 0, max: 100, default: 20 }, isActive: { type: Boolean, default: true, index: true }, archivedAt: Date
 }, { timestamps: true });
 schema.index({ department: 1, team: 1, status: 1 }); schema.index({ firstName: "text", lastName: "text", employeeId: "text", officialEmail: "text" });
-export const Employee = model<EmployeeDocument>("Employee", schema);
+export const Employee = tenantModel<EmployeeDocument>("Employee", schema);

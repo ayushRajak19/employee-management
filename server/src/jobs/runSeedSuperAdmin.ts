@@ -2,9 +2,11 @@ import { connectDatabase, disconnectDatabase } from "../config/database.js";
 import { seedOrganization } from "./seedSuperAdmin.js";
 
 const run = async (): Promise<void> => {
-  await connectDatabase();
+  console.log("Connecting to MongoDB");
+  const { defaultTenantId } = await connectDatabase();
+  console.log("Tenant migration marker verified");
   try {
-    await seedOrganization();
+    await seedOrganization(defaultTenantId);
   } finally {
     await disconnectDatabase();
   }

@@ -13,8 +13,8 @@ const clearCookies = (response: Response): void => {
 };
 
 export const login = async (request: Request, response: Response): Promise<void> => {
-  const { email, password } = request.body as { email: string; password: string };
-  const result = await authService.login(email, password, request); setCookies(response, result.accessToken, result.refreshToken);
+  const { email, password, tenantSlug } = request.body as { email: string; password: string; tenantSlug?: string };
+  const result = await authService.login(email, password, tenantSlug, request); setCookies(response, result.accessToken, result.refreshToken);
   response.json({ success: true, message: "Signed in successfully", data: { user: result.user } });
 };
 export const refresh = async (request: Request, response: Response): Promise<void> => {

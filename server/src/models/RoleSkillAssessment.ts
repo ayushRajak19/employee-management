@@ -1,4 +1,5 @@
-import { Schema, model, type Types } from "mongoose";
+import { Schema, type Types } from "mongoose";
+import { tenantModel } from "../tenancy/tenantModel.js";
 
 export interface RoleSkillScore {
   skillId: string;
@@ -42,4 +43,4 @@ const schema = new Schema<RoleSkillAssessmentDocument>({
   submittedAt: { type: Date, required: true, default: Date.now }
 }, { timestamps: true });
 
-export const RoleSkillAssessment = model<RoleSkillAssessmentDocument>("RoleSkillAssessment", schema);
+export const RoleSkillAssessment = tenantModel<RoleSkillAssessmentDocument>("RoleSkillAssessment", schema);

@@ -1,4 +1,5 @@
-import { Schema, model, type Types } from "mongoose";
+import { Schema, type Types } from "mongoose";
+import { tenantModel } from "../tenancy/tenantModel.js";
 import { CONTRIBUTION_AREAS, type ContributionArea } from "./ContributionReview.js";
 
 export interface ContributionSnapshotDocument {
@@ -28,4 +29,4 @@ const schema = new Schema<ContributionSnapshotDocument>({
   alerts: { type: [alertSchema], default: [] }, calculatedBy: { type: Schema.Types.ObjectId, ref: "User", required: true }, calculatedAt: { type: Date, default: Date.now }
 }, { timestamps: true, versionKey: false });
 schema.index({ employee: 1, period: 1 }, { unique: true });
-export const ContributionSnapshot = model<ContributionSnapshotDocument>("ContributionSnapshot", schema);
+export const ContributionSnapshot = tenantModel<ContributionSnapshotDocument>("ContributionSnapshot", schema);

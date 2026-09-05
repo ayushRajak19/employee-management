@@ -1,0 +1,36 @@
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Building2, Copy, Plus, ShieldCheck, X } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { tenantApi, type CreateTenantInput } from "@/features/tenants/tenantApi";
+import { useAuth } from "@/features/auth/AuthProvider";
+
+const password = () => {
+  const bytes = crypto.getRandomValues(new Uint8Array(14));
+  return `Mb!${Array.from(bytes, (value) => "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789"[value % 57]).join("")}9a`;
+};
+const initialForm = (): CreateTenantInput => ({ name: "", slug: "", plan: "STANDARD", adminName: "", adminEmail: "", temporaryPassword: password() });
+
+export const TenantsPage = () => {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState(initialForm);
+  const tenants = useQuery({ queryKey: ["platform", "tenants"], queryFn: tenantApi.list });
+  const create = useMutation({ mutationFn: tenantApi.create, onSuccess: async () => { setOpen(false); setForm(initialForm()); await queryClient.invalidateQueries({ queryKey: ["platform", "tenants"] }); } });
+  const status = useMutation({ mutationFn: ({ id, value }: { id: string; value: "ACTIVE" | "SUSPENDED" }) => tenantApi.updateStatus(id, value), onSuccess: async () => queryClient.invalidateQueries({ queryKey: ["platform", "tenants"] }) });
+  const update = <K extends keyof CreateTenantInput>(key: K, value: CreateTenantInput[K]) => setForm((current) => ({ ...current, [key]: value }));
+
+  return <main className="flex-1 px-5 py-8 sm:px-8"><div className="mx-auto max-w-[1200px]">
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-sm font-medium text-brand-700">Platform administration</p><h1 className="mt-1 text-3xl font-semibold">Vendor organizations</h1><p className="mt-2 text-sm text-slate-500">Provision isolated workspaces, administrators and organization data.</p></div><Button onClick={() => { create.reset(); setOpen(true); }}><Plus size={16}/> Add organization</Button></div>
+    <div className="mt-6 flex gap-3 rounded-2xl border border-violet-200 bg-violet-50 p-4 text-violet-900"><ShieldCheck size={19} className="mt-0.5 shrink-0"/><p className="text-sm leading-6">Each organization has its own users, roles, employees, files and records. Suspending one immediately blocks its sessions without deleting any data.</p></div>
+    <section className="mt-5 overflow-hidden rounded-2xl border bg-white shadow-soft">
+      {tenants.isLoading ? <div className="space-y-3 p-5"><Skeleton className="h-16"/><Skeleton className="h-16"/></div> : tenants.error ? <p className="p-8 text-center text-sm text-red-600">{tenants.error.message}</p> : <div className="divide-y">{tenants.data?.items.map((item) => <div key={item._id} className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center"><div className="grid size-11 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700"><Building2 size={19}/></div><div><p className="font-semibold">{item.name}</p><p className="mt-1 text-xs text-slate-400">Organization ID: <span className="font-mono">{item.slug}</span> · {item.plan.toLowerCase()}</p></div><div className="sm:ml-auto sm:text-right"><span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${item.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : item.status === "SUSPENDED" ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-700"}`}>{item.status}</span>{item._id !== user?.tenantId && item.status !== "PROVISIONING" && <button className="ml-3 text-xs font-medium text-slate-500 hover:text-slate-900" disabled={status.isPending} onClick={() => status.mutate({ id: item._id, value: item.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE" })}>{item.status === "ACTIVE" ? "Suspend" : "Activate"}</button>}</div></div>)}{!tenants.data?.items.length && <p className="p-10 text-center text-sm text-slate-400">No organizations found.</p>}</div>}
+    </section>
+  </div>
+  {open && <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-ink/35 p-4 backdrop-blur-sm"><form className="my-6 w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl" onSubmit={(event) => { event.preventDefault(); create.mutate(form); }}><div className="flex items-start"><div><h2 className="text-xl font-semibold">Provision organization</h2><p className="mt-1 text-sm text-slate-500">Creates a tenant workspace and its first Super Admin.</p></div><button type="button" aria-label="Close" className="ml-auto grid size-9 place-items-center rounded-lg hover:bg-slate-100" onClick={() => setOpen(false)}><X size={17}/></button></div><div className="mt-6 grid gap-4 sm:grid-cols-2"><label className="text-sm font-medium">Organization name<Input required minLength={2} className="mt-2" value={form.name} onChange={(event) => { update("name", event.target.value); if (!form.slug) update("slug", event.target.value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")); }}/></label><label className="text-sm font-medium">Organization ID<Input required pattern="[a-z0-9][a-z0-9-]*" className="mt-2 font-mono" value={form.slug} onChange={(event) => update("slug", event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}/></label><label className="text-sm font-medium">Admin name<Input required minLength={2} className="mt-2" value={form.adminName} onChange={(event) => update("adminName", event.target.value)}/></label><label className="text-sm font-medium">Admin email<Input required type="email" className="mt-2" value={form.adminEmail} onChange={(event) => update("adminEmail", event.target.value)}/></label><label className="text-sm font-medium">Plan<select className="mt-2 h-11 w-full rounded-xl border bg-white px-3 text-sm" value={form.plan} onChange={(event) => update("plan", event.target.value as CreateTenantInput["plan"])}><option value="STANDARD">Standard</option><option value="ENTERPRISE">Enterprise</option></select></label><label className="text-sm font-medium">Temporary password<div className="mt-2 flex gap-2"><Input required minLength={12} value={form.temporaryPassword} onChange={(event) => update("temporaryPassword", event.target.value)}/><Button type="button" variant="secondary" aria-label="Copy password" onClick={() => void navigator.clipboard.writeText(form.temporaryPassword)}><Copy size={15}/></Button></div></label></div>{create.error && <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{create.error.message}</p>}<div className="mt-6 flex justify-end gap-2"><Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancel</Button><Button disabled={create.isPending}>{create.isPending ? "Provisioning…" : "Provision organization"}</Button></div></form></div>}
+  </main>;
+};
+

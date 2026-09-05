@@ -1,4 +1,5 @@
-import { Schema, model, type Types } from "mongoose";
+import { Schema, type Types } from "mongoose";
+import { tenantModel } from "../tenancy/tenantModel.js";
 
 export const EMAIL_WORKFLOW_STATUSES = ["DRAFT", "ACTIVE", "PAUSED"] as const;
 export interface EmailWorkflowDocument {
@@ -27,4 +28,4 @@ const schema = new Schema<EmailWorkflowDocument>({
   createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
   activatedAt: Date,
 }, { timestamps: true });
-export const EmailWorkflow = model<EmailWorkflowDocument>("EmailWorkflow", schema);
+export const EmailWorkflow = tenantModel<EmailWorkflowDocument>("EmailWorkflow", schema);

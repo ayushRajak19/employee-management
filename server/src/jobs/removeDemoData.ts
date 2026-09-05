@@ -28,12 +28,14 @@ import { TaskActivity } from "../models/TaskActivity.js";
 import { Team } from "../models/Team.js";
 import { Training } from "../models/Training.js";
 import { User } from "../models/User.js";
+import { runWithTenant } from "../tenancy/tenantContext.js";
 
 const seededSkillNames = ["react", "node.js", "laravel", "php", "python", "sql", "mongodb", "ai / ml", "rag", "devops", "sales", "crm", "seo", "content marketing"];
 
 const run = async (): Promise<void> => {
-  await connectDatabase();
+  const { defaultTenantId } = await connectDatabase();
   try {
+    await runWithTenant(defaultTenantId, async () => {
     const employees = await Employee.find({ $or: [{ officialEmail: /@demo\.mobiusbloom\.local$/i }, { employeeId: /^MB-DEMO-/i }] }).select("_id user").lean();
     const employeeIds = employees.map((item) => item._id);
     const employeeUserIds = employees.map((item) => item.user);
@@ -102,6 +104,7 @@ const run = async (): Promise<void> => {
     }
     if (unusedSkillIds.length) await Skill.deleteMany({ _id: { $in: unusedSkillIds } });
     console.log("Demo data removed", { ...preview, unusedSkills: unusedSkillIds.length, unusedKpis: unusedKpiIds.length });
+    });
   } finally {
     await disconnectDatabase();
   }

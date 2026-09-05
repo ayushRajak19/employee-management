@@ -12,6 +12,8 @@ This repository is an independent Node.js application for `employee.whalexy.com`
 
 Business rules belong in services. Routes compose validation, authentication and permission middleware before controllers. Growing histories (audit, task activity, performance snapshots, notifications and verification history) use separate collections rather than unbounded employee documents.
 
+All business models are tenant-scoped through a central fail-closed Mongoose model wrapper. Authentication establishes an AsyncLocalStorage tenant context from the signed session token, and model middleware injects `tenantId` into all supported query and write paths. Platform tenant administration is separately protected by a configured email allowlist plus the Super Admin role. See [MULTI_TENANCY.md](./MULTI_TENANCY.md) for the migration and operations runbook.
+
 ## Model map
 
 | Domain | Collections | Key references and indexes |

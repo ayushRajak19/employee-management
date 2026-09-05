@@ -1,4 +1,5 @@
-import { Schema, model, type Types } from "mongoose";
+import { Schema, type Types } from "mongoose";
+import { tenantModel } from "../tenancy/tenantModel.js";
 
 export type FitClassification = "STRONG_FIT" | "POTENTIAL_FIT" | "NOT_FIT";
 export interface ScreeningResultRecord { applicant: Types.ObjectId; candidateName: string; score: number; classification: FitClassification; summary: string; writtenReason: string; matchedRequirements: string[]; missingRequirements: string[]; evidence: string[] }
@@ -11,4 +12,4 @@ const resumeScreeningSchema = new Schema<ResumeScreeningRecord>({
   jobTitle: { type: String, required: true, trim: true, maxlength: 160 }, jobDescription: { type: String, required: true, maxlength: 30_000 }, status: { type: String, enum: ["COMPLETED"], default: "COMPLETED" }, results: { type: [resultSchema], required: true }, provider: { type: String, required: true, maxlength: 40 }, model: { type: String, required: true, maxlength: 120 }, createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true }
 }, { timestamps: true });
 resumeScreeningSchema.index({ createdAt: -1 });
-export const ResumeScreening = model<ResumeScreeningRecord>("ResumeScreening", resumeScreeningSchema);
+export const ResumeScreening = tenantModel<ResumeScreeningRecord>("ResumeScreening", resumeScreeningSchema);

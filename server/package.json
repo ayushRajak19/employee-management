@@ -11,6 +11,11 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "seed": "tsx src/jobs/runSeedSuperAdmin.ts",
     "cleanup:demo": "tsx src/jobs/removeDemoData.ts",
+    "backup": "tsx src/jobs/backupDatabase.ts",
+    "preflight:tenants": "tsx src/jobs/tenantPreflight.ts",
+    "verify:preservation": "tsx src/jobs/verifyMigrationPreservation.ts",
+    "restore:migration-metadata": "tsx src/jobs/restoreMigrationMetadata.ts",
+    "migrate:tenants": "tsx src/jobs/runTenantMigration.ts",
     "test": "tsx --test src/**/*.test.ts"
   },
   "dependencies": {

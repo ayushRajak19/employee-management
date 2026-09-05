@@ -1,4 +1,5 @@
-import { Schema, model } from "mongoose";
+import { Schema } from "mongoose";
+import { tenantModel } from "../tenancy/tenantModel.js";
 import { PERMISSIONS, ROLES, type PermissionName, type RoleName } from "@mobiusbloom/shared";
 
 export interface RoleDocument { name: RoleName; description: string; permissions: PermissionName[]; isSystem: boolean }
@@ -8,4 +9,4 @@ const roleSchema = new Schema<RoleDocument>({
   permissions: [{ type: String, enum: PERMISSIONS, required: true }],
   isSystem: { type: Boolean, default: true }
 }, { timestamps: true });
-export const Role = model<RoleDocument>("Role", roleSchema);
+export const Role = tenantModel<RoleDocument>("Role", roleSchema);

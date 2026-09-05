@@ -1,4 +1,5 @@
-import { Schema, model, type Types } from "mongoose";
+import { Schema, type Types } from "mongoose";
+import { tenantModel } from "../tenancy/tenantModel.js";
 export interface AiEmployeeSummaryDocument { employee: Types.ObjectId; kind: "CONTRIBUTION" | "PERFORMANCE"; summary: string; provider: string; model: string; generatedBy: Types.ObjectId; generatedAt: Date }
 const schema = new Schema<AiEmployeeSummaryDocument>({
   employee: { type: Schema.Types.ObjectId, ref: "Employee", required: true, index: true },
@@ -7,4 +8,4 @@ const schema = new Schema<AiEmployeeSummaryDocument>({
   generatedBy: { type: Schema.Types.ObjectId, ref: "User", required: true }, generatedAt: { type: Date, default: Date.now }
 }, { timestamps: true, versionKey: false });
 schema.index({ employee: 1, kind: 1 }, { unique: true });
-export const AiEmployeeSummary = model<AiEmployeeSummaryDocument>("AiEmployeeSummary", schema);
+export const AiEmployeeSummary = tenantModel<AiEmployeeSummaryDocument>("AiEmployeeSummary", schema);

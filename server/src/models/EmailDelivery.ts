@@ -1,4 +1,5 @@
-import { Schema, model, type Types } from "mongoose";
+import { Schema, type Types } from "mongoose";
+import { tenantModel } from "../tenancy/tenantModel.js";
 
 export interface EmailDeliveryDocument {
   workflow?: Types.ObjectId;
@@ -24,4 +25,4 @@ const schema = new Schema<EmailDeliveryDocument>({
   lastEventAt: { type: Date, required: true, default: Date.now },
   events: [{ _id: false, type: { type: String, required: true }, occurredAt: { type: Date, required: true }, reason: String }],
 }, { timestamps: true });
-export const EmailDelivery = model<EmailDeliveryDocument>("EmailDelivery", schema);
+export const EmailDelivery = tenantModel<EmailDeliveryDocument>("EmailDelivery", schema);

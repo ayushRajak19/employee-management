@@ -8,13 +8,17 @@ import { Department } from "../models/Department.js";
 import { Team } from "../models/Team.js";
 import { Designation } from "../models/Designation.js";
 import { additionalDesignationPresets } from "../data/additionalRoleSkillCatalog.js";
+import { runWithTenant } from "../tenancy/tenantContext.js";
 
-export const seedOrganization = async (): Promise<void> => {
-  if (!env.SUPER_ADMIN_NAME || !env.SUPER_ADMIN_EMAIL || !env.SUPER_ADMIN_PASSWORD) {
-    throw new Error("SUPER_ADMIN_NAME, SUPER_ADMIN_EMAIL and SUPER_ADMIN_PASSWORD are required for seeding");
-  }
-  await Permission.bulkWrite(PERMISSIONS.map((key) => ({ updateOne: { filter: { key }, update: { $set: { description: key.replace(".", " ") } }, upsert: true } })));
-  await Role.bulkWrite(ROLES.map((name) => ({ updateOne: { filter: { name }, update: { $set: { description: name.replaceAll("_", " "), permissions: [...ROLE_PERMISSIONS[name]], isSystem: true } }, upsert: true } })));
+export const seedPermissions = async (): Promise<void> => {
+  await Permission.bulkWrite(PERMISSIONS.map((key) => ({ updateOne: { filter: { key }, update: { $set: { description: key.replace(".", " ") } }, upsert: true } })), { timestamps: false });
+};
+
+export const seedTenantRoles = async (): Promise<void> => {
+  await Role.bulkWrite(ROLES.map((name) => ({ updateOne: { filter: { name }, update: { $set: { description: name.replaceAll("_", " "), permissions: [...ROLE_PERMISSIONS[name]], isSystem: true } }, upsert: true } })), { timestamps: false });
+};
+
+export const seedTenantOrganizationPresets = async (): Promise<void> => {
   const departmentPresets = [
     { name: "IT", code: "IT" },
     { name: "Sales", code: "SALE" },
@@ -23,19 +27,17 @@ export const seedOrganization = async (): Promise<void> => {
     { name: "Operations", code: "OPER" },
     { name: "Administration", code: "ADMIN" },
   ];
-  const departments = new Map<string, InstanceType<typeof Department>>();
-  for (const preset of departmentPresets) {
-    const department = await Department.findOneAndUpdate(
-      { code: preset.code },
-      { $set: { ...preset, description: `${preset.name} department`, isActive: true } },
-      { upsert: true, new: true, runValidators: true },
-    );
-    departments.set(preset.name, department);
-  }
+  await Department.bulkWrite(departmentPresets.map((preset) => ({ updateOne: {
+    filter: { code: preset.code },
+    update: { $setOnInsert: { ...preset, description: `${preset.name} department`, isActive: true } },
+    upsert: true,
+  } })), { timestamps: false });
+  const departmentRecords = await Department.find({ code: { $in: departmentPresets.map((preset) => preset.code) } });
+  const departments = new Map(departmentRecords.map((department) => [department.name, department]));
   await Team.findOneAndUpdate(
     { department: departments.get("IT")!._id, code: "DEV" },
-    { $set: { name: "Development", description: "Software development team", isActive: true } },
-    { upsert: true, new: true, runValidators: true },
+    { $setOnInsert: { name: "Development", description: "Software development team", isActive: true } },
+    { upsert: true, new: true, runValidators: true, timestamps: false },
   );
   const designationPresets = [
     { name: "Software Engineer", code: "SWE", department: "IT", catalogRole: "AI/ML Developer" },
@@ -48,25 +50,34 @@ export const seedOrganization = async (): Promise<void> => {
     { name: "Operations Analyst", code: "OPS", department: "Operations", catalogRole: "Admin" },
     ...additionalDesignationPresets,
   ];
-  for (const preset of designationPresets) {
-    await Designation.findOneAndUpdate(
-      { code: preset.code },
-      { $set: { name: preset.name, department: departments.get(preset.department)!._id, catalogRole: preset.catalogRole, isActive: true } },
-      { upsert: true, new: true, runValidators: true },
-    );
-  }
-  const role = await Role.findOne({ name: "SUPER_ADMIN" }).orFail();
-  const existing = await User.findOne({ email: env.SUPER_ADMIN_EMAIL.toLowerCase() });
-  if (existing) {
-    existing.name = env.SUPER_ADMIN_NAME;
-    existing.role = role._id;
-    existing.isActive = true;
-    existing.onboardingComplete = true;
-    existing.forcePasswordChange = false;
-    existing.passwordHash = await bcrypt.hash(env.SUPER_ADMIN_PASSWORD, 12);
-    await existing.save();
-    console.log("Super Admin credentials synchronized");
-  }
-  else { await User.create({ name: env.SUPER_ADMIN_NAME, email: env.SUPER_ADMIN_EMAIL, passwordHash: await bcrypt.hash(env.SUPER_ADMIN_PASSWORD, 12), role: role._id, isActive: true, forcePasswordChange: false, onboardingComplete: true }); console.log("Super Admin created"); }
+  await Designation.bulkWrite(designationPresets.map((preset) => ({ updateOne: {
+    filter: { code: preset.code },
+    update: { $setOnInsert: { name: preset.name, department: departments.get(preset.department)!._id, catalogRole: preset.catalogRole, isActive: true } },
+    upsert: true,
+  } })), { timestamps: false });
+};
+
+export const seedOrganization = async (tenantId: string): Promise<void> => {
+  console.log("Verifying global permissions");
+  await seedPermissions();
+  await runWithTenant(tenantId, async () => {
+    console.log("Verifying tenant roles");
+    await seedTenantRoles();
+    console.log("Verifying organization presets");
+    await seedTenantOrganizationPresets();
+    if (!env.SUPER_ADMIN_NAME || !env.SUPER_ADMIN_EMAIL || !env.SUPER_ADMIN_PASSWORD) {
+      console.warn("Super Admin seed credentials are not configured; existing accounts remain unchanged");
+      return;
+    }
+    const normalizedEmail = env.SUPER_ADMIN_EMAIL.toLowerCase();
+    const existing = await User.findOne({ email: normalizedEmail }).select("_id").lean();
+    if (existing) {
+      console.log("Existing Super Admin account and password preserved");
+      return;
+    }
+    const role = await Role.findOne({ name: "SUPER_ADMIN" }).orFail();
+    await User.create({ name: env.SUPER_ADMIN_NAME, email: normalizedEmail, passwordHash: await bcrypt.hash(env.SUPER_ADMIN_PASSWORD, 12), role: role._id, isActive: true, forcePasswordChange: false, onboardingComplete: true });
+    console.log("Super Admin created");
+  });
   console.log("Organization presets seeded");
 };

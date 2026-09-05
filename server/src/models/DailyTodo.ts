@@ -1,4 +1,5 @@
-import { Schema, model, type Types } from "mongoose";
+import { Schema, type Types } from "mongoose";
+import { tenantModel } from "../tenancy/tenantModel.js";
 
 export interface DailyTodoDocument {
   user: Types.ObjectId;
@@ -30,4 +31,4 @@ const schema = new Schema<DailyTodoDocument>({
 
 schema.index({ user: 1, date: 1, createdAt: 1 });
 schema.index({ date: 1, employee: 1, status: 1 });
-export const DailyTodo = model<DailyTodoDocument>("DailyTodo", schema);
+export const DailyTodo = tenantModel<DailyTodoDocument>("DailyTodo", schema);

@@ -24,6 +24,10 @@ export interface SessionUser {
   id: string;
   name: string;
   email: string;
+  tenantId: string;
+  tenantName: string;
+  tenantSlug: string;
+  isPlatformAdmin: boolean;
   role: RoleName;
   permissions: PermissionName[];
   forcePasswordChange: boolean;

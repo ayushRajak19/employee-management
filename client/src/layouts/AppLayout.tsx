@@ -21,6 +21,7 @@ type NavItem = {
   path: string;
   roles?: RoleName[];
   permission?: PermissionName;
+  platformOnly?: boolean;
 };
 
 const managementRoles: RoleName[] = ["SUPER_ADMIN", "HR_ADMIN", "DEPARTMENT_HEAD", "MANAGER"];
@@ -85,6 +86,7 @@ const groups: { label: string; items: NavItem[] }[] = [
     label: "Administration", items: [
       { label: "Administrators", icon: UserCog, path: "/administrators", roles: superAdminRole },
       { label: "Email automation", icon: MailPlus, path: "/email-automation", roles: superAdminRole },
+      { label: "Vendor organizations", icon: Building2, path: "/platform/tenants", platformOnly: true },
       { label: "Access & audit", icon: ShieldCheck, path: "/governance", permission: "audit.view" },
       { label: "Settings", icon: Settings, path: "/people-ops", permission: "settings.manage" },
     ],
@@ -115,7 +117,8 @@ export const AppLayout = () => {
       items: group.items.filter(
         (item) =>
           (!item.roles || item.roles.includes(user!.role)) &&
-          (!item.permission || user!.permissions.includes(item.permission))
+          (!item.permission || user!.permissions.includes(item.permission)) &&
+          (!item.platformOnly || user!.isPlatformAdmin)
       ),
     }))
     .filter((group) => group.items.length);
@@ -136,8 +139,8 @@ export const AppLayout = () => {
         />
         {!collapsed && (
           <div className="ml-3 overflow-hidden">
-            <p className="truncate text-sm font-semibold">MobiusBloom</p>
-            <p className="text-[11px] text-slate-400">Employee intelligence</p>
+            <p className="truncate text-sm font-semibold">{user?.tenantName ?? "MobiusBloom"}</p>
+            <p className="truncate text-[11px] text-slate-400">{user?.tenantSlug ?? "Employee intelligence"}</p>
           </div>
         )}
         {/* Desktop collapse toggle */}

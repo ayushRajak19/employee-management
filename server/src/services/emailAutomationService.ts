@@ -6,6 +6,8 @@ import { EmailWorkflow, type EmailWorkflowDocument } from "../models/EmailWorkfl
 import { VendorContact, type VendorContactDocument } from "../models/VendorContact.js";
 import { AppError } from "../utils/AppError.js";
 import { writeAudit } from "./auditService.js";
+import { Tenant } from "../models/Tenant.js";
+import { currentTenantId, runWithTenant } from "../tenancy/tenantContext.js";
 
 type WorkflowInput = Pick<EmailWorkflowDocument, "name" | "audience" | "subject" | "message" | "followUp" | "delayDays" | "followUpSubject" | "followUpMessage">;
 type ContactInput = Pick<VendorContactDocument, "name" | "companyName" | "email" | "source" | "consentAt">;
@@ -13,7 +15,7 @@ type BrevoResponse = { messageId?: string; code?: string; message?: string };
 type WebhookInput = { event?: string; email?: string; reason?: string; ts_event?: number; ts?: number; "message-id"?: string };
 type BrevoEmailEvent = { date?: string; email?: string; event?: string; messageId?: string; reason?: string };
 
-const configured = () => Boolean(env.BREVO_API_KEY && env.BREVO_SENDER_EMAIL);
+const configured = () => env.EMAIL_AUTOMATION_ENABLED && Boolean(env.BREVO_API_KEY && env.BREVO_SENDER_EMAIL);
 const webhookToken = env.BREVO_WEBHOOK_TOKEN || createHash("sha256").update(`brevo-webhook:${env.JWT_ACCESS_SECRET}`).digest("hex");
 const requireConfiguration = () => {
   if (!configured()) throw new AppError("Brevo is not configured on the server", 503, "BREVO_NOT_CONFIGURED");
@@ -213,16 +215,22 @@ export const handleWebhook = async (input: WebhookInput, token?: string) => {
   const rawMessageId = String(input["message-id"] || "");
   const messageIds = [rawMessageId, rawMessageId.replace(/^<|>$/g, ""), `<${rawMessageId.replace(/^<|>$/g, "")}>`];
   const occurredAt = new Date((input.ts_event || input.ts || Date.now() / 1000) * 1000);
-  const delivery = await EmailDelivery.findOneAndUpdate({ providerMessageId: { $in: messageIds } }, { $set: { status: webhookStatus[event] || event.toUpperCase(), lastEventAt: occurredAt }, $push: { events: { type: event, occurredAt, reason: input.reason } } }, { new: true });
-  if (input.email && ["hard_bounce", "blocked", "invalid_email", "spam", "unsubscribed"].includes(event)) {
-    await suppressContact(input.email, event);
-  }
-  return { matched: Boolean(delivery) };
+  const match = await EmailDelivery.collection.findOne({ providerMessageId: { $in: messageIds } }, { projection: { tenantId: 1 } });
+  if (!match?.tenantId) return { matched: false };
+  return runWithTenant(match.tenantId, async () => {
+    const delivery = await EmailDelivery.findOneAndUpdate({ _id: match._id }, { $set: { status: webhookStatus[event] || event.toUpperCase(), lastEventAt: occurredAt }, $push: { events: { type: event, occurredAt, reason: input.reason } } }, { new: true });
+    if (delivery && input.email && ["hard_bounce", "blocked", "invalid_email", "spam", "unsubscribed"].includes(event)) await suppressContact(input.email, event);
+    return { matched: Boolean(delivery) };
+  });
 };
 export const unsubscribe = async (token: string) => {
-  const contact = await VendorContact.findOneAndUpdate({ unsubscribeToken: token }, { $set: { status: "UNSUBSCRIBED" } }, { new: true }).select("_id");
-  if (!contact) throw new AppError("This unsubscribe link is invalid", 404);
-  await EmailEnrollment.updateMany({ contact: contact._id, status: { $in: ["PENDING", "PROCESSING"] } }, { $set: { status: "STOPPED" } });
+  const match = await VendorContact.collection.findOne({ unsubscribeToken: token }, { projection: { tenantId: 1 } });
+  if (!match?.tenantId) throw new AppError("This unsubscribe link is invalid", 404);
+  await runWithTenant(match.tenantId, async () => {
+    const contact = await VendorContact.findOneAndUpdate({ _id: match._id }, { $set: { status: "UNSUBSCRIBED" } }, { new: true }).select("_id");
+    if (!contact) throw new AppError("This unsubscribe link is invalid", 404);
+    await EmailEnrollment.updateMany({ contact: contact._id, status: { $in: ["PENDING", "PROCESSING"] } }, { $set: { status: "STOPPED" } });
+  });
 };
 
 const processOne = async () => {
@@ -252,15 +260,23 @@ const processOne = async () => {
   }
   return true;
 };
+const runTenantEmailAutomationCycle = async () => {
+    const startOfDay = new Date(); startOfDay.setUTCHours(0, 0, 0, 0);
+    const sentToday = await EmailDelivery.countDocuments({ step: { $gte: 0 }, createdAt: { $gte: startOfDay } });
+    const available = Math.max(0, env.EMAIL_AUTOMATION_DAILY_LIMIT - sentToday);
+    for (let index = 0; index < Math.min(env.EMAIL_AUTOMATION_BATCH_SIZE, available); index += 1) if (!(await processOne())) break;
+};
 let cycleRunning = false;
 export const runEmailAutomationCycle = async () => {
   if (cycleRunning || !configured()) return;
   cycleRunning = true;
   try {
-    const startOfDay = new Date(); startOfDay.setUTCHours(0, 0, 0, 0);
-    const sentToday = await EmailDelivery.countDocuments({ step: { $gte: 0 }, createdAt: { $gte: startOfDay } });
-    const available = Math.max(0, env.EMAIL_AUTOMATION_DAILY_LIMIT - sentToday);
-    for (let index = 0; index < Math.min(env.EMAIL_AUTOMATION_BATCH_SIZE, available); index += 1) if (!(await processOne())) break;
+    const tenantId = currentTenantId();
+    if (tenantId) await runTenantEmailAutomationCycle();
+    else {
+      const tenants = await Tenant.find({ status: "ACTIVE" }).select("_id").lean();
+      for (const tenant of tenants) await runWithTenant(tenant._id, runTenantEmailAutomationCycle);
+    }
   }
   finally { cycleRunning = false; }
 };

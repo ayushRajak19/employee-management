@@ -1,4 +1,5 @@
-import { Schema, model, type Types } from "mongoose";
+import { Schema, type Types } from "mongoose";
+import { tenantModel } from "../tenancy/tenantModel.js";
 
 export const EMAIL_ENROLLMENT_STATUSES = ["PENDING", "PROCESSING", "COMPLETED", "STOPPED", "FAILED"] as const;
 export interface EmailEnrollmentDocument {
@@ -23,4 +24,4 @@ const schema = new Schema<EmailEnrollmentDocument>({
 }, { timestamps: true });
 schema.index({ workflow: 1, contact: 1 }, { unique: true });
 schema.index({ status: 1, nextRunAt: 1 });
-export const EmailEnrollment = model<EmailEnrollmentDocument>("EmailEnrollment", schema);
+export const EmailEnrollment = tenantModel<EmailEnrollmentDocument>("EmailEnrollment", schema);

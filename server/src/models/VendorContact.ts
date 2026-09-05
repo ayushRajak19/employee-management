@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
-import { Schema, model, type Types } from "mongoose";
+import { Schema, type Types } from "mongoose";
+import { tenantModel } from "../tenancy/tenantModel.js";
 
 export const VENDOR_STATUSES = ["ACTIVE", "REPLIED", "UNSUBSCRIBED", "BOUNCED", "BLOCKED"] as const;
 export interface VendorContactDocument {
@@ -24,4 +25,4 @@ const schema = new Schema<VendorContactDocument>({
   unsubscribeToken: { type: String, required: true, unique: true, index: true, default: () => randomBytes(24).toString("hex"), select: false },
   createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
 }, { timestamps: true });
-export const VendorContact = model<VendorContactDocument>("VendorContact", schema);
+export const VendorContact = tenantModel<VendorContactDocument>("VendorContact", schema);

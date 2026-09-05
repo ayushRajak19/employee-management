@@ -1,4 +1,5 @@
-import { Schema, model, type Types } from "mongoose";
+import { Schema, type Types } from "mongoose";
+import { tenantModel } from "../tenancy/tenantModel.js";
 
 export interface UserDocument {
   name: string; email: string; passwordHash: string; role: Types.ObjectId; employee?: Types.ObjectId;
@@ -16,4 +17,4 @@ const userSchema = new Schema<UserDocument>({
   passwordChangedAt: Date, lastLoginAt: Date
 }, { timestamps: true });
 userSchema.index({ isActive: 1, role: 1 });
-export const User = model<UserDocument>("User", userSchema);
+export const User = tenantModel<UserDocument>("User", userSchema);

@@ -1,4 +1,5 @@
-import { Schema, model, type Types } from "mongoose";
+import { Schema, type Types } from "mongoose";
+import { tenantModel } from "../tenancy/tenantModel.js";
 
 export interface ApplicantRecord {
   name: string;
@@ -35,4 +36,4 @@ const applicantSchema = new Schema<ApplicantRecord>({
 }, { timestamps: true });
 
 applicantSchema.index({ createdAt: -1, jobCategory: 1 });
-export const Applicant = model<ApplicantRecord>("Applicant", applicantSchema);
+export const Applicant = tenantModel<ApplicantRecord>("Applicant", applicantSchema);

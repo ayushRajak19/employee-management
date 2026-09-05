@@ -7,41 +7,68 @@ import { AppError } from "../utils/AppError.js";
 import { createAccessToken, createRefreshToken, hashToken, verifyRefreshToken } from "./tokenService.js";
 import { writeAudit } from "./auditService.js";
 import type { RoleDocument } from "../models/Role.js";
+import { runWithTenant } from "../tenancy/tenantContext.js";
+import { requireActiveTenant, resolveTenantForLogin, tenantIdForRefreshTokenHash, type ActiveTenant } from "../tenancy/tenantResolver.js";
+import { isPlatformAdminEmail } from "../middleware/platformAdmin.js";
 
 type PopulatedUser = Awaited<ReturnType<typeof getPopulatedUser>>;
 const getPopulatedUser = async (id: string) => User.findById(id).populate<{ role: RoleDocument }>("role").exec();
-const sessionUser = (user: NonNullable<PopulatedUser>): SessionUser => ({ id: user.id, name: user.name, email: user.email, role: user.role.name, permissions: user.role.permissions, forcePasswordChange: user.forcePasswordChange, onboardingComplete: user.onboardingComplete });
+const sessionUser = (user: NonNullable<PopulatedUser>, tenant: ActiveTenant): SessionUser => ({
+  id: user.id,
+  name: user.name,
+  email: user.email,
+  tenantId: tenant._id.toString(),
+  tenantName: tenant.name,
+  tenantSlug: tenant.slug,
+  isPlatformAdmin: user.role.name === "SUPER_ADMIN" && isPlatformAdminEmail(user.email),
+  role: user.role.name,
+  permissions: user.role.permissions,
+  forcePasswordChange: user.forcePasswordChange,
+  onboardingComplete: user.onboardingComplete,
+});
 const requestMeta = (request: Request) => ({ ip: request.ip, userAgent: request.get("user-agent")?.slice(0, 500) });
 
-export const login = async (email: string, password: string, request: Request) => {
-  const user = await User.findOne({ email, isActive: true }).select("+passwordHash").populate<{ role: RoleDocument }>("role");
-  if (!user || !(await bcrypt.compare(password, user.passwordHash))) throw new AppError("Email or password is incorrect", 401, "INVALID_CREDENTIALS");
-  const refresh = createRefreshToken(user.id);
-  await RefreshSession.create({ user: user._id, tokenHash: hashToken(refresh.token), family: refresh.family, expiresAt: refresh.expiresAt, ...requestMeta(request) });
-  user.lastLoginAt = new Date(); await user.save();
-  await writeAudit({ user: user._id, action: "AUTH_LOGIN", entityType: "User", entityId: user.id, ipAddress: request.ip, userAgent: request.get("user-agent") });
-  return { user: sessionUser(user), accessToken: createAccessToken(user.id), refreshToken: refresh.token };
+export const login = async (email: string, password: string, tenantSlug: string | undefined, request: Request) => {
+  const tenant = await resolveTenantForLogin(email, tenantSlug);
+  return runWithTenant(tenant._id, async () => {
+    const user = await User.findOne({ email, isActive: true }).select("+passwordHash").populate<{ role: RoleDocument }>("role");
+    if (!user || !(await bcrypt.compare(password, user.passwordHash))) throw new AppError("Email, password or organization is incorrect", 401, "INVALID_CREDENTIALS");
+    const tenantId = tenant._id.toString();
+    const refresh = createRefreshToken(user.id, tenantId);
+    await RefreshSession.create({ user: user._id, tokenHash: hashToken(refresh.token), family: refresh.family, expiresAt: refresh.expiresAt, ...requestMeta(request) });
+    user.lastLoginAt = new Date(); await user.save();
+    await writeAudit({ user: user._id, action: "AUTH_LOGIN", entityType: "User", entityId: user.id, ipAddress: request.ip, userAgent: request.get("user-agent") });
+    return { user: sessionUser(user, tenant), accessToken: createAccessToken(user.id, tenantId), refreshToken: refresh.token };
+  });
 };
 
 export const rotateRefreshToken = async (token: string, request: Request) => {
   let payload;
   try { payload = verifyRefreshToken(token); } catch { throw new AppError("Session expired", 401, "INVALID_REFRESH_TOKEN"); }
   const tokenHash = hashToken(token);
-  const existing = await RefreshSession.findOne({ tokenHash });
-  if (!existing || existing.revokedAt) {
-    await RefreshSession.updateMany({ family: payload.family, revokedAt: { $exists: false } }, { $set: { revokedAt: new Date() } });
-    throw new AppError("Session reuse detected. Please sign in again", 401, "REFRESH_REUSE_DETECTED");
-  }
-  const user = await getPopulatedUser(payload.sub);
-  if (!user?.isActive) throw new AppError("Account is unavailable", 401, "ACCOUNT_UNAVAILABLE");
-  const refresh = createRefreshToken(user.id, payload.family);
-  existing.revokedAt = new Date(); existing.replacedByHash = hashToken(refresh.token); await existing.save();
-  await RefreshSession.create({ user: user._id, tokenHash: hashToken(refresh.token), family: refresh.family, expiresAt: refresh.expiresAt, ...requestMeta(request) });
-  return { user: sessionUser(user), accessToken: createAccessToken(user.id), refreshToken: refresh.token };
+  const tenantId = payload.tenantId ?? await tenantIdForRefreshTokenHash(tokenHash);
+  if (!tenantId) throw new AppError("Session expired", 401, "INVALID_REFRESH_TOKEN");
+  const tenant = await requireActiveTenant(tenantId);
+  return runWithTenant(tenantId, async () => {
+    const existing = await RefreshSession.findOne({ tokenHash });
+    if (!existing || existing.revokedAt) {
+      await RefreshSession.updateMany({ family: payload.family, revokedAt: { $exists: false } }, { $set: { revokedAt: new Date() } });
+      throw new AppError("Session reuse detected. Please sign in again", 401, "REFRESH_REUSE_DETECTED");
+    }
+    const user = await getPopulatedUser(payload.sub);
+    if (!user?.isActive) throw new AppError("Account is unavailable", 401, "ACCOUNT_UNAVAILABLE");
+    const refresh = createRefreshToken(user.id, tenantId, payload.family);
+    existing.revokedAt = new Date(); existing.replacedByHash = hashToken(refresh.token); await existing.save();
+    await RefreshSession.create({ user: user._id, tokenHash: hashToken(refresh.token), family: refresh.family, expiresAt: refresh.expiresAt, ...requestMeta(request) });
+    return { user: sessionUser(user, tenant), accessToken: createAccessToken(user.id, tenantId), refreshToken: refresh.token };
+  });
 };
 
 export const revokeRefreshToken = async (token: string | undefined): Promise<void> => {
-  if (token) await RefreshSession.updateOne({ tokenHash: hashToken(token), revokedAt: { $exists: false } }, { $set: { revokedAt: new Date() } });
+  if (!token) return;
+  const tokenHash = hashToken(token);
+  const tenantId = await tenantIdForRefreshTokenHash(tokenHash);
+  if (tenantId) await runWithTenant(tenantId, () => RefreshSession.updateOne({ tokenHash, revokedAt: { $exists: false } }, { $set: { revokedAt: new Date() } }));
 };
 
 export const changePassword = async (userId: string, currentPassword: string, newPassword: string, request: Request): Promise<SessionUser> => {
@@ -51,11 +78,11 @@ export const changePassword = async (userId: string, currentPassword: string, ne
   user.passwordHash = await bcrypt.hash(newPassword, 12); user.forcePasswordChange = false; user.passwordChangedAt = new Date(); await user.save();
   await RefreshSession.updateMany({ user: user._id, revokedAt: { $exists: false } }, { $set: { revokedAt: new Date() } });
   await writeAudit({ user: user._id, action: "PASSWORD_CHANGED", entityType: "User", entityId: user.id, ipAddress: request.ip, userAgent: request.get("user-agent") });
-  return sessionUser(user);
+  return sessionUser(user, await requireActiveTenant(user.get("tenantId").toString()));
 };
 
-export const getSessionUser = async (userId: string): Promise<SessionUser> => {
+export const getSessionUser = async (userId: string, tenant: ActiveTenant): Promise<SessionUser> => {
   const user = await getPopulatedUser(userId);
   if (!user?.isActive) throw new AppError("Authentication required", 401, "UNAUTHENTICATED");
-  return sessionUser(user);
+  return sessionUser(user, tenant);
 };
