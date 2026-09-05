@@ -194,13 +194,12 @@ export const AppLayout = () => {
       </nav>
 
       {/* User / logout */}
-      <div className="border-t p-3">
-        <button
+      <div className="space-y-2 border-t p-3">
+        <div
           className={cn(
-            "flex w-full items-center rounded-xl p-2 text-left hover:bg-slate-50",
+            "flex w-full items-center rounded-xl p-2 text-left",
             collapsed && "justify-center"
           )}
-          onClick={() => logout.mutate()}
         >
           <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-slate-100 text-xs font-semibold">
             {user?.name.split(" ").map((part) => part[0]).slice(0, 2).join("")}
@@ -211,9 +210,22 @@ export const AppLayout = () => {
                 <p className="truncate text-xs font-semibold">{user?.name}</p>
                 <p className="truncate text-[10px] text-slate-400">{user?.role.replaceAll("_", " ")}</p>
               </div>
-              <LogOut size={15} className="text-slate-400" />
             </>
           )}
+        </div>
+        <button
+          type="button"
+          aria-label="Sign out"
+          title="Sign out"
+          disabled={logout.isPending}
+          className={cn(
+            "flex h-10 w-full items-center rounded-xl px-3 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-wait disabled:opacity-60",
+            collapsed && "justify-center px-0"
+          )}
+          onClick={() => logout.mutate()}
+        >
+          <LogOut size={17} />
+          {!collapsed && <span className="ml-3">{logout.isPending ? "Signing out…" : "Sign out"}</span>}
         </button>
       </div>
     </aside>
@@ -272,6 +284,16 @@ export const AppLayout = () => {
               <p className="text-xs font-semibold">{user?.name}</p>
               <p className="text-[10px] text-slate-400">{user?.role.replaceAll("_", " ")}</p>
             </div>
+            <button
+              type="button"
+              aria-label="Sign out"
+              title="Sign out"
+              disabled={logout.isPending}
+              className="ml-1 grid size-10 shrink-0 place-items-center rounded-xl border bg-white text-slate-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:cursor-wait disabled:opacity-60"
+              onClick={() => logout.mutate()}
+            >
+              <LogOut size={17} />
+            </button>
           </div>
         </header>
 
