@@ -101,9 +101,19 @@ export const syncDeliveryEvents = async () => {
     const rawId = normalizeMessageId(item.messageId);
     const event = normalizeEvent(item.event);
     const occurredAt = item.date && !Number.isNaN(Date.parse(item.date)) ? new Date(item.date) : new Date();
-    const delivery = await EmailDelivery.findOne({ providerMessageId: { $in: [rawId, `<${rawId}>`] } }).select("_id events");
-    if (!delivery || delivery.events.some((record) => record.type === event && record.occurredAt.getTime() === occurredAt.getTime())) continue;
-    await EmailDelivery.updateOne({ _id: delivery._id }, { $set: { status: webhookStatus[event] || event.toUpperCase(), lastEventAt: occurredAt }, $push: { events: { type: event, occurredAt, reason: item.reason } } });
+    const delivery = await EmailDelivery.findOne({ providerMessageId: { $in: [rawId, `<${rawId}>`] } }).select("_id status events");
+    if (!delivery) continue;
+    const recordedFailure = [...delivery.events].reverse().find((record) => ["error", "hard_bounce", "blocked", "invalid_email", "spam"].includes(record.type));
+    if (recordedFailure && ["REQUESTED", "REQUESTS", "SENT"].includes(delivery.status)) {
+      await EmailDelivery.updateOne({ _id: delivery._id }, { $set: { status: webhookStatus[recordedFailure.type] || "ERROR", lastEventAt: recordedFailure.occurredAt } });
+      delivery.status = webhookStatus[recordedFailure.type] || "ERROR";
+    }
+    if (delivery.events.some((record) => record.type === event && record.occurredAt.getTime() === occurredAt.getTime())) continue;
+    const status = webhookStatus[event] || event.toUpperCase();
+    const filter = ["request", "requests", "sent"].includes(event)
+      ? { _id: delivery._id, status: { $nin: ["ERROR", "BOUNCED", "BLOCKED", "INVALID", "SPAM"] } }
+      : { _id: delivery._id };
+    await EmailDelivery.updateOne(filter, { $set: { status, lastEventAt: occurredAt }, $push: { events: { type: event, occurredAt, reason: item.reason } } });
     if (item.email && ["hard_bounce", "blocked", "invalid_email", "spam", "unsubscribed"].includes(event)) {
       await suppressContact(item.email, event);
     }
@@ -117,12 +127,15 @@ export const summary = async () => {
     EmailWorkflow.countDocuments(), EmailWorkflow.countDocuments({ status: "ACTIVE" }), VendorContact.countDocuments(),
     EmailDelivery.countDocuments({ step: { $gte: 0 } }), EmailDelivery.countDocuments({ "events.type": "delivered" }),
     EmailDelivery.countDocuments({ "events.type": "opened" }), EmailDelivery.countDocuments({ "events.type": "click" }),
-    EmailDelivery.countDocuments({ status: { $in: ["BOUNCED", "BLOCKED", "INVALID", "SPAM"] } }),
+    EmailDelivery.countDocuments({ status: { $in: ["ERROR", "BOUNCED", "BLOCKED", "INVALID", "SPAM"] } }),
     VendorContact.countDocuments({ status: "REPLIED" }),
   ]);
   return { workflows, active, contacts, accepted, sent: accepted, delivered, opened, clicked, bounced, replies };
 };
-export const listDeliveries = () => EmailDelivery.find().select("recipientEmail subject status lastEventAt createdAt step").sort({ createdAt: -1 }).limit(50).lean();
+export const listDeliveries = async () => {
+  const items = await EmailDelivery.find().select("recipientEmail subject status lastEventAt createdAt step events").sort({ createdAt: -1 }).limit(50).lean();
+  return items.map((item) => ({ ...item, lastError: [...item.events].reverse().find((event) => event.reason)?.reason || null, events: undefined }));
+};
 export const listWorkflows = () => EmailWorkflow.find().sort({ createdAt: -1 }).lean();
 export const createWorkflow = async (input: WorkflowInput, actor: string) => {
   const item = await EmailWorkflow.create({ ...input, createdBy: actor });
@@ -188,7 +201,7 @@ export const updateContactStatus = async (id: string, status: VendorContactDocum
   return item;
 };
 
-const webhookStatus: Record<string, string> = { request: "REQUESTED", sent: "SENT", delivered: "DELIVERED", opened: "OPENED", unique_opened: "OPENED", click: "CLICKED", hard_bounce: "BOUNCED", soft_bounce: "DEFERRED", deferred: "DEFERRED", blocked: "BLOCKED", invalid_email: "INVALID", spam: "SPAM", unsubscribed: "UNSUBSCRIBED" };
+const webhookStatus: Record<string, string> = { request: "REQUESTED", requests: "REQUESTED", sent: "SENT", delivered: "DELIVERED", opened: "OPENED", unique_opened: "OPENED", click: "CLICKED", error: "ERROR", hard_bounce: "BOUNCED", soft_bounce: "DEFERRED", deferred: "DEFERRED", blocked: "BLOCKED", invalid_email: "INVALID", spam: "SPAM", unsubscribed: "UNSUBSCRIBED" };
 const suppressContact = async (email: string, event: string) => {
   const status = event === "hard_bounce" || event === "invalid_email" ? "BOUNCED" : event === "unsubscribed" ? "UNSUBSCRIBED" : "BLOCKED";
   const contact = await VendorContact.findOneAndUpdate({ email: email.toLowerCase() }, { $set: { status } }, { new: true });

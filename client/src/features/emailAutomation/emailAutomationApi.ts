@@ -5,7 +5,7 @@ export interface EmailWorkflowItem { _id: string; name: string; audience: string
 export interface VendorContactItem { _id: string; name: string; companyName: string; email: string; source: string; consentAt: string; status: "ACTIVE" | "REPLIED" | "UNSUBSCRIBED" | "BOUNCED" | "BLOCKED"; repliedAt?: string; createdAt: string }
 export interface AutomationConfiguration { configured: boolean; senderEmail: string | null; senderName: string; replyToEmail: string | null; webhookConfigured: boolean; webhookUrl: string; dailyLimit: number }
 export interface AutomationSummary { workflows: number; active: number; contacts: number; accepted: number; sent: number; delivered: number; opened: number; clicked: number; bounced: number; replies: number }
-export interface EmailDeliveryItem { _id: string; recipientEmail: string; subject: string; status: string; lastEventAt: string; createdAt: string; step: number }
+export interface EmailDeliveryItem { _id: string; recipientEmail: string; subject: string; status: string; lastEventAt: string; createdAt: string; step: number; lastError?: string | null }
 export interface WorkflowInput { name: string; audience: string; subject: string; message: string; followUp: boolean; delayDays: number; followUpSubject?: string; followUpMessage?: string }
 export interface VendorInput { name: string; companyName: string; email: string; source: string; consentAt: string }
 
