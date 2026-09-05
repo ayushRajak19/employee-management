@@ -68,7 +68,7 @@ export const revokeRefreshToken = async (token: string | undefined): Promise<voi
   if (!token) return;
   const tokenHash = hashToken(token);
   const tenantId = await tenantIdForRefreshTokenHash(tokenHash);
-  if (tenantId) await runWithTenant(tenantId, () => RefreshSession.updateOne({ tokenHash, revokedAt: { $exists: false } }, { $set: { revokedAt: new Date() } }));
+  if (tenantId) await runWithTenant(tenantId, () => RefreshSession.updateOne({ tokenHash, revokedAt: { $exists: false } }, { $set: { revokedAt: new Date() } }).exec());
 };
 
 export const changePassword = async (userId: string, currentPassword: string, newPassword: string, request: Request): Promise<SessionUser> => {
