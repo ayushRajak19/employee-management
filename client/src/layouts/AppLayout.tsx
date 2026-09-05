@@ -108,7 +108,10 @@ export const AppLayout = () => {
 
   const logout = useMutation({
     mutationFn: authApi.logout,
-    onSettled: () => { setUser(null); navigate("/login", { replace: true }); },
+    onSettled: () => {
+      setUser(null);
+      window.location.replace("/login");
+    },
   });
 
   const visibleGroups = groups
