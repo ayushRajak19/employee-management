@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import { Route, Routes } from "react-router-dom";
 import { AppLayout } from "@/layouts/AppLayout";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { LandingPage } from "@/pages/LandingPage";
 import { OnboardingRoute, PasswordChangeRoute, PlatformRoute, ProtectedRoute, RoleRoute } from "@/routes/ProtectedRoute";
 
 const LoginPage = lazy(() => import("@/pages/LoginPage").then((module) => ({ default: module.LoginPage })));
@@ -35,6 +36,7 @@ const TenantsPage = lazy(() => import("@/pages/TenantsPage").then((module) => ({
 const PageLoader = () => <div className="space-y-4 p-8" aria-label="Loading page"><Skeleton className="h-9 w-64"/><Skeleton className="h-48 w-full"/><Skeleton className="h-48 w-full"/></div>;
 
 export const App = () => <Suspense fallback={<PageLoader/>}><Routes>
+  <Route path="/welcome" element={<LandingPage/>}/>
   <Route path="/login" element={<LoginPage/>}/>
   <Route path="/register" element={<RegisterPage/>}/>
   <Route element={<PasswordChangeRoute/>}><Route path="/change-password" element={<ChangePasswordPage/>}/></Route>

@@ -4,10 +4,10 @@ export default {
   theme: {
     extend: {
       colors: {
-        ink: "#302947",
+        ink: "#152c39",
         brand: {
-          50: "#f8f5ff", 100: "#efe8ff", 200: "#dfd2ff", 300: "#cbb8ff",
-          400: "#b39af7", 500: "#9b7be8", 600: "#8062c9", 700: "#654aa8",
+          50: "#eef9f6", 100: "#d9f0e8", 200: "#afe0d1", 300: "#79c8b5",
+          400: "#43aa94", 500: "#258d79", 600: "#147461", 700: "#105b4e",
         },
       },
       fontFamily: { sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"] },

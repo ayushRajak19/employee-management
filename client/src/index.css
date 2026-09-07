@@ -11,18 +11,18 @@
   }
 
   * {
-    @apply border-violet-100;
+    @apply border-slate-200;
   }
 
   body {
-    @apply m-0 bg-[#faf8ff] text-ink antialiased;
+    @apply m-0 bg-[#f5f7f8] text-ink antialiased;
     width: 100%;
     max-width: 100%;
     min-width: 0;
     overflow-x: clip;
     background-image: radial-gradient(
       circle at 85% 5%,
-      rgba(223, 210, 255, 0.32),
+      rgba(175, 224, 209, 0.16),
       transparent 28rem
     );
   }
