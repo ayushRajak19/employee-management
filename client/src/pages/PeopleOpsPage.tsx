@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Award, CalendarDays, Plus, ShieldCheck, X } from "lucide-react";
-import { PERMISSIONS, type PermissionName } from "@mobiusbloom/shared";
+import { PERMISSIONS, type PermissionName } from "@mobius-ems/shared";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useAuth } from "@/features/auth/AuthProvider";
@@ -54,3 +54,4 @@ export const PeopleOpsPage = () => {
   {editingRole && <div className="fixed inset-0 z-50 grid place-items-center bg-ink/35 p-4"><div className="max-h-[85vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-6"><h2 className="text-xl font-semibold">{editingRole.name.replaceAll("_", " ")} permissions</h2><div className="mt-5 grid gap-2 sm:grid-cols-2">{PERMISSIONS.map((permission) => <label className="flex items-center rounded-xl border p-3 text-xs" key={permission}><input type="checkbox" checked={editingRole.permissions.includes(permission)} onChange={(event) => setEditingRole({ ...editingRole, permissions: event.target.checked ? [...editingRole.permissions, permission] : editingRole.permissions.filter((item: PermissionName) => item !== permission) })}/><span className="ml-2">{permission}</span></label>)}</div>{saveRole.error && <p className="mt-3 text-sm text-red-600">{saveRole.error.message}</p>}<div className="mt-6 flex justify-end gap-2"><Button variant="ghost" onClick={() => setEditingRole(null)}>Cancel</Button><Button disabled={saveRole.isPending} onClick={() => saveRole.mutate()}>Save permissions</Button></div></div></div>}
   </main>;
 };
+

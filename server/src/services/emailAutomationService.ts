@@ -82,14 +82,14 @@ export const registerWebhook = async () => {
     console.warn("Could not read existing Brevo webhooks; attempting a fresh registration", error);
   }
   const created = await brevoRequest<{ id: number }>("/webhooks", { method: "POST", body: JSON.stringify({
-    url, type: "transactional", description: "MobiusBloom email automation events", batched: false,
+    url, type: "transactional", description: "MobiusEMS email automation events", batched: false,
     events: ["request", "delivered", "hardBounce", "softBounce", "blocked", "spam", "invalid", "deferred", "click", "opened", "uniqueOpened", "unsubscribed"],
   }) });
   return { id: created.id, created: true };
 };
 export const sendTest = async (recipient: string) => {
-  const messageId = await sendBrevoEmail({ to: recipient, subject: "MobiusBloom Brevo connection test", text: "Your Brevo email automation connection is working correctly." });
-  await EmailDelivery.create({ recipientEmail: recipient, providerMessageId: messageId, step: -1, subject: "MobiusBloom Brevo connection test", status: "REQUESTED", events: [{ type: "request", occurredAt: new Date() }] });
+  const messageId = await sendBrevoEmail({ to: recipient, subject: "MobiusEMS Brevo connection test", text: "Your Brevo email automation connection is working correctly." });
+  await EmailDelivery.create({ recipientEmail: recipient, providerMessageId: messageId, step: -1, subject: "MobiusEMS Brevo connection test", status: "REQUESTED", events: [{ type: "request", occurredAt: new Date() }] });
   return { messageId };
 };
 
@@ -291,3 +291,4 @@ export const initializeEmailAutomation = async () => {
   }
   await runEmailAutomationCycle();
 };
+

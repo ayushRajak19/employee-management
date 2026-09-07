@@ -23,7 +23,7 @@ export const createApp = () => {
     const databaseConnected = mongoose.connection.readyState === 1;
     response.status(databaseConnected ? 200 : 503).json({
       success: databaseConnected,
-      message: databaseConnected ? "MobiusBloom Employee API is healthy" : "API is running but MongoDB is unavailable",
+      message: databaseConnected ? "MobiusEMS API is healthy" : "API is running but MongoDB is unavailable",
       database: databaseConnected ? "connected" : "disconnected"
     });
   });
@@ -36,3 +36,4 @@ export const createApp = () => {
   } else app.use(notFound);
   app.use(errorHandler); return app;
 };
+

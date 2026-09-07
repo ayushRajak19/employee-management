@@ -1,6 +1,6 @@
 import bcrypt from "bcrypt";
 import type { Request } from "express";
-import type { SessionUser } from "@mobiusbloom/shared";
+import type { SessionUser } from "@mobius-ems/shared";
 import { User } from "../models/User.js";
 import { RefreshSession } from "../models/RefreshSession.js";
 import { AppError } from "../utils/AppError.js";
@@ -86,3 +86,4 @@ export const getSessionUser = async (userId: string, tenant: ActiveTenant): Prom
   if (!user?.isActive) throw new AppError("Authentication required", 401, "UNAUTHENTICATED");
   return sessionUser(user, tenant);
 };
+

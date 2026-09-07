@@ -8,7 +8,7 @@ const schema = z.object({
   MONGODB_URI: z.string().min(1),
   MONGODB_MIN_POOL_SIZE: z.coerce.number().int().min(0).max(50).default(2),
   MONGODB_MAX_POOL_SIZE: z.coerce.number().int().min(5).max(200).default(30),
-  DEFAULT_TENANT_NAME: z.string().min(2).max(120).default("MobiusBloom"),
+  DEFAULT_TENANT_NAME: z.string().min(2).max(120).default("MobiusEMS"),
   DEFAULT_TENANT_SLUG: z.string().regex(/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/).default("mobiusbloom"),
   PLATFORM_ADMIN_EMAILS: z.string().default(""),
   JWT_ACCESS_SECRET: z.string().min(32), JWT_REFRESH_SECRET: z.string().min(32),
@@ -16,7 +16,7 @@ const schema = z.object({
   COOKIE_DOMAIN: z.string().optional(),
   CLOUDINARY_CLOUD_NAME: z.string().optional(), CLOUDINARY_API_KEY: z.string().optional(), CLOUDINARY_API_SECRET: z.string().optional(),
   SMTP_HOST: z.string().optional(), SMTP_PORT: z.coerce.number().int().positive().optional(), SMTP_USER: z.string().optional(), SMTP_PASSWORD: z.string().optional(),
-  BREVO_API_KEY: z.string().min(20).optional(), BREVO_SENDER_EMAIL: z.string().email().optional(), BREVO_SENDER_NAME: z.string().min(1).max(100).default("MobiusBloom Sales"),
+  BREVO_API_KEY: z.string().min(20).optional(), BREVO_SENDER_EMAIL: z.string().email().optional(), BREVO_SENDER_NAME: z.string().min(1).max(100).default("MobiusEMS"),
   BREVO_REPLY_TO_EMAIL: z.string().email().optional(), BREVO_WEBHOOK_TOKEN: z.string().min(24).optional(),
   EMAIL_AUTOMATION_ENABLED: z.enum(["true", "false"]).default("true").transform((value) => value === "true"),
   EMAIL_AUTOMATION_BATCH_SIZE: z.coerce.number().int().min(1).max(100).default(20),
@@ -44,3 +44,4 @@ const schema = z.object({
 const result = schema.safeParse(process.env);
 if (!result.success) throw new Error(`Invalid environment configuration: ${result.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join(", ")}`);
 export const env = result.data;
+

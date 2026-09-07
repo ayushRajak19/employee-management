@@ -1,5 +1,5 @@
 import bcrypt from "bcrypt";
-import { PERMISSIONS, ROLE_PERMISSIONS, ROLES } from "@mobiusbloom/shared";
+import { PERMISSIONS, ROLE_PERMISSIONS, ROLES } from "@mobius-ems/shared";
 import { env } from "../config/env.js";
 import { Permission } from "../models/Permission.js";
 import { Role } from "../models/Role.js";
@@ -81,3 +81,4 @@ export const seedOrganization = async (tenantId: string): Promise<void> => {
   });
   console.log("Organization presets seeded");
 };
+

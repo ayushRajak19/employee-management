@@ -1,4 +1,4 @@
-import type { ApiResponse } from "@mobiusbloom/shared";
+import type { ApiResponse } from "@mobius-ems/shared";
 export class ApiError extends Error { constructor(message: string, public status: number, public errors?: Record<string, string[]>) { super(message); } }
 let refreshPromise: Promise<boolean> | null = null;
 const request = async <T>(path: string, init: RequestInit = {}, canRefresh = true): Promise<T> => {
@@ -15,3 +15,4 @@ const request = async <T>(path: string, init: RequestInit = {}, canRefresh = tru
   return payload.data as T;
 };
 export const api = { get: <T>(path: string) => request<T>(path), post: <T>(path: string, body?: unknown) => request<T>(path, { method: "POST", body: body === undefined ? undefined : JSON.stringify(body) }), patch: <T>(path: string, body?: unknown) => request<T>(path, { method: "PATCH", body: body === undefined ? undefined : JSON.stringify(body) }), put: <T>(path: string, body?: unknown) => request<T>(path, { method: "PUT", body: body === undefined ? undefined : JSON.stringify(body) }), delete: <T>(path: string) => request<T>(path, { method: "DELETE" }), upload: <T>(path: string, body: FormData) => request<T>(path, { method: "POST", body }) };
+

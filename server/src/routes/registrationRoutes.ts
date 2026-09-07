@@ -22,13 +22,13 @@ registrationRouter.post("/request", validate(z.object({ body: details })), async
   const pass = process.env.MAIL_PASSWORD || env.SMTP_PASSWORD;
   if (!host || !user || !pass) throw new AppError("Organization registration email is not configured yet. Please contact support.", 503);
   if (await Tenant.exists({ slug: input.slug })) throw new AppError("That organization ID is already in use", 409);
-  const token = jwt.sign({ ...input, purpose: "organization-registration" }, env.JWT_ACCESS_SECRET, { expiresIn: "30m", audience: "organization-registration", issuer: "whalexy" });
+  const token = jwt.sign({ ...input, purpose: "organization-registration" }, env.JWT_ACCESS_SECRET, { expiresIn: "30m", audience: "organization-registration", issuer: "mobius-ems" });
   const url = new URL("/register", env.CLIENT_URL);
   url.hash = new URLSearchParams({ token }).toString();
   const port = Number(process.env.MAIL_PORT || env.SMTP_PORT || 465);
   const transport = nodemailer.createTransport({ host, port, secure: port === 465, requireTLS: port !== 465, auth: { user, pass }, connectionTimeout: 10000, socketTimeout: 20000 });
   try {
-    await transport.sendMail({ from: { name: process.env.MAIL_FROM_NAME || "Whalexy", address: process.env.MAIL_FROM_ADDRESS || user }, to: input.adminEmail, subject: "Verify your organization registration", text: `Verify your email to create ${input.name} on Whalexy.\n\n${url.toString()}\n\nThis link expires in 30 minutes. If you did not request it, ignore this email.` });
+    await transport.sendMail({ from: { name: process.env.MAIL_FROM_NAME || "MobiusEMS", address: process.env.MAIL_FROM_ADDRESS || user }, to: input.adminEmail, subject: "Verify your MobiusEMS organization registration", text: `Verify your email to create ${input.name} on MobiusEMS.\n\n${url.toString()}\n\nThis link expires in 30 minutes. If you did not request it, ignore this email.` });
   } catch { throw new AppError("We could not send the verification email. Please try again later.", 503); }
   finally { transport.close(); }
   response.json({ success: true, message: "Check your email for the verification link." });
@@ -37,7 +37,7 @@ registrationRouter.post("/complete", validate(z.object({ body: finish })), async
   const input = finish.parse(request.body);
   let verified;
   try {
-    const payload = jwt.verify(input.token, env.JWT_ACCESS_SECRET, { algorithms: ["HS256"], audience: "organization-registration", issuer: "whalexy" });
+    const payload = jwt.verify(input.token, env.JWT_ACCESS_SECRET, { algorithms: ["HS256"], audience: "organization-registration", issuer: "mobius-ems" });
     if (typeof payload === "string" || payload.purpose !== "organization-registration") throw new Error();
     verified = details.parse(payload);
   } catch { throw new AppError("Verification link is invalid or expired. Please register again.", 400); }

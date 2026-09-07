@@ -12,7 +12,7 @@ export const RegisterPage = () => {
   const [message, setMessage] = useState("");
   const [complete, setComplete] = useState(false);
   return <main className="grid min-h-screen place-items-center bg-brand-50 px-4 py-10"><section className="w-full max-w-lg rounded-2xl border bg-white p-8 shadow-soft">
-    <p className="text-sm font-medium text-brand-700">Whalexy</p><h1 className="mt-2 text-2xl font-semibold">{token ? "Finish organization registration" : "Register your organization"}</h1>
+    <p className="text-sm font-medium text-brand-700">MobiusEMS</p><h1 className="mt-2 text-2xl font-semibold">{token ? "Finish organization registration" : "Register your organization"}</h1>
     <p className="mt-3 text-sm text-slate-500">{token ? "Choose a secure administrator password to create your workspace." : "Create a separate workspace for your team. Verify your email to get started."}</p>
     {!message && <form className="mt-6 space-y-4" onSubmit={async (event) => {
       event.preventDefault(); setPending(true); setError("");

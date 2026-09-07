@@ -1,5 +1,5 @@
 import type { RequestHandler } from "express";
-import type { PermissionName } from "@mobiusbloom/shared";
+import type { PermissionName } from "@mobius-ems/shared";
 import { verifyAccessToken } from "../services/tokenService.js";
 import { getSessionUser } from "../services/authService.js";
 import { AppError } from "../utils/AppError.js";
@@ -24,3 +24,4 @@ export const requirePermission = (...permissions: PermissionName[]): RequestHand
   if (!request.user || !permissions.every((permission) => request.user?.permissions.includes(permission))) return next(new AppError("You do not have permission to perform this action", 403, "FORBIDDEN"));
   next();
 };
+

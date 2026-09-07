@@ -40,8 +40,8 @@ Deploy during a maintenance window or with the old application instances drained
 ## Configuration
 
 ```dotenv
-DEFAULT_TENANT_NAME=MobiusBloom
-DEFAULT_TENANT_SLUG=mobiusbloom
+DEFAULT_TENANT_NAME=MobiusEMS
+DEFAULT_TENANT_SLUG=mobius-ems
 PLATFORM_ADMIN_EMAILS=owner@example.com
 MONGODB_MIN_POOL_SIZE=2
 MONGODB_MAX_POOL_SIZE=30

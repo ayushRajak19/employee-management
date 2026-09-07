@@ -1,5 +1,5 @@
 {
-  "name": "mobiusbloom-employee",
+  "name": "mobius-ems",
   "type": "module",
   "private": true,
   "version": "0.1.0",
@@ -26,3 +26,4 @@
   "devDependencies": { "concurrently": "^9.2.0" },
   "engines": { "node": ">=20" }
 }
+

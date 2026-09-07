@@ -1,6 +1,6 @@
 import { createContext, useContext, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { SessionUser } from "@mobiusbloom/shared";
+import type { SessionUser } from "@mobius-ems/shared";
 import { authApi } from "./authApi";
 
 interface AuthContextValue { user: SessionUser | null; isLoading: boolean; setUser: (user: SessionUser | null) => void }
@@ -16,3 +16,4 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   return <AuthContext.Provider value={{ user: query.data?.user ?? null, isLoading: query.isLoading, setUser }}>{children}</AuthContext.Provider>;
 };
 export const useAuth = () => { const value = useContext(AuthContext); if (!value) throw new Error("useAuth must be used inside AuthProvider"); return value; };
+

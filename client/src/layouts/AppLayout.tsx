@@ -1,7 +1,7 @@
 import { useEffect, useState, type ComponentType } from "react";
 import logoMark from "@/assets/mobius-mark.png";
 import { useMutation } from "@tanstack/react-query";
-import type { PermissionName, RoleName } from "@mobiusbloom/shared";
+import type { PermissionName, RoleName } from "@mobius-ems/shared";
 import {
   Activity, BarChart3, Bot, BrainCircuit, BriefcaseBusiness, Building2, CalendarCheck2,
   ChevronLeft, CircleGauge, FileText, GraduationCap, ListTodo, LogOut, Menu,
@@ -10,7 +10,7 @@ import {
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { HeaderSearch } from "@/components/HeaderSearch";
 import { NotificationsPopover } from "@/components/NotificationsPopover";
-import { AskMobiusFloating } from "@/features/ai/AiWorkspacePanels";
+import { MobiusEmsAiFloating } from "@/features/ai/AiWorkspacePanels";
 import { authApi } from "@/features/auth/authApi";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { cn } from "@/lib/cn";
@@ -137,13 +137,13 @@ export const AppLayout = () => {
       <div className="flex h-16 items-center border-b px-4 sm:h-20 sm:px-5">
         <img
           src={logoMark}
-          alt="MobiusBloom Endless Innovation logo"
+          alt="MobiusEMS"
           className="h-10 w-8 shrink-0 rounded-lg object-contain"
         />
         {!collapsed && (
           <div className="ml-3 overflow-hidden">
-            <p className="truncate text-sm font-semibold">{user?.tenantName ?? "MobiusBloom"}</p>
-            <p className="truncate text-[11px] text-slate-400">{user?.tenantSlug ?? "Employee intelligence"}</p>
+            <p className="truncate text-sm font-semibold">MobiusEMS</p>
+            <p className="truncate text-[11px] text-slate-400">{user?.tenantName ?? "Employee management"}</p>
           </div>
         )}
         {/* Desktop collapse toggle */}
@@ -307,8 +307,10 @@ export const AppLayout = () => {
 
         {/* Page content */}
         <Outlet />
-        <AskMobiusFloating />
+        <MobiusEmsAiFloating />
       </div>
     </div>
   );
 };
+
+

@@ -21,7 +21,7 @@ export const uploadPrivate = async (buffer: Buffer, folder: string, metadata: Re
 };
 export const uploadProfilePhoto = async (buffer: Buffer, employeeId: string, mimeType: string): Promise<string> => {
   const tenantId = requireTenantId().toString();
-  if (cloudinaryConfigured()) { configured(); return new Promise((resolve, reject) => { const stream = cloudinary.uploader.upload_stream({ resource_type: "image", type: "upload", folder: `${tenantId}/mobiusbloom-employee/${employeeId}/profile`, public_id: "avatar", overwrite: true, invalidate: true, transformation: [{ width: 600, height: 600, crop: "fill", gravity: "face", quality: "auto", fetch_format: "auto" }] }, (error, result) => { if (error || !result) reject(new AppError("Profile photo upload failed", 502, "PROFILE_PHOTO_UPLOAD_FAILED")); else resolve(result.public_id); }); stream.end(buffer); }); }
+  if (cloudinaryConfigured()) { configured(); return new Promise((resolve, reject) => { const stream = cloudinary.uploader.upload_stream({ resource_type: "image", type: "upload", folder: `${tenantId}/mobius-ems/${employeeId}/profile`, public_id: "avatar", overwrite: true, invalidate: true, transformation: [{ width: 600, height: 600, crop: "fill", gravity: "face", quality: "auto", fetch_format: "auto" }] }, (error, result) => { if (error || !result) reject(new AppError("Profile photo upload failed", 502, "PROFILE_PHOTO_UPLOAD_FAILED")); else resolve(result.public_id); }); stream.end(buffer); }); }
   return new Promise((resolve, reject) => { const stream = mongoBucket().openUploadStream(`${employeeId}-${randomUUID()}`, { metadata: { tenantId, mimeType, category: "PROFILE_PHOTO", employeeId } }); stream.on("error", () => reject(new AppError("Profile photo upload failed", 502, "PROFILE_PHOTO_UPLOAD_FAILED"))); stream.on("finish", () => resolve(`mongo:${stream.id.toString()}`)); Readable.from(buffer).pipe(stream); });
 };
 export const profilePhotoUrl = (key?: string): string | undefined => { if (!key) return undefined; if (key.startsWith("mongo:")) return `/api/v1/employees/profile-photos/${key.slice(6)}`; if (!cloudinaryConfigured()) return undefined; configured(); return cloudinary.url(key, { resource_type: "image", type: "upload", secure: true, transformation: [{ width: 240, height: 240, crop: "fill", gravity: "face", quality: "auto", fetch_format: "auto" }] }); };
@@ -37,7 +37,7 @@ export const deleteProfilePhoto = async (key?: string): Promise<void> => {
   if (!["ok", "not found"].includes(result.result)) throw new AppError("Profile photo could not be deleted", 502, "STORAGE_DELETE_FAILED");
 };
 export const uploadApplicantPrivate = async (buffer: Buffer, originalName: string, mimeType: string): Promise<StoredObject> => {
-  const stored = await uploadPrivate(buffer, "mobiusbloom-employee/applicants", { originalName, mimeType, category: "APPLICANT_CV" });
+  const stored = await uploadPrivate(buffer, "mobius-ems/applicants", { originalName, mimeType, category: "APPLICANT_CV" });
   return stored.provider === "MONGODB" ? { ...stored, format: path.extname(originalName).slice(1).toLowerCase() || undefined } : stored;
 };
 export const openMongoPrivate = async (key: string) => {
@@ -67,3 +67,4 @@ export const openMongoProfilePhoto = async (key: string) => {
   if (!file) throw new AppError("Profile photo not found", 404, "PROFILE_PHOTO_NOT_FOUND");
   return { stream: bucket.openDownloadStream(id), mimeType: typeof file.metadata?.mimeType === "string" ? file.metadata.mimeType : "image/jpeg" };
 };
+

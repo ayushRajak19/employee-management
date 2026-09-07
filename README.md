@@ -1,6 +1,6 @@
-# MobiusBloom Employee
+# MobiusEMS
 
-MobiusBloom Employee is an independent workforce capability, delivery, growth, and performance-intelligence platform for `employee.whalexy.com`. It does not share code or runtime infrastructure with the Laravel application at `whalexy.com`.
+MobiusEMS is the flagship employee management product of Mobius Bloom Venture Pvt Ltd. It is an independent workforce capability, delivery, growth, and performance-intelligence platform for `employee.whalexy.com`, and does not share code or runtime infrastructure with the Laravel application at `whalexy.com`.
 
 ## What is included
 
@@ -80,7 +80,7 @@ Express serves `client/dist`, retains `/api/v1/*` for REST endpoints, and applie
 
 ### AI provider configuration
 
-Groq is the default. Set `AI_PROVIDER=groq`, `GROQ_API_KEY`, and optionally `AI_MODEL`. The provider layer also supports OpenAI, OpenRouter, Together, Anthropic, Gemini, and generic OpenAI-compatible APIs through `AI_PROVIDER`, `AI_API_KEY`, `AI_MODEL`, and optional `AI_BASE_URL`. Put keys only in Hostinger environment variables, then redeploy. `AI_COMPANY_KNOWLEDGE` can contain approved policy notes used by Ask Mobius; unanswered policy questions are escalated to HR.
+Groq is the default. Set `AI_PROVIDER=groq`, `GROQ_API_KEY`, and optionally `AI_MODEL`. The provider layer also supports OpenAI, OpenRouter, Together, Anthropic, Gemini, and generic OpenAI-compatible APIs through `AI_PROVIDER`, `AI_API_KEY`, `AI_MODEL`, and optional `AI_BASE_URL`. Put keys only in Hostinger environment variables, then redeploy. `AI_COMPANY_KNOWLEDGE` can contain approved policy notes used by MobiusEMS AI; unanswered policy questions are escalated to HR.
 
 AI requests are rate-limited, role-scoped, and audit logged. Employee contribution and performance summaries are advisory drafts. Daily personal to-dos are private and excluded from performance evidence. Mood Break jokes are safety-constrained and cached to limit provider usage.
 
@@ -91,3 +91,4 @@ Access and refresh tokens use HttpOnly cookies; production cookies are Secure an
 Before launch, rotate seed credentials, use high-entropy secrets, configure Atlas and storage backups, test restoration, restrict Hostinger environment access, and run `npm run typecheck`, `npm run lint`, and `npm run build` in CI.
 
 See [architecture](docs/ARCHITECTURE.md) and [schema reference](docs/SCHEMA.md).
+

@@ -12,7 +12,7 @@ const start = async (): Promise<void> => {
   await seedOrganization(defaultTenantId);
 
   const server = createServer(createApp());
-  server.listen(env.PORT, () => console.log(`MobiusBloom Employee listening on port ${env.PORT}`));
+  server.listen(env.PORT, () => console.log(`MobiusEMS listening on port ${env.PORT}`));
   void initializeEmailAutomation().catch((error: unknown) => console.error("Brevo email automation initialization failed", error));
   const automationTimer = setInterval(() => void runEmailAutomationCycle(), 60_000); automationTimer.unref();
 
@@ -30,7 +30,8 @@ const start = async (): Promise<void> => {
 };
 
 void start().catch((error: unknown) => {
-  console.error("MobiusBloom Employee failed to start", error);
+  console.error("MobiusEMS failed to start", error);
   void disconnectDatabase().finally(() => process.exit(1));
 });
+
 

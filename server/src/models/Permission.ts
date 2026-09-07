@@ -1,5 +1,5 @@
 import { Schema, model } from "mongoose";
-import { PERMISSIONS, type PermissionName } from "@mobiusbloom/shared";
+import { PERMISSIONS, type PermissionName } from "@mobius-ems/shared";
 
 export interface PermissionDocument { key: PermissionName; description: string }
 const permissionSchema = new Schema<PermissionDocument>({
@@ -7,3 +7,4 @@ const permissionSchema = new Schema<PermissionDocument>({
   description: { type: String, required: true, maxlength: 300 }
 }, { timestamps: true });
 export const Permission = model<PermissionDocument>("Permission", permissionSchema);
+

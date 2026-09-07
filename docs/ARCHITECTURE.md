@@ -1,4 +1,4 @@
-# MobiusBloom Employee architecture
+# MobiusEMS architecture
 
 ## Boundaries
 
@@ -46,3 +46,4 @@ Public: Login. Forced flow: Change Password, then Onboarding. Authenticated shel
 6. Development: learning history, training, matching, workload, strengths and development areas.
 7. Governance: private documents, notifications, reports, audit explorer and settings.
 8. Production: security review, accessibility/responsive QA, optimization and Hostinger deployment.
+
