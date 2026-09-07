@@ -7,7 +7,7 @@ export const taskTransitionSchema = z.object({ params: z.object({ id: objectId }
 export const taskReviewSchema = z.object({ params: z.object({ id: objectId }), body: z.object({ qualityRating: z.number().int().min(1).max(5), reviewComment: z.string().trim().max(2000).optional(), approve: z.boolean() }) });
 const voiceLanguage = z.enum(["auto", "en-IN", "hi-IN", "bn-IN", "ta-IN", "te-IN", "mr-IN", "gu-IN", "kn-IN", "ml-IN", "pa-IN", "ur-IN"]);
 export const voiceTextPreviewSchema = z.object({ body: z.object({ transcript: z.string().trim().min(2).max(10_000), language: voiceLanguage.optional().default("auto"), timezoneOffsetMinutes: z.number().int().min(-840).max(840).optional().default(0) }) });
-export const voiceCommandSchema = z.object({ params: z.object({ id: objectId }), body: z.object({
+const voiceDraftSchema = z.object({
   action: z.enum(["CREATE_TASK", "UPDATE_STATUS"]), name: z.string().trim().min(2).max(200).optional(), description: z.string().trim().max(5000).optional(),
   project: objectId.optional(), assignedEmployee: objectId.optional(), verbalAssigner: z.string().trim().min(2).max(120).optional(),
   priority: z.enum(PRIORITIES).optional(), complexity: z.enum(COMPLEXITIES).optional(), estimatedHours: z.number().positive().max(10000).optional(), deadline: z.coerce.date().optional(),
@@ -15,5 +15,9 @@ export const voiceCommandSchema = z.object({ params: z.object({ id: objectId }),
 }).superRefine((value, context) => {
   if (value.action === "CREATE_TASK") for (const field of ["name", "project", "deadline"] as const) if (!value[field]) context.addIssue({ code: "custom", path: [field], message: `${field} is required` });
   if (value.action === "UPDATE_STATUS") { if (!value.task) context.addIssue({ code: "custom", path: ["task"], message: "task is required" }); if (!value.status) context.addIssue({ code: "custom", path: ["status"], message: "status is required" }); if (value.status === "IN_REVIEW" && (!value.completionNote || value.completionNote.length < 10)) context.addIssue({ code: "custom", path: ["completionNote"], message: "Add a short completion note" }); }
-}) });
+});
+export const voiceCommandSchema = z.object({ params: z.object({ id: objectId }), body: z.union([
+  voiceDraftSchema,
+  z.object({ drafts: z.array(voiceDraftSchema).min(1).max(25) })
+]) });
 export const voiceCommandIdSchema = z.object({ params: z.object({ id: objectId }) });

@@ -72,6 +72,8 @@ export interface NotificationItem {
   type: string;
   title: string;
   body: string;
+  entityType?: string;
+  entityId?: string;
   readAt?: string;
   createdAt: string;
 }

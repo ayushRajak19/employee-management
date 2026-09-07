@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { detectMentionedVoiceHours, detectVoiceAction, detectVoiceHours, detectVoiceStatusIntent, extractVoiceAssigner, parseVoiceDeadline } from "./voiceTaskService.js";
+import { detectMentionedVoiceHours, detectVoiceAction, detectVoiceHours, detectVoiceStatusIntent, extractVoiceAssigner, parseVoiceDeadline, splitVoiceAssignments } from "./voiceTaskService.js";
 
 test("completion intent is detected across supported Indian languages", () => {
   const examples = [
@@ -37,4 +37,26 @@ test("deadline time uses the employee browser timezone", () => {
 test("deadline clock values are not mistaken for worked hours", () => {
   assert.equal(detectMentionedVoiceHours("complete the report by 2:00 p.m."), undefined);
   assert.equal(detectMentionedVoiceHours("complete the report in two hours"), 2);
+});
+
+test("one Hinglish command is split into assignments for multiple employees", () => {
+  const assignments = splitVoiceAssignments(
+    "Vandana ko payroll report banana hai aur Ayush ko client follow-up karna hai by tomorrow",
+    [
+      { id: "vandana-id", label: "Vandana Sharma", detail: "EMP-101" },
+      { id: "ayush-id", label: "Ayush Rajak", detail: "EMP-102" }
+    ]
+  );
+  assert.deepEqual(assignments, [
+    { assignedEmployee: "vandana-id", assigneeLabel: "Vandana Sharma", text: "payroll report banana hai" },
+    { assignedEmployee: "ayush-id", assigneeLabel: "Ayush Rajak", text: "client follow-up karna hai by tomorrow" }
+  ]);
+});
+
+test("ambiguous first names are not guessed", () => {
+  const assignments = splitVoiceAssignments("Aman ko report banana hai", [
+    { id: "aman-one", label: "Aman Gupta" },
+    { id: "aman-two", label: "Aman Sharma" }
+  ]);
+  assert.equal(assignments.length, 0);
 });

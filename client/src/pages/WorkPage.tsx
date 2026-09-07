@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, CalendarClock, ClipboardPlus, Mic, Plus } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useAuth } from "@/features/auth/AuthProvider";
@@ -16,6 +17,8 @@ const columns = ["NOT_STARTED", "IN_PROGRESS", "BLOCKED", "IN_REVIEW", "COMPLETE
 export const WorkPage = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const linkedTaskId = searchParams.get("task");
   const isEmployee = user?.role === "EMPLOYEE";
   const [dialog, setDialog] = useState<"project" | "task" | null>(null);
   const [manualOpen, setManualOpen] = useState(false);
@@ -38,6 +41,16 @@ export const WorkPage = () => {
   const transition = useMutation({ mutationFn: ({ task, status, blockerReason }: { task: Task; status: string; blockerReason?: string }) => workApi.transition(task._id, { status, ...(status === "BLOCKED" && { blockerReason, blockerExternal: ["WAITING_FOR_CLIENT", "EXTERNAL_DEPENDENCY", "ACCESS_REQUIRED"].includes(blockerReason ?? "") }) }), onSuccess: refresh });
   const move = (task: Task, status: string) => { if (task.status === status) return; if (status === "BLOCKED") setBlocked({ task, target: status }); else transition.mutate({ task, status }); };
   const canCreate = user?.permissions.includes("task.create");
+
+  useEffect(() => {
+    if (!linkedTaskId || !tasks.data?.items) return;
+    const linkedTask = tasks.data.items.find((item) => item._id === linkedTaskId);
+    if (!linkedTask) return;
+    setSelected(linkedTask);
+    const next = new URLSearchParams(searchParams);
+    next.delete("task");
+    setSearchParams(next, { replace: true });
+  }, [linkedTaskId, searchParams, setSearchParams, tasks.data?.items]);
 
   return <main className="flex-1 overflow-hidden px-5 py-8 sm:px-8"><div className="mx-auto max-w-[1600px]">
     <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="text-sm font-medium text-brand-700">Work</p><h1 className="mt-1 text-3xl font-semibold">Projects & task board</h1><p className="mt-2 text-sm text-slate-500">Track outcomes, blockers, quality, deadlines and rework without rewarding longer hours.</p></div>{isEmployee ? <div className="flex flex-wrap gap-2"><Button variant="secondary" onClick={() => setManualOpen(true)}><ClipboardPlus size={16}/> Add manual task</Button><Button onClick={() => setVoiceOpen(true)}><Mic size={16}/> Voice task</Button></div> : canCreate && <div className="flex flex-wrap gap-2"><Button variant="secondary" onClick={() => setDialog("project")}><Plus size={16}/> Project</Button><Button variant="secondary" onClick={() => setDialog("task")}><Plus size={16}/> Task</Button><Button onClick={() => setVoiceOpen(true)}><Mic size={16}/> Voice control</Button></div>}</div>

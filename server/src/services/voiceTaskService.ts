@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Employee } from "../models/Employee.js";
+import { Project } from "../models/Project.js";
 import { Task, type TaskDocument } from "../models/Task.js";
 import { VoiceCommand } from "../models/VoiceCommand.js";
 import { env } from "../config/env.js";
@@ -13,7 +14,7 @@ import { createManualTask, createTask, listProjects, listTasks, transitionTask }
 
 type Actor = { id: string; role: string; permissions: string[] };
 type Option = { id: string; label: string; detail?: string; status?: string };
-type VoiceDraft = {
+export type VoiceDraft = {
   action: "CREATE_TASK" | "UPDATE_STATUS";
   name?: string;
   description?: string;
@@ -118,6 +119,47 @@ const findMention = <T extends { label: string }>(transcript: string, options: T
     .sort((a, b) => b.label.length - a.label.length)[0];
 };
 
+const escapeRegularExpression = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+export type VoiceAssignmentSegment = { assignedEmployee: string; assigneeLabel: string; text: string };
+export const splitVoiceAssignments = (transcript: string, employees: Option[]): VoiceAssignmentSegment[] => {
+  const firstNameCounts = new Map<string, number>();
+  for (const employee of employees) {
+    const firstName = normalize(employee.label).split(" ")[0];
+    if (firstName) firstNameCounts.set(firstName, (firstNameCounts.get(firstName) ?? 0) + 1);
+  }
+  const mentions: Array<{ start: number; end: number; employee: Option; aliasLength: number }> = [];
+  for (const employee of employees) {
+    const firstName = employee.label.trim().split(/\s+/)[0];
+    const aliases = [...new Set([
+      employee.label,
+      employee.detail,
+      firstName && firstNameCounts.get(normalize(firstName)) === 1 ? firstName : undefined
+    ].filter((value): value is string => Boolean(value?.trim())))].sort((left, right) => right.length - left.length);
+    for (const alias of aliases) {
+      const expression = new RegExp(`(^|[^\\p{L}\\p{N}])(${escapeRegularExpression(alias)})(?=$|[^\\p{L}\\p{N}])`, "giu");
+      for (const match of transcript.matchAll(expression)) {
+        const matchedAlias = match[2];
+        if (!matchedAlias) continue;
+        const start = (match.index ?? 0) + (match[1]?.length ?? 0);
+        mentions.push({ start, end: start + matchedAlias.length, employee, aliasLength: matchedAlias.length });
+      }
+    }
+  }
+  const ordered = mentions
+    .sort((left, right) => left.start - right.start || right.aliasLength - left.aliasLength)
+    .filter((mention, index, all) => !all.slice(0, index).some((other) => other.start === mention.start || (other.employee.id === mention.employee.id && other.start === mention.start)));
+  return ordered.map((mention, index) => {
+    const next = ordered[index + 1];
+    const raw = transcript.slice(mention.end, next?.start ?? transcript.length);
+    const text = raw
+      .replace(/^[\s,:;–—-]*(?:(?:ko|को|के लिए|के लिये)\s+)?(?:(?:should|needs? to|has to|must|will|please)\s+)?/iu, "")
+      .replace(/[\s,:;–—-]*(?:and|aur|और)\s*$/iu, "")
+      .replace(/^[\s,:;–—-]+|[\s,:;–—-]+$/g, "")
+      .trim();
+    return { assignedEmployee: mention.employee.id, assigneeLabel: mention.employee.label, text };
+  }).filter((item) => item.text.length >= 2);
+};
+
 const detectPriority = (text: string): VoiceDraft["priority"] => text.includes("critical") || text.includes("urgent") ? "CRITICAL" : text.includes("high priority") ? "HIGH" : text.includes("low priority") ? "LOW" : "MEDIUM";
 const detectComplexity = (text: string): VoiceDraft["complexity"] => text.includes("very hard") ? "VERY_HARD" : text.includes("hard") || text.includes("complex") ? "HARD" : text.includes("easy") || text.includes("simple") ? "EASY" : "MEDIUM";
 const hourUnits = ["hour", "hours", "hr", "hrs", "घंटा", "घंटे", "तास", "மணி", "గంట", "గంటలు", "કલાક", "ಗಂಟೆ", "മണിക്കൂർ", "گھنٹہ", "گھنٹے"];
@@ -216,34 +258,82 @@ const buildDraft = (transcript: string, actor: Actor, options: Awaited<ReturnTyp
   return { draft, confidence: Math.min(0.98, confidence) };
 };
 
-export const createPreview = async (transcript: string, actor: Actor, metadata: { language?: string; durationSeconds?: number; timezoneOffsetMinutes?: number } = {}) => {
-  const cleanTranscript = transcript.trim(); if (cleanTranscript.length < 2) throw new AppError("Say or type a task command", 422, "EMPTY_TRANSCRIPT");
-  const options = await loadOptions(actor); const { draft, confidence } = buildDraft(cleanTranscript, actor, options, metadata.timezoneOffsetMinutes);
-  const command = await VoiceCommand.create({ actor: actor.id, actorRole: actor.role, transcript: cleanTranscript, language: metadata.language, durationSeconds: metadata.durationSeconds, intent: draft.action, confidence, status: "TRANSCRIBED", draft });
-  return { command: { id: command.id, transcript: command.transcript, language: command.language, durationSeconds: command.durationSeconds, confidence, status: command.status }, draft, options };
+const hasDeadlineSignal = (text: string) => /\b(?:today|tomorrow|day after tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|20\d{2}-\d{1,2}-\d{1,2}|\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?))\b|आज|कल|परसों/iu.test(text);
+const buildDrafts = (transcript: string, actor: Actor, options: Awaited<ReturnType<typeof loadOptions>>, timezoneOffsetMinutes = 0) => {
+  const single = buildDraft(transcript, actor, options, timezoneOffsetMinutes);
+  if (single.draft.action !== "CREATE_TASK" || actor.role === "EMPLOYEE") return { drafts: [single.draft], confidence: single.confidence };
+  const assignments = splitVoiceAssignments(transcript, options.employees);
+  if (assignments.length < 2) return { drafts: [single.draft], confidence: single.confidence };
+  const sharedProject = findMention(transcript, options.projects) ?? (options.projects.length === 1 ? options.projects[0] : undefined);
+  const sharedDeadline = hasDeadlineSignal(transcript) ? parseVoiceDeadline(transcript, timezoneOffsetMinutes) : undefined;
+  const results = assignments.map((assignment) => {
+    const parsed = buildDraft(assignment.text, actor, options, timezoneOffsetMinutes);
+    return {
+      draft: {
+        ...parsed.draft,
+        action: "CREATE_TASK" as const,
+        assignedEmployee: assignment.assignedEmployee,
+        project: parsed.draft.project ?? sharedProject?.id,
+        deadline: hasDeadlineSignal(assignment.text) ? parsed.draft.deadline : sharedDeadline ?? parsed.draft.deadline,
+        description: assignment.text
+      },
+      confidence: Math.min(0.98, parsed.confidence + 0.15)
+    };
+  });
+  return { drafts: results.map((item) => item.draft), confidence: Math.min(...results.map((item) => item.confidence)) };
 };
 
-export const confirmCommand = async (id: string, draft: VoiceDraft, actor: Actor) => {
+export const createPreview = async (transcript: string, actor: Actor, metadata: { language?: string; durationSeconds?: number; timezoneOffsetMinutes?: number } = {}) => {
+  const cleanTranscript = transcript.trim(); if (cleanTranscript.length < 2) throw new AppError("Say or type a task command", 422, "EMPTY_TRANSCRIPT");
+  const options = await loadOptions(actor); const { drafts, confidence } = buildDrafts(cleanTranscript, actor, options, metadata.timezoneOffsetMinutes); const draft = drafts[0];
+  if (!draft) throw new AppError("No task assignment could be extracted", 422, "NO_ASSIGNMENTS_FOUND");
+  const storedDraft: Record<string, unknown> = drafts.length === 1 ? { ...draft } : { drafts };
+  const command = await VoiceCommand.create({ actor: actor.id, actorRole: actor.role, transcript: cleanTranscript, language: metadata.language, durationSeconds: metadata.durationSeconds, intent: draft.action, confidence, status: "TRANSCRIBED", draft: storedDraft });
+  return { command: { id: command.id, transcript: command.transcript, language: command.language, durationSeconds: command.durationSeconds, confidence, status: command.status }, draft, drafts, options };
+};
+
+export const confirmCommand = async (id: string, input: VoiceDraft | { drafts: VoiceDraft[] }, actor: Actor) => {
   const command = await VoiceCommand.findById(id); if (!command) throw new AppError("Voice command not found", 404);
   if (command.actor.toString() !== actor.id) throw new AppError("This voice command belongs to another user", 403);
   if (command.status !== "TRANSCRIBED") throw new AppError(`Voice command is already ${command.status.toLowerCase()}`, 409);
-  let task: Awaited<ReturnType<typeof createTask>>;
-  if (draft.action === "CREATE_TASK") {
-    if (actor.role === "EMPLOYEE") task = await createManualTask({ name: draft.name!, description: draft.description, project: draft.project!, verbalAssigner: draft.verbalAssigner || "Voice self-report", priority: draft.priority ?? "MEDIUM", complexity: draft.complexity ?? "MEDIUM", estimatedHours: draft.estimatedHours ?? 1, deadline: new Date(draft.deadline!) }, actor);
-    else {
-      if (!actor.permissions.includes("task.create") || !actor.permissions.includes("task.assign")) throw new AppError("You cannot assign tasks", 403);
-      if (!draft.assignedEmployee) throw new AppError("Choose the employee who should receive this task", 422);
-      task = await createTask({ name: draft.name!, description: draft.description, project: draft.project!, assignedEmployee: draft.assignedEmployee, priority: draft.priority ?? "MEDIUM", complexity: draft.complexity ?? "MEDIUM", estimatedHours: draft.estimatedHours ?? 1, deadline: new Date(draft.deadline!) }, actor.id);
-    }
-  } else {
-    const current = await Task.findById(draft.task!).select("status startDate"); if (!current) throw new AppError("Task not found", 404);
-    const trackedHours = draft.actualHours ?? (draft.status === "IN_REVIEW" && current.startDate ? Math.max(0.01, Number(((Date.now() - current.startDate.getTime()) / 3_600_000).toFixed(2))) : undefined);
-    if (draft.status === "IN_REVIEW" && ["NOT_STARTED", "BLOCKED"].includes(current.status)) await transitionTask(draft.task!, { status: "IN_PROGRESS", actualHours: trackedHours }, actor);
-    task = await transitionTask(draft.task!, { status: draft.status!, actualHours: trackedHours, completionNote: draft.completionNote, blockerReason: draft.status === "BLOCKED" ? (draft.blockerReason ?? "OTHER") : undefined, blockerComment: draft.blockerComment, blockerExternal: false }, actor);
+  const drafts = "drafts" in input ? input.drafts : [input];
+  const firstDraft = drafts[0];
+  if (!firstDraft) throw new AppError("Add at least one task assignment", 422, "EMPTY_VOICE_BATCH");
+  if (drafts.length > 1 && drafts.some((draft) => draft.action !== "CREATE_TASK")) throw new AppError("Batch voice commands can only create tasks", 422, "INVALID_VOICE_BATCH");
+  const creationDrafts = drafts.filter((draft) => draft.action === "CREATE_TASK");
+  if (actor.role !== "EMPLOYEE" && creationDrafts.length) {
+    if (!actor.permissions.includes("task.create") || !actor.permissions.includes("task.assign")) throw new AppError("You cannot assign tasks", 403);
+    if (creationDrafts.some((draft) => !draft.assignedEmployee)) throw new AppError("Choose the employee who should receive every task", 422);
+    const projectIds = [...new Set(creationDrafts.map((draft) => draft.project!))];
+    const employeeIds = [...new Set(creationDrafts.map((draft) => draft.assignedEmployee!))];
+    const [projects, employees] = await Promise.all([
+      Project.find({ _id: { $in: projectIds }, isActive: true }).select("_id").lean(),
+      Employee.find({ _id: { $in: employeeIds }, isActive: true }).select("_id").lean()
+    ]);
+    if (projects.length !== projectIds.length) throw new AppError("One or more selected projects are unavailable", 422, "INVALID_VOICE_PROJECT");
+    if (employees.length !== employeeIds.length) throw new AppError("One or more selected employees are unavailable", 422, "INVALID_VOICE_ASSIGNEE");
   }
-  command.intent = draft.action; command.draft = draft; command.task = task._id; command.status = "CONFIRMED"; await command.save();
-  await writeAudit({ user: actor.id, action: "VOICE_TASK_COMMAND_CONFIRMED", entityType: "VoiceCommand", entityId: command.id, newValue: { intent: draft.action, transcript: command.transcript, task: task.id } });
-  return { command, task };
+  const tasks: Awaited<ReturnType<typeof createTask>>[] = [];
+  for (const draft of drafts) {
+    let task: Awaited<ReturnType<typeof createTask>>;
+    if (draft.action === "CREATE_TASK") {
+      if (actor.role === "EMPLOYEE") task = await createManualTask({ name: draft.name!, description: draft.description, project: draft.project!, verbalAssigner: draft.verbalAssigner || "Voice self-report", priority: draft.priority ?? "MEDIUM", complexity: draft.complexity ?? "MEDIUM", estimatedHours: draft.estimatedHours ?? 1, deadline: new Date(draft.deadline!) }, actor);
+      else {
+        task = await createTask({ name: draft.name!, description: draft.description, project: draft.project!, assignedEmployee: draft.assignedEmployee!, priority: draft.priority ?? "MEDIUM", complexity: draft.complexity ?? "MEDIUM", estimatedHours: draft.estimatedHours ?? 1, deadline: new Date(draft.deadline!) }, actor.id);
+      }
+    } else {
+      const current = await Task.findById(draft.task!).select("status startDate"); if (!current) throw new AppError("Task not found", 404);
+      const trackedHours = draft.actualHours ?? (draft.status === "IN_REVIEW" && current.startDate ? Math.max(0.01, Number(((Date.now() - current.startDate.getTime()) / 3_600_000).toFixed(2))) : undefined);
+      if (draft.status === "IN_REVIEW" && ["NOT_STARTED", "BLOCKED"].includes(current.status)) await transitionTask(draft.task!, { status: "IN_PROGRESS", actualHours: trackedHours }, actor);
+      task = await transitionTask(draft.task!, { status: draft.status!, actualHours: trackedHours, completionNote: draft.completionNote, blockerReason: draft.status === "BLOCKED" ? (draft.blockerReason ?? "OTHER") : undefined, blockerComment: draft.blockerComment, blockerExternal: false }, actor);
+    }
+    tasks.push(task);
+  }
+  const task = tasks[0];
+  if (!task) throw new AppError("No task was created", 500, "VOICE_CONFIRMATION_FAILED");
+  command.intent = firstDraft.action; command.draft = drafts.length === 1 ? { ...firstDraft } : { drafts }; command.task = task._id; command.tasks = tasks.map((item) => item._id); command.status = "CONFIRMED"; await command.save();
+  await writeAudit({ user: actor.id, action: "VOICE_TASK_COMMAND_CONFIRMED", entityType: "VoiceCommand", entityId: command.id, newValue: { intent: firstDraft.action, transcript: command.transcript, tasks: tasks.map((item) => item.id) } });
+  return { command, task, tasks };
 };
 
 export const cancelCommand = async (id: string, actor: Actor) => {
@@ -255,5 +345,5 @@ export const cancelCommand = async (id: string, actor: Actor) => {
 
 export const listHistory = async (actor: Actor) => {
   const filter = actor.role === "SUPER_ADMIN" ? {} : { actor: actor.id };
-  return VoiceCommand.find(filter).populate("actor", "name email").populate("task", "taskId name status").sort({ createdAt: -1 }).limit(100).lean();
+  return VoiceCommand.find(filter).populate("actor", "name email").populate("task", "taskId name status").populate("tasks", "taskId name status").sort({ createdAt: -1 }).limit(100).lean();
 };

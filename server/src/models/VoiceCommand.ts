@@ -15,6 +15,7 @@ export interface VoiceCommandDocument {
   status: typeof VOICE_COMMAND_STATUSES[number];
   draft: Record<string, unknown>;
   task?: Types.ObjectId;
+  tasks: Types.ObjectId[];
   errorMessage?: string;
 }
 
@@ -29,6 +30,7 @@ const schema = new Schema<VoiceCommandDocument>({
   status: { type: String, enum: VOICE_COMMAND_STATUSES, default: "TRANSCRIBED", index: true },
   draft: { type: Schema.Types.Mixed, required: true },
   task: { type: Schema.Types.ObjectId, ref: "Task", index: true },
+  tasks: { type: [{ type: Schema.Types.ObjectId, ref: "Task" }], default: [] },
   errorMessage: { type: String, maxlength: 1000 }
 }, { timestamps: true, versionKey: false });
 
