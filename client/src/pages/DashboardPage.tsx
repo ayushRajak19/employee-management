@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { MoodBreakPanel } from "@/features/ai/AiWorkspacePanels";
 import { cn } from "@/lib/cn";
+import { AdminAnalytics } from "./AdminAnalytics";
 
 /* ─── Types ─── */
 interface Metric { label: string; value: number | string; detail: string }
@@ -80,12 +81,15 @@ export const DashboardPage = () => {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["dashboard", "summary"],
     queryFn: () => api.get<Summary>("/api/v1/dashboard/summary"),
+    enabled: user?.role !== "SUPER_ADMIN",
   });
 
   const firstName = data?.greetingName ?? user?.name.split(" ")[0];
   const employeeView = user?.role === "EMPLOYEE";
   const metrics = data?.metrics;
   const performance = data?.performanceEvidence;
+
+  if (user?.role === "SUPER_ADMIN") return <AdminAnalytics/>;
 
   return (
     <main className="flex-1 overflow-x-clip px-4 py-6 sm:px-8 sm:py-9">
