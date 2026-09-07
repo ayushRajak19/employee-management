@@ -24,6 +24,10 @@
 
 @media(max-width:390px){.lp-hero h1{font-size:49px}.lp-button-dark svg{display:none}.lp-showroom-ui{margin:14px}.lp-scene-metrics{grid-template-columns:1fr}.lp-scene-metrics span{display:flex;align-items:center;justify-content:space-between}.lp-scene-metrics strong{margin:0}.lp-scene-bars{display:none}.lp-scene-board{grid-template-columns:1fr;height:auto}.lp-scene-board>div:nth-child(3){display:none}.lp-outcomes>div>p{grid-template-columns:1fr 20px 1fr}.lp-outcomes small{display:none}.lp-final h2{font-size:43px}}
 
+/* Keep the primary identity and navigation comfortably readable at a glance. */
+@media(min-width:761px){.lp-nav{min-height:104px;padding-top:20px;padding-bottom:20px;gap:30px}.lp-nav .lp-brand{gap:11px;font-size:25px;letter-spacing:-.85px}.lp-nav .lp-brand img{width:36px;height:49px}.lp-nav .lp-brand small{margin-left:6px;padding-left:15px;font-size:10px;line-height:1.35;letter-spacing:2px}.lp-nav nav,.lp-nav-actions{gap:31px;font-size:14px;font-weight:700}.lp-nav .lp-button{padding:15px 21px;font-size:14px}}
+@media(max-width:760px){.lp-nav{min-height:78px}.lp-nav .lp-brand{font-size:20px}.lp-nav .lp-brand img{width:28px;height:38px}.lp-nav .lp-button-dark{padding:12px 14px;font-size:13px}}
+
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 
 .lp-rail-mark{display:grid;width:27px;height:37px;place-items:center;margin-bottom:12px;color:white;font-family:Georgia,serif;font-size:26px;font-style:italic;font-weight:400}.lp-final-mark{display:block;color:white;font-family:Georgia,serif;font-size:57px;font-style:italic;font-weight:400;line-height:1}@media(max-width:760px){.lp-rail-mark{width:20px;height:27px;font-size:20px}}
