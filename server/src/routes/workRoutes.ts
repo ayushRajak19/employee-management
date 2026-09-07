@@ -5,7 +5,7 @@ import { authenticate, requirePermission } from "../middleware/auth.js";
 import { voiceUpload } from "../middleware/upload.js";
 import { validate } from "../middleware/validate.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { manualTaskSchema, projectSchema, taskReviewSchema, taskSchema, taskTransitionSchema, voiceCommandIdSchema, voiceCommandSchema, voiceTextPreviewSchema } from "../validators/workValidators.js";
+import { manualTaskSchema, projectSchema, taskIdSchema, taskReassignSchema, taskReviewSchema, taskSchema, taskTransitionSchema, voiceCommandIdSchema, voiceCommandSchema, voiceTextPreviewSchema } from "../validators/workValidators.js";
 
 export const workRouter = Router();
 workRouter.use(authenticate);
@@ -17,6 +17,8 @@ workRouter.post("/tasks", requirePermission("task.create", "task.assign"), valid
 workRouter.post("/tasks/manual", requirePermission("task.update"), validate(manualTaskSchema), asyncHandler(controller.createManualTask));
 workRouter.patch("/tasks/:id/status", requirePermission("task.update"), validate(taskTransitionSchema), asyncHandler(controller.transition));
 workRouter.patch("/tasks/:id/review", requirePermission("task.review"), validate(taskReviewSchema), asyncHandler(controller.review));
+workRouter.patch("/tasks/:id/reassign", requirePermission("task.assign"), validate(taskReassignSchema), asyncHandler(controller.reassign));
+workRouter.delete("/tasks/:id", requirePermission("task.assign"), validate(taskIdSchema), asyncHandler(controller.remove));
 workRouter.get("/tasks/:id/activity", asyncHandler(controller.activity));
 workRouter.get("/voice/history", asyncHandler(voiceController.history));
 workRouter.post("/voice/preview", voiceUpload, asyncHandler(voiceController.previewAudio));

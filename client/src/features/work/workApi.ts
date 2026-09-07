@@ -11,6 +11,8 @@ export const workApi = {
   projects: () => api.get<{ items: Project[] }>("/api/v1/work/projects"), createProject: (body: unknown) => api.post("/api/v1/work/projects", body),
   tasks: () => api.get<{ items: Task[] }>("/api/v1/work/tasks"), createTask: (body: unknown) => api.post("/api/v1/work/tasks", body), createManualTask: (body: unknown) => api.post("/api/v1/work/tasks/manual", body),
   transition: (id: string, body: unknown) => api.patch(`/api/v1/work/tasks/${id}/status`, body), review: (id: string, body: unknown) => api.patch(`/api/v1/work/tasks/${id}/review`, body), activity: (id: string) => api.get<{ items: TaskActivity[] }>(`/api/v1/work/tasks/${id}/activity`), metrics: () => api.get<TaskMetrics>("/api/v1/work/tasks/metrics"),
+  reassign: (id: string, assignedEmployee: string) => api.patch(`/api/v1/work/tasks/${id}/reassign`, { assignedEmployee }),
+  remove: (id: string) => api.delete(`/api/v1/work/tasks/${id}`),
   voicePreview: (audio: Blob, language = "auto") => { const body = new FormData(); body.append("audio", audio, "voice-task.webm"); body.append("language", language); body.append("timezoneOffsetMinutes", String(new Date().getTimezoneOffset())); return api.upload<VoicePreview>("/api/v1/work/voice/preview", body); },
   voicePreviewFile: (file: File, language = "auto") => { const body = new FormData(); body.append("audio", file); body.append("language", language); body.append("timezoneOffsetMinutes", String(new Date().getTimezoneOffset())); return api.upload<VoicePreview>("/api/v1/work/voice/preview", body); },
   voicePreviewText: (transcript: string, language = "auto") => api.post<VoicePreview>("/api/v1/work/voice/preview-text", { transcript, language, timezoneOffsetMinutes: new Date().getTimezoneOffset() }),
