@@ -13,13 +13,14 @@ import { writeAudit } from "./auditService.js";
 import { createManualTask, createTask, listProjects, listTasks, transitionTask } from "./workService.js";
 
 type Actor = { id: string; role: string; permissions: string[] };
-type Option = { id: string; label: string; detail?: string; status?: string };
+type Option = { id: string; label: string; detail?: string; status?: string; relatedEmployeeIds?: string[] };
 export type VoiceDraft = {
   action: "CREATE_TASK" | "UPDATE_STATUS";
   name?: string;
   description?: string;
   project?: string;
   assignedEmployee?: string;
+  assigneeHint?: string;
   verbalAssigner?: string;
   priority?: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
   complexity?: "EASY" | "MEDIUM" | "HARD" | "VERY_HARD";
@@ -120,8 +121,64 @@ const findMention = <T extends { label: string }>(transcript: string, options: T
 };
 
 const escapeRegularExpression = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-export type VoiceAssignmentSegment = { assignedEmployee: string; assigneeLabel: string; text: string };
+const editDistance = (left: string, right: string) => {
+  const previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+  for (let leftIndex = 1; leftIndex <= left.length; leftIndex += 1) {
+    const current = [leftIndex];
+    for (let rightIndex = 1; rightIndex <= right.length; rightIndex += 1) {
+      current[rightIndex] = Math.min(
+        (current[rightIndex - 1] ?? 0) + 1,
+        (previous[rightIndex] ?? 0) + 1,
+        (previous[rightIndex - 1] ?? 0) + (left[leftIndex - 1] === right[rightIndex - 1] ? 0 : 1)
+      );
+    }
+    previous.splice(0, previous.length, ...current);
+  }
+  return previous[right.length] ?? Math.max(left.length, right.length);
+};
+
+const employeeMatchScore = (spoken: string, employee: Option, uniqueFirstNames: Set<string>) => {
+  const spokenForms = [normalize(spoken), ...normalize(spoken).split(" ").slice(-2), normalize(spoken).split(" ").at(-1) ?? ""].filter((item) => item.length >= 2);
+  const fullName = normalize(employee.label);
+  const firstName = fullName.split(" ")[0] ?? "";
+  const aliases = [fullName, normalize(employee.detail ?? ""), ...(uniqueFirstNames.has(firstName) ? [firstName] : [])].filter(Boolean);
+  let best = 0;
+  for (const spokenForm of spokenForms) for (const alias of aliases) {
+    if (spokenForm === alias) best = Math.max(best, 1);
+    else if (spokenForm.length >= 3 && alias.startsWith(spokenForm)) best = Math.max(best, 0.8 + Math.min(0.15, spokenForm.length / alias.length * 0.15));
+    else best = Math.max(best, 1 - editDistance(spokenForm, alias) / Math.max(spokenForm.length, alias.length));
+  }
+  return best;
+};
+
+export const resolveSpokenEmployee = (spoken: string, employees: Option[]) => {
+  const firstNameCounts = new Map<string, number>();
+  for (const employee of employees) {
+    const firstName = normalize(employee.label).split(" ")[0];
+    if (firstName) firstNameCounts.set(firstName, (firstNameCounts.get(firstName) ?? 0) + 1);
+  }
+  const uniqueFirstNames = new Set([...firstNameCounts].filter(([, count]) => count === 1).map(([name]) => name));
+  const ranked = employees.map((employee) => ({ employee, score: employeeMatchScore(spoken, employee, uniqueFirstNames) })).sort((left, right) => right.score - left.score);
+  const best = ranked[0]; const runnerUp = ranked[1];
+  return best && best.score >= 0.72 && (!runnerUp || best.score - runnerUp.score >= 0.08) ? best.employee : undefined;
+};
+
+export type VoiceAssignmentSegment = { assignedEmployee?: string; assigneeLabel: string; text: string };
 export const splitVoiceAssignments = (transcript: string, employees: Option[]): VoiceAssignmentSegment[] => {
+  const markerExpression = /(^|[,;]|\b(?:and|aur)\b|और)\s*([\p{L}\p{N}'-]+(?:\s+[\p{L}\p{N}'-]+){0,2})\s+(?:ko|को)\s+/giu;
+  const markerMatches = [...transcript.matchAll(markerExpression)];
+  if (markerMatches.length) return markerMatches.map((match, index) => {
+    const spokenName = match[2]?.trim() ?? "";
+    const employee = resolveSpokenEmployee(spokenName, employees);
+    const start = (match.index ?? 0) + match[0].length;
+    const end = markerMatches[index + 1]?.index ?? transcript.length;
+    const text = transcript.slice(start, end)
+      .replace(/[\s,:;–—-]*(?:and|aur|और)\s*$/iu, "")
+      .replace(/^[\s,:;–—-]+|[\s,:;–—-]+$/g, "")
+      .trim();
+    return { assignedEmployee: employee?.id, assigneeLabel: employee?.label ?? spokenName, text };
+  }).filter((item) => item.text.length >= 2);
+
   const firstNameCounts = new Map<string, number>();
   for (const employee of employees) {
     const firstName = normalize(employee.label).split(" ")[0];
@@ -228,7 +285,15 @@ const loadOptions = async (actor: Actor) => {
   const [projectsRaw, tasksRaw] = await Promise.all([listProjects(actor), listTasks({}, actor)]);
   const employeeFilter = actor.role === "EMPLOYEE" ? { user: actor.id, isActive: true } : { isActive: true };
   const employeesRaw = await Employee.find(employeeFilter).select("firstName lastName employeeId").sort({ firstName: 1 }).lean();
-  const projects: Option[] = projectsRaw.map((item) => ({ id: item._id.toString(), label: item.name, detail: item.code }));
+  const referenceId = (value: unknown) => {
+    if (!value) return undefined;
+    if (typeof value === "object" && "_id" in value) return String((value as { _id: unknown })._id);
+    return String(value);
+  };
+  const projects: Option[] = projectsRaw.map((item) => ({
+    id: item._id.toString(), label: item.name, detail: item.code,
+    relatedEmployeeIds: [referenceId(item.projectManager), ...(item.teamMembers ?? []).map(referenceId)].filter((value): value is string => Boolean(value))
+  }));
   const employees: Option[] = employeesRaw.map((item) => ({ id: item._id.toString(), label: `${item.firstName} ${item.lastName}`, detail: item.employeeId }));
   const tasks: Option[] = tasksRaw.map((item) => ({ id: item._id.toString(), label: item.name, detail: item.taskId, status: item.status }));
   return { projects, employees, tasks };
@@ -263,17 +328,20 @@ const buildDrafts = (transcript: string, actor: Actor, options: Awaited<ReturnTy
   const single = buildDraft(transcript, actor, options, timezoneOffsetMinutes);
   if (single.draft.action !== "CREATE_TASK" || actor.role === "EMPLOYEE") return { drafts: [single.draft], confidence: single.confidence };
   const assignments = splitVoiceAssignments(transcript, options.employees);
-  if (assignments.length < 2) return { drafts: [single.draft], confidence: single.confidence };
+  if (!assignments.length) return { drafts: [single.draft], confidence: single.confidence };
   const sharedProject = findMention(transcript, options.projects) ?? (options.projects.length === 1 ? options.projects[0] : undefined);
   const sharedDeadline = hasDeadlineSignal(transcript) ? parseVoiceDeadline(transcript, timezoneOffsetMinutes) : undefined;
   const results = assignments.map((assignment) => {
     const parsed = buildDraft(assignment.text, actor, options, timezoneOffsetMinutes);
+    const employeeProjects = assignment.assignedEmployee ? options.projects.filter((project) => project.relatedEmployeeIds?.includes(assignment.assignedEmployee!)) : [];
+    const inferredProject = employeeProjects.length === 1 ? employeeProjects[0] : undefined;
     return {
       draft: {
         ...parsed.draft,
         action: "CREATE_TASK" as const,
         assignedEmployee: assignment.assignedEmployee,
-        project: parsed.draft.project ?? sharedProject?.id,
+        assigneeHint: assignment.assigneeLabel,
+        project: parsed.draft.project ?? sharedProject?.id ?? inferredProject?.id,
         deadline: hasDeadlineSignal(assignment.text) ? parsed.draft.deadline : sharedDeadline ?? parsed.draft.deadline,
         description: assignment.text
       },
@@ -285,7 +353,8 @@ const buildDrafts = (transcript: string, actor: Actor, options: Awaited<ReturnTy
 
 export const createPreview = async (transcript: string, actor: Actor, metadata: { language?: string; durationSeconds?: number; timezoneOffsetMinutes?: number } = {}) => {
   const cleanTranscript = transcript.trim(); if (cleanTranscript.length < 2) throw new AppError("Say or type a task command", 422, "EMPTY_TRANSCRIPT");
-  const options = await loadOptions(actor); const { drafts, confidence } = buildDrafts(cleanTranscript, actor, options, metadata.timezoneOffsetMinutes); const draft = drafts[0];
+  const interpretedTranscript = cleanTranscript.replace(/\bbye\s+(?=today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday)/giu, "by ");
+  const options = await loadOptions(actor); const { drafts, confidence } = buildDrafts(interpretedTranscript, actor, options, metadata.timezoneOffsetMinutes); const draft = drafts[0];
   if (!draft) throw new AppError("No task assignment could be extracted", 422, "NO_ASSIGNMENTS_FOUND");
   const storedDraft: Record<string, unknown> = drafts.length === 1 ? { ...draft } : { drafts };
   const command = await VoiceCommand.create({ actor: actor.id, actorRole: actor.role, transcript: cleanTranscript, language: metadata.language, durationSeconds: metadata.durationSeconds, intent: draft.action, confidence, status: "TRANSCRIBED", draft: storedDraft });

@@ -58,5 +58,20 @@ test("ambiguous first names are not guessed", () => {
     { id: "aman-one", label: "Aman Gupta" },
     { id: "aman-two", label: "Aman Sharma" }
   ]);
-  assert.equal(assignments.length, 0);
+  assert.equal(assignments.length, 1);
+  assert.equal(assignments[0]?.assignedEmployee, undefined);
+  assert.equal(assignments[0]?.assigneeLabel, "Aman");
+});
+
+test("browser speech spelling variants still resolve separate assignees", () => {
+  const assignments = splitVoiceAssignments(
+    "Van ko payroll report banana hai aur Aayush ko client follow up karna hai bye tomorrow",
+    [
+      { id: "vandana-id", label: "Vandana Thapa", detail: "MB-2026-6D3C7E" },
+      { id: "ayush-id", label: "Ayush Rajak", detail: "MB-2026-A1B2C3" }
+    ]
+  );
+  assert.equal(assignments.length, 2);
+  assert.equal(assignments[0]?.assignedEmployee, "vandana-id");
+  assert.equal(assignments[1]?.assignedEmployee, "ayush-id");
 });
