@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Bot, Check, ChevronDown, Clock3, Layers3, Mic, ShieldCheck, Sparkles, Target, Users, Workflow } from "lucide-react";
 import logo from "@/assets/mobius-mark.png";
@@ -18,12 +18,13 @@ export const LandingPage = () => {
   const [activeView, setActiveView] = useState<ShowroomKey>("Command center");
   const active = showroom[activeView];
   const destination = user ? "/" : "/register";
+  useEffect(() => { document.title = "MobiusBloom — Run the company, not the chaos."; }, []);
 
   return <div className="lp">
     <a className="sr-only focus:not-sr-only" href="#main-content">Skip to content</a>
     <header className="lp-nav">
       <Link to="/welcome" className="lp-brand" aria-label="MobiusBloom home"><img src={logo} alt=""/><span>MobiusBloom</span><small>WORKFORCE OS</small></Link>
-      <nav aria-label="Main navigation"><a href="#product">Product</a><a href="#intelligence">Mobius AI</a><a href="#voice">Voice control</a><a href="#why">Why MobiusBloom</a></nav>
+      <nav aria-label="Main navigation"><Link to="/solutions">All capabilities</Link><Link to="/solutions/employee-360">Employee 360</Link><Link to="/solutions/ask-mobius">Mobius AI</Link><Link to="/solutions/voice-task-assistant">Voice control</Link></nav>
       <div className="lp-nav-actions"><Link to={user ? "/" : "/login"}>{user ? "Workspace" : "Sign in"}</Link><Link className="lp-button lp-button-dark" to={destination}>Start building <ArrowRight size={16}/></Link></div>
     </header>
 
@@ -86,6 +87,6 @@ export const LandingPage = () => {
       <section className="lp-final"><span className="lp-final-orbit"/><b className="lp-final-mark">8</b><p className="lp-kicker">YOUR COMPANY IS ALREADY MOVING</p><h2>Give it one place<br/><em>to move together.</em></h2><div><Link className="lp-button lp-button-light" to={destination}>Build your workspace <ArrowRight size={18}/></Link><Link to={user ? "/" : "/login"}>{user ? "Return to workspace" : "Sign in to your team"} ↗</Link></div></section>
     </main>
 
-    <footer className="lp-footer"><Link to="/welcome" className="lp-brand"><img src={logo} alt=""/><span>MobiusBloom</span></Link><p>People, work, and intelligence—moving as one.</p><div><a href="#product">Product</a><a href="#intelligence">AI</a><Link to={user ? "/" : "/login"}>Workspace ↗</Link></div></footer>
+    <footer className="lp-footer"><Link to="/welcome" className="lp-brand"><img src={logo} alt=""/><span>MobiusBloom</span></Link><p>People, work, and intelligence—moving as one.</p><div><Link to="/solutions">Capabilities</Link><Link to="/solutions/ask-mobius">AI</Link><Link to={user ? "/" : "/login"}>Workspace ↗</Link></div></footer>
   </div>;
 };

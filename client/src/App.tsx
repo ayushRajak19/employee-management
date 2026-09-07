@@ -6,6 +6,8 @@ import { LandingPage } from "@/pages/LandingPage";
 import { OnboardingRoute, PasswordChangeRoute, PlatformRoute, ProtectedRoute, RoleRoute } from "@/routes/ProtectedRoute";
 
 const LoginPage = lazy(() => import("@/pages/LoginPage").then((module) => ({ default: module.LoginPage })));
+const SolutionsIndexPage = lazy(() => import("@/pages/SolutionsPage").then((module) => ({ default: module.SolutionsIndexPage })));
+const SolutionDetailPage = lazy(() => import("@/pages/SolutionsPage").then((module) => ({ default: module.SolutionDetailPage })));
 const RegisterPage = lazy(() => import("@/pages/RegisterPage").then((module) => ({ default: module.RegisterPage })));
 const ChangePasswordPage = lazy(() => import("@/pages/ChangePasswordPage").then((module) => ({ default: module.ChangePasswordPage })));
 const OnboardingPage = lazy(() => import("@/pages/OnboardingPage").then((module) => ({ default: module.OnboardingPage })));
@@ -37,6 +39,8 @@ const PageLoader = () => <div className="space-y-4 p-8" aria-label="Loading page
 
 export const App = () => <Suspense fallback={<PageLoader/>}><Routes>
   <Route path="/welcome" element={<LandingPage/>}/>
+  <Route path="/solutions" element={<SolutionsIndexPage/>}/>
+  <Route path="/solutions/:slug" element={<SolutionDetailPage/>}/>
   <Route path="/login" element={<LoginPage/>}/>
   <Route path="/register" element={<RegisterPage/>}/>
   <Route element={<PasswordChangeRoute/>}><Route path="/change-password" element={<ChangePasswordPage/>}/></Route>
