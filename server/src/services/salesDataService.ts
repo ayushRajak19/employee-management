@@ -294,7 +294,8 @@ export const updateSalesData = async (viewer: SessionUser, entity: SalesEntityNa
     const nextStatus = input.status as TargetStatus;
     if (previousStatus !== nextStatus && !targetTransitions[previousStatus].includes(nextStatus)) throw new AppError(`Target cannot move from ${previousStatus} to ${nextStatus}`, 409, "INVALID_TARGET_TRANSITION");
   }
-  if (entity === "targets" && item.get("status") === "CLOSED") {
+  const canEditClosedTarget = viewer.role === "SUPER_ADMIN" || viewer.role === "HR_ADMIN";
+  if (entity === "targets" && item.get("status") === "CLOSED" && !canEditClosedTarget) {
     const fields = Object.keys(input).filter((field) => field !== "status");
     const isIdempotentStatusRetry = fields.length === 0 && input.status === "CLOSED";
     if (!isIdempotentStatusRetry) throw new AppError("Closed targets cannot be edited", 409, "TARGET_CLOSED");
