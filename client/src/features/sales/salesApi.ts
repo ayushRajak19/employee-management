@@ -64,6 +64,7 @@ export const salesApi = {
   territoryAnalytics: (id: string) => api.get<SalesAnalytics>(`/api/v1/sales/territories/${id}/analytics`),
   records: (path: string) => api.get<{ items: SalesRecord[] }>(`/api/v1/sales/${path}`),
   createRecord: (path: string, body: Record<string, unknown>) => api.post<{ item: SalesRecord }>(`/api/v1/sales/${path}`, body),
+  updateRecord: (path: string, id: string, body: Record<string, unknown>) => api.patch<{ item: SalesRecord }>(`/api/v1/sales/${path}/${id}`, body),
   createTerritory: (body: Record<string, unknown>) => api.post<{ item: SalesTerritory }>("/api/v1/sales/territories", body),
   assignTerritory: (body: Record<string, unknown>) => api.post<{ item: unknown }>("/api/v1/sales/territories/assignments", body),
   employeeMap: () => api.get<{ scope: "SELF" | "TEAM" | "ALL"; geography: GeoNodeDto[]; employees: EmployeeMapItem[] }>("/api/v1/employee-map"),

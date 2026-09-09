@@ -23,7 +23,7 @@ export const seedTenantRoles = async (): Promise<void> => {
 export const seedTenantGeography = async (): Promise<void> => {
   await GeoNode.findOneAndUpdate(
     { type: "GLOBAL" },
-    { $set: { isActive: true }, $setOnInsert: { name: "World", code: "WORLD", ancestors: [], depth: 0 } },
+    { $set: { isActive: true }, $unset: { location: "" }, $setOnInsert: { name: "World", code: "WORLD", ancestors: [], depth: 0 } },
     { upsert: true, new: true, runValidators: true, timestamps: false },
   );
 };
@@ -85,7 +85,7 @@ export const seedOrganization = async (tenantId: string): Promise<void> => {
     await seedTenantOrganizationPresets();
     console.log("Verifying geographic master root");
     await seedTenantGeography();
-    if (env.NODE_ENV !== "production") {
+    if (env.SEED_SALES_DEMO_DATA) {
       console.log("Verifying development Sales Intelligence sample data");
       await seedSalesDemoData();
     }

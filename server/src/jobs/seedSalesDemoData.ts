@@ -12,7 +12,7 @@ import { SalesTarget } from "../models/SalesTarget.js";
 import { SalesTerritory } from "../models/SalesTerritory.js";
 
 export const seedSalesDemoData = async (): Promise<void> => {
-  const world = await GeoNode.findOneAndUpdate({ code: "WORLD" }, { $setOnInsert: { name: "World", type: "GLOBAL", ancestors: [], depth: 0, isActive: true, location: { type: "Point", coordinates: [10, 20] } } }, { upsert: true, new: true });
+  const world = await GeoNode.findOneAndUpdate({ code: "WORLD" }, { $setOnInsert: { name: "World", type: "GLOBAL", ancestors: [], depth: 0, isActive: true } }, { upsert: true, new: true });
   const india = await GeoNode.findOneAndUpdate({ code: "IN" }, { $setOnInsert: { name: "India", type: "COUNTRY", parent: world._id, ancestors: [world._id], depth: 1, isActive: true, location: { type: "Point", coordinates: [78.9629, 20.5937] } } }, { upsert: true, new: true });
   const state = await GeoNode.findOneAndUpdate({ code: "IN-CG" }, { $setOnInsert: { name: "Chhattisgarh", type: "STATE", parent: india._id, ancestors: [world._id, india._id], depth: 2, isActive: true, location: { type: "Point", coordinates: [81.8661, 21.2787] } } }, { upsert: true, new: true });
   const cityData = [

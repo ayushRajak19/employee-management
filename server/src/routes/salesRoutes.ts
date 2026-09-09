@@ -66,7 +66,7 @@ salesRouter.get("/territories/:territoryId/opportunity", salesAnalytics, validat
 
 const dataRoutes = [
   { path: "leads", entity: "leads", view: salesView, manage: requireAnyPermission("sales.lead.manage.self", "sales.lead.manage.team", "sales.lead.manage.all"), create: createLeadSchema, update: updateLeadSchema },
-  { path: "customers", entity: "customers", view: requirePermission("sales.customer.view"), manage: requirePermission("sales.configuration.manage"), create: createCustomerSchema, update: updateCustomerSchema },
+  { path: "customers", entity: "customers", view: requirePermission("sales.customer.view"), manage: requireAnyPermission("sales.customer.manage.self", "sales.customer.manage.team", "sales.customer.manage.all", "sales.configuration.manage"), create: createCustomerSchema, update: updateCustomerSchema },
   { path: "pipeline", entity: "opportunities", view: requirePermission("sales.pipeline.view"), manage: requirePermission("sales.pipeline.manage"), create: createOpportunitySchema, update: updateOpportunitySchema },
   { path: "targets", entity: "targets", view: requirePermission("sales.target.view"), manage: requirePermission("sales.target.manage"), create: createTargetSchema, update: updateTargetSchema },
   { path: "revenue", entity: "revenue", view: requirePermission("sales.revenue.view"), manage: requirePermission("sales.revenue.manage"), create: createRevenueSchema, update: updateRevenueSchema },

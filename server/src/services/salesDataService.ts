@@ -4,7 +4,7 @@ import { ChannelPartner } from "../models/ChannelPartner.js";
 import { Employee } from "../models/Employee.js";
 import { GeoNode } from "../models/GeoNode.js";
 import { SalesCustomer } from "../models/SalesCustomer.js";
-import { SalesLead } from "../models/SalesLead.js";
+import { LEAD_STATUSES, SalesLead } from "../models/SalesLead.js";
 import { SalesOpportunity } from "../models/SalesOpportunity.js";
 import { SalesRevenueTransaction } from "../models/SalesRevenueTransaction.js";
 import { SalesTarget } from "../models/SalesTarget.js";
@@ -20,6 +20,16 @@ import {
 
 export type SalesEntityName = "leads" | "customers" | "opportunities" | "targets" | "revenue" | "channelPartners";
 type SalesInput = Record<string, unknown> & { ownerEmployee?: string; employee?: string; territory?: string; geoNode?: string };
+type LeadStatus = typeof LEAD_STATUSES[number];
+
+const leadTransitions: Record<LeadStatus, readonly LeadStatus[]> = {
+  NEW: ["CONTACTED", "QUALIFIED", "CONVERTED", "LOST"],
+  CONTACTED: ["QUALIFIED", "CONVERTED", "LOST"],
+  QUALIFIED: ["CONVERTED", "LOST"],
+  CONVERTED: [],
+  LOST: [],
+};
+export const canTransitionLeadStatus = (from: LeadStatus, to: LeadStatus) => from === to || leadTransitions[from].includes(to);
 
 export const salesPopulationPaths: Record<SalesEntityName, string> = {
   leads: "ownerEmployee territory geoNode",
@@ -111,14 +121,41 @@ export const updateSalesData = async (viewer: SessionUser, entity: SalesEntityNa
   const item = await model.findOne({ _id: id, ...scopeFilter(scope, entity) });
   if (!item) throw new AppError("Sales record not found", 404);
   const input = { ...raw };
+  if (entity === "leads" && typeof input.status === "string") {
+    const previousStatus = item.get("status") as LeadStatus;
+    const nextStatus = input.status as LeadStatus;
+    if (!canTransitionLeadStatus(previousStatus, nextStatus)) throw new AppError(`Lead cannot move from ${previousStatus} to ${nextStatus}`, 409, "INVALID_LEAD_TRANSITION");
+  }
   if (scope.level === "SELF") {
     const employeeKey = entity === "targets" || entity === "revenue" ? "employee" : "ownerEmployee";
     if (input[employeeKey]) input[employeeKey] = scope.employeeId;
   }
   await validateReferences(scope, input);
   const previous = item.toObject();
+  let convertedCustomer;
+  if (entity === "leads" && input.status === "CONVERTED" && !item.get("customer")) {
+    convertedCustomer = await SalesCustomer.findOneAndUpdate(
+      { sourceLead: item._id },
+      { $setOnInsert: {
+        name: item.get("name"),
+        sourceLead: item._id,
+        ownerEmployee: item.get("ownerEmployee"),
+        territory: item.get("territory"),
+        geoNode: item.get("geoNode"),
+        coordinates: item.get("coordinates"),
+        status: "ACTIVE",
+        customerType: "CONVERTED_LEAD",
+        lifetimeRevenue: 0,
+        currency: item.get("currency") ?? "INR",
+      } },
+      { upsert: true, new: true, runValidators: true },
+    );
+    input.customer = convertedCustomer._id;
+    input.convertedAt = new Date();
+  }
   item.set(input);
   await item.save();
+  if (convertedCustomer) await writeAudit({ user: viewer.id, action: "SALES_CUSTOMER_AUTO_CREATED", entityType: "SalesCustomer", entityId: convertedCustomer.id, newValue: { sourceLead: item.id } });
   await writeAudit({
     user: viewer.id,
     action: `SALES_${entity.toUpperCase()}_UPDATED`,

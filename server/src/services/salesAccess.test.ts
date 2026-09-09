@@ -4,7 +4,7 @@ import { ROLE_PERMISSIONS, type SessionUser } from "@mobius-ems/shared";
 import { Types } from "mongoose";
 import { getEmployeeMapColor } from "./employeeMapService.js";
 import { expectedGeoParentType } from "./geoService.js";
-import { salesPopulationPaths } from "./salesDataService.js";
+import { canTransitionLeadStatus, salesPopulationPaths } from "./salesDataService.js";
 import { effectivePeriodsOverlap } from "./salesTerritoryService.js";
 import { assertSalesEmployeeScope, assertSalesTerritoryScope, salesScopeLevelForPermissions } from "./salesScopeService.js";
 import { assignmentSchema, createOpportunitySchema, createRevenueSchema, createTargetSchema } from "../validators/salesValidators.js";
@@ -53,6 +53,16 @@ test("Sales employees can create their own geography, territory, and channel par
   assert.ok(ROLE_PERMISSIONS.EMPLOYEE.includes("sales.territory.create.self"));
   assert.ok(ROLE_PERMISSIONS.EMPLOYEE.includes("sales.channel_partner.manage.self"));
   assert.ok(ROLE_PERMISSIONS.EMPLOYEE.includes("sales.lead.manage.self"));
+  assert.ok(ROLE_PERMISSIONS.EMPLOYEE.includes("sales.customer.manage.self"));
+});
+
+test("lead lifecycle moves forward and converted or lost leads are terminal", () => {
+  assert.equal(canTransitionLeadStatus("NEW", "CONTACTED"), true);
+  assert.equal(canTransitionLeadStatus("NEW", "CONVERTED"), true);
+  assert.equal(canTransitionLeadStatus("QUALIFIED", "CONVERTED"), true);
+  assert.equal(canTransitionLeadStatus("QUALIFIED", "CONTACTED"), false);
+  assert.equal(canTransitionLeadStatus("CONVERTED", "NEW"), false);
+  assert.equal(canTransitionLeadStatus("LOST", "QUALIFIED"), false);
 });
 
 test("employees without a sales permission have no sales scope", () => {

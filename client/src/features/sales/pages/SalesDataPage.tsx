@@ -13,7 +13,7 @@ type Column = { label: string; align?: "right"; render: (item: SalesRecord) => R
 
 const managePermissions: Record<SalesDataPath, PermissionName[]> = {
   leads: ["sales.lead.manage.self", "sales.lead.manage.team", "sales.lead.manage.all"],
-  customers: ["sales.configuration.manage"],
+  customers: ["sales.customer.manage.self", "sales.customer.manage.team", "sales.customer.manage.all", "sales.configuration.manage"],
   pipeline: ["sales.pipeline.manage"],
   targets: ["sales.target.manage"],
   revenue: ["sales.revenue.manage"],
@@ -47,9 +47,30 @@ const initialForm = () => ({
   stage: "QUALIFIED", type: "OTHER", customerType: "", reference: "", leadTarget: "0", conversionTarget: "0",
 });
 
+type LeadStatus = "NEW" | "CONTACTED" | "QUALIFIED" | "CONVERTED" | "LOST";
+const nextLeadStatuses: Record<LeadStatus, LeadStatus[]> = {
+  NEW: ["CONTACTED", "QUALIFIED", "CONVERTED", "LOST"],
+  CONTACTED: ["QUALIFIED", "CONVERTED", "LOST"],
+  QUALIFIED: ["CONVERTED", "LOST"],
+  CONVERTED: [],
+  LOST: [],
+};
+const LeadStatusControl = ({ item }: { item: SalesRecord }) => {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const status = (item.status ?? "NEW") as LeadStatus;
+  const canUpdate = managePermissions.leads.some((permission) => user?.permissions.includes(permission));
+  const update = useMutation({
+    mutationFn: (nextStatus: LeadStatus) => salesApi.updateRecord("leads", item._id, { status: nextStatus }),
+    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["sales"] }); },
+  });
+  if (!canUpdate) return status;
+  return <div><select aria-label={`Update ${item.name ?? "lead"} status`} disabled={update.isPending || nextLeadStatuses[status].length === 0} className="h-9 rounded-lg border bg-white px-2 text-xs font-semibold disabled:bg-slate-50" value={status} onChange={(event) => update.mutate(event.target.value as LeadStatus)}><option value={status}>{status}</option>{nextLeadStatuses[status].map((next) => <option key={next} value={next}>{next}</option>)}</select>{update.error && <p className="mt-1 max-w-44 whitespace-normal text-xs text-red-600">{update.error.message}</p>}</div>;
+};
+
 const columnsFor = (path: SalesDataPath): Column[] => {
   if (path === "leads") return [
-    { label: "Lead", render: (item) => item.name ?? "—" }, { label: "Status", render: (item) => item.status ?? "—" },
+    { label: "Lead", render: (item) => item.name ?? "—" }, { label: "Status / action", render: (item) => <LeadStatusControl item={item}/> },
     { label: "Source", render: (item) => item.source ?? "—" }, { label: "Owner", render: (item) => labelOf(item.ownerEmployee) },
     { label: "Territory", render: (item) => labelOf(item.territory) }, { label: "Estimated value", align: "right", render: (item) => money(item.currency, item.estimatedValue) },
   ];
