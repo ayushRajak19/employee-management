@@ -55,14 +55,18 @@ const groups: { label: string; items: NavItem[] }[] = [
     ],
   },
   {
-    label: "Sales", items: [
-      { label: "Sales dashboard", icon: TrendingUp, path: "/sales", permissions: ["sales.analytics.self", "sales.analytics.team", "sales.analytics.all"], capability: "SALES_MODULE" },
-      { label: "Geographic intelligence", icon: MapPinned, path: "/sales/geography", permissions: ["sales.map.self", "sales.map.team", "sales.map.all"], capability: "SALES_MODULE" },
-      { label: "Territories", icon: Route, path: "/sales/territories", permission: "sales.territory.view", capability: "SALES_MODULE" },
+    label: "Sales setup", items: [
+      { label: "Geography (locations)", icon: MapPinned, path: "/sales/geography", permissions: ["sales.map.self", "sales.map.team", "sales.map.all"], capability: "SALES_MODULE" },
+      { label: "Territories (ownership)", icon: Route, path: "/sales/territories", permission: "sales.territory.view", capability: "SALES_MODULE" },
       { label: "Sales employees", icon: Users, path: "/sales/employees", permissions: ["sales.view.team", "sales.view.all"], capability: "SALES_MODULE" },
+    ],
+  },
+  {
+    label: "Sales workflow", items: [
+      { label: "Sales dashboard", icon: TrendingUp, path: "/sales", permissions: ["sales.analytics.self", "sales.analytics.team", "sales.analytics.all"], capability: "SALES_MODULE" },
       { label: "Leads", icon: Users, path: "/sales/leads", permissions: ["sales.view.self", "sales.view.team", "sales.view.all"], capability: "SALES_MODULE" },
       { label: "Customers", icon: UserRound, path: "/sales/customers", permission: "sales.customer.view", capability: "SALES_MODULE" },
-      { label: "Pipeline", icon: BriefcaseBusiness, path: "/sales/pipeline", permission: "sales.pipeline.view", capability: "SALES_MODULE" },
+      { label: "Pipeline (deals)", icon: BriefcaseBusiness, path: "/sales/pipeline", permission: "sales.pipeline.view", capability: "SALES_MODULE" },
       { label: "Targets", icon: Target, path: "/sales/targets", permission: "sales.target.view", capability: "SALES_MODULE" },
       { label: "Revenue", icon: TrendingUp, path: "/sales/revenue", permission: "sales.revenue.view", capability: "SALES_MODULE" },
       { label: "Channel partners", icon: Building2, path: "/sales/channel-partners", permission: "sales.channel_partner.view", capability: "SALES_MODULE" },

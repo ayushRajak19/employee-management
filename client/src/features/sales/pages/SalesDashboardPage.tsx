@@ -8,10 +8,12 @@ import { SalesTrendChart } from "../components/SalesTrendChart";
 import { salesApi } from "../salesApi";
 
 const salesFlow = [
-  { label: "1. Lead", text: "Capture a potential buyer", path: "/sales/leads" },
-  { label: "2. Customer", text: "Created when the lead converts", path: "/sales/customers" },
-  { label: "3. Pipeline", text: "Track the customer's active deal", path: "/sales/pipeline" },
-  { label: "4. Revenue", text: "Created when the deal is won", path: "/sales/revenue" },
+  { label: "1. Geography", text: "Add the location only if it is missing", path: "/sales/geography" },
+  { label: "2. Territory", text: "Connect the location to sales ownership", path: "/sales/territories" },
+  { label: "3. Lead", text: "Capture a potential buyer", path: "/sales/leads" },
+  { label: "4. Customer", text: "Created when the lead converts", path: "/sales/customers" },
+  { label: "5. Pipeline", text: "Track the customer's active deal", path: "/sales/pipeline" },
+  { label: "6. Revenue", text: "Created when the deal is won", path: "/sales/revenue" },
 ];
 
 export const SalesDashboardPage = () => {
@@ -30,9 +32,9 @@ export const SalesDashboardPage = () => {
     <p className="mt-2 text-sm text-slate-500">One connected view from prospect and customer ownership to pipeline and realized revenue.</p>
 
     <section className={`mt-5 rounded-2xl border p-5 ${isHrView ? "border-blue-100 bg-blue-50" : "border-emerald-100 bg-emerald-50"}`}>
-      <h2 className="font-semibold">{isHrView ? "HR responsibility" : "How a sale moves through the system"}</h2>
-      <p className="mt-1 text-xs text-slate-600">{isHrView ? "Use coverage, workload, capacity and outcome trends for workforce planning. Sales records remain read-only for HR." : "Do not create the same buyer in every section. Move the record forward through this flow."}</p>
-      {!isHrView && <div className="mt-4 grid gap-2 md:grid-cols-4">{salesFlow.map((step, index) => <Link key={step.path} to={step.path} className="relative rounded-xl border border-emerald-100 bg-white p-3 hover:border-brand-300"><p className="text-sm font-semibold text-brand-700">{step.label}</p><p className="mt-1 text-xs text-slate-500">{step.text}</p>{index < salesFlow.length - 1 && <ArrowRight className="absolute -right-3 top-7 z-10 hidden rounded-full bg-white text-brand-500 md:block" size={20}/>}</Link>)}</div>}
+      <h2 className="font-semibold">{isHrView ? "HR responsibility" : "How setup and sales connect"}</h2>
+      <p className="mt-1 text-xs text-slate-600">{isHrView ? "Use coverage, workload, capacity and outcome trends for workforce planning. Sales records remain read-only for HR." : "Geography and territory are setup. Start daily work from a lead; do not create the same buyer again in Customers or Pipeline."}</p>
+      {!isHrView && <div className="mt-4 grid gap-2 md:grid-cols-3">{salesFlow.map((step, index) => <Link key={step.path} to={step.path} className="relative rounded-xl border border-emerald-100 bg-white p-3 hover:border-brand-300"><p className="text-sm font-semibold text-brand-700">{step.label}</p><p className="mt-1 text-xs text-slate-500">{step.text}</p>{index < salesFlow.length - 1 && <ArrowRight className="absolute -right-3 top-7 z-10 hidden rounded-full bg-white text-brand-500 md:block" size={20}/>}</Link>)}</div>}
     </section>
 
     {query.isLoading ? <Skeleton className="mt-7 h-64"/> : query.isError ? <div className="mt-7 rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">{query.error.message}</div> : query.data ? <>
