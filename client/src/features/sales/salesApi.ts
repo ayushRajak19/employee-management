@@ -10,6 +10,7 @@ export interface SalesRecord {
   email?: string;
   phone?: string;
   notes?: string;
+  market?: string;
   code?: string;
   status?: string;
   stage?: string;

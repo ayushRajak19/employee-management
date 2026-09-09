@@ -6,9 +6,10 @@ export interface SalesCustomerDocument {
   primaryContactName?: string;
   email?: string;
   phone?: string;
+  market?: string;
   sourceLead?: Types.ObjectId;
   ownerEmployee: Types.ObjectId;
-  territory: Types.ObjectId;
+  territory?: Types.ObjectId;
   geoNode?: Types.ObjectId;
   coordinates?: { type: "Point"; coordinates: [number, number] };
   status: "ACTIVE" | "INACTIVE";
@@ -23,9 +24,10 @@ const schema = new Schema<SalesCustomerDocument>({
   primaryContactName: { type: String, trim: true, maxlength: 160 },
   email: { type: String, trim: true, lowercase: true, maxlength: 254 },
   phone: { type: String, trim: true, maxlength: 40 },
+  market: { type: String, trim: true, maxlength: 120 },
   sourceLead: { type: Schema.Types.ObjectId, ref: "SalesLead" },
   ownerEmployee: { type: Schema.Types.ObjectId, ref: "Employee", required: true, index: true },
-  territory: { type: Schema.Types.ObjectId, ref: "SalesTerritory", required: true, index: true },
+  territory: { type: Schema.Types.ObjectId, ref: "SalesTerritory", index: true },
   geoNode: { type: Schema.Types.ObjectId, ref: "GeoNode", index: true },
   coordinates: { type: { type: String, enum: ["Point"] }, coordinates: [{ type: Number }] },
   status: { type: String, enum: ["ACTIVE", "INACTIVE"], default: "ACTIVE", index: true },

@@ -66,9 +66,10 @@ export const assignmentSchema = z.object({ body: assignmentBody });
 
 const ownerAndLocation = {
   ownerEmployee: objectId.optional(),
-  territory: objectId,
+  territory: objectId.optional(),
   geoNode: objectId.optional(),
   coordinates: coordinates.optional(),
+  market: z.string().trim().max(120).optional(),
 };
 export const leadBody = z.object({
   name: z.string().trim().min(1).max(160), ...ownerAndLocation,
@@ -101,15 +102,15 @@ const targetBase = z.object({
 export const targetBody = targetBase.refine((body) => body.employee || body.territory, { message: "Target requires an employee or territory" })
   .refine((body) => body.periodEnd >= body.periodStart, { message: "Period end must be after start", path: ["periodEnd"] });
 export const revenueBody = z.object({
-  customer: objectId.optional(), employee: objectId.optional(), territory: objectId, geoNode: objectId.optional(),
+  customer: objectId.optional(), employee: objectId.optional(), territory: objectId.optional(), geoNode: objectId.optional(),
   amount: nonNegative, currency, transactionDate: z.coerce.date(), source: z.string().trim().min(1).max(80),
   reference: z.string().trim().max(160).optional(), productId: z.string().trim().max(120).optional(), channelPartner: objectId.optional(),
 });
 const channelPartnerBase = z.object({
   name: z.string().trim().min(1).max(160), code: z.string().trim().min(1).max(40).transform((value) => value.toUpperCase()),
   type: z.enum(["DISTRIBUTOR", "DEALER", "RESELLER", "RETAILER", "SERVICE_PARTNER", "OTHER"]),
-  contactName: z.string().trim().min(1).max(160).optional(), email, phone,
-  territory: objectId, ownerEmployee: objectId.optional(), geoNode: objectId.optional(),
+  contactName: z.string().trim().min(1).max(160).optional(), email, phone, market: z.string().trim().max(120).optional(),
+  territory: objectId.optional(), ownerEmployee: objectId.optional(), geoNode: objectId.optional(),
   status: z.enum(["ACTIVE", "INACTIVE"]).default("ACTIVE"), effectiveFrom: z.coerce.date(), effectiveTo: z.coerce.date().optional(),
 });
 export const channelPartnerBody = channelPartnerBase.refine(validEffectiveRange, { message: "Effective end must be after start", path: ["effectiveTo"] });

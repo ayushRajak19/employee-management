@@ -21,7 +21,7 @@ import {
 } from "./salesScopeService.js";
 
 export type SalesEntityName = "leads" | "customers" | "opportunities" | "targets" | "revenue" | "channelPartners";
-type SalesInput = Record<string, unknown> & { ownerEmployee?: string; employee?: string; territory?: string; geoNode?: string };
+type SalesInput = Record<string, unknown> & { ownerEmployee?: string; employee?: string; territory?: string; geoNode?: string; market?: string };
 type LeadStatus = typeof LEAD_STATUSES[number];
 type OpportunityStatus = typeof OPPORTUNITY_STATUSES[number];
 type TargetStatus = "DRAFT" | "ACTIVE" | "CLOSED";
@@ -62,6 +62,15 @@ const modelFor = (entity: SalesEntityName): Model<Record<string, unknown>> => {
   }
 };
 
+const territoryVisibility = (scope: ResolvedSalesScope, ownerField?: string): Record<string, unknown> => {
+  const clauses: Record<string, unknown>[] = [];
+  if (scope.allowedTerritoryIds.length) clauses.push({ territory: { $in: scope.allowedTerritoryIds } });
+  const unassigned: Record<string, unknown> = { territory: { $exists: false } };
+  if (ownerField && scope.level !== "ALL") unassigned[ownerField] = { $in: scope.allowedEmployeeIds };
+  clauses.push(unassigned);
+  return { $or: clauses };
+};
+
 const scopeFilter = (scope: ResolvedSalesScope, entity: SalesEntityName): Record<string, unknown> => {
   if (entity === "targets") {
     return { $or: [
@@ -70,24 +79,25 @@ const scopeFilter = (scope: ResolvedSalesScope, entity: SalesEntityName): Record
     ] };
   }
   if (entity === "channelPartners") return {
-    territory: { $in: scope.allowedTerritoryIds },
+    ...territoryVisibility(scope, "ownerEmployee"),
     ...(scope.level === "SELF" && scope.employeeId ? { ownerEmployee: scope.employeeId } : {}),
   };
   const employeeField = entity === "revenue" ? "employee" : "ownerEmployee";
   return {
     [employeeField]: { $in: scope.allowedEmployeeIds },
-    territory: { $in: scope.allowedTerritoryIds },
+    ...territoryVisibility(scope),
   };
 };
 
 const applyCustomerContext = async (scope: ResolvedSalesScope, entity: SalesEntityName, input: SalesInput) => {
   if (!["opportunities", "revenue"].includes(entity) || typeof input.customer !== "string") return;
-  const customer = await SalesCustomer.findOne({ _id: input.customer, ...scopeFilter(scope, "customers") }).select("ownerEmployee territory geoNode currency").lean();
+  const customer = await SalesCustomer.findOne({ _id: input.customer, ...scopeFilter(scope, "customers") }).select("ownerEmployee territory geoNode market currency").lean();
   if (!customer) throw new AppError("Customer not found", 404);
   if (entity === "revenue") input.employee = customer.ownerEmployee.toString();
   else input.ownerEmployee = customer.ownerEmployee.toString();
-  input.territory = customer.territory.toString();
+  if (customer.territory) input.territory = customer.territory.toString();
   if (customer.geoNode) input.geoNode = customer.geoNode.toString();
+  if (customer.market) input.market = customer.market;
   input.currency = customer.currency;
 };
 
@@ -151,8 +161,9 @@ const createWonRevenue = async (viewer: SessionUser, opportunity: SalesRecordDoc
       sourceOpportunity: opportunity.get("_id"),
       customer: customerId,
       employee: opportunity.get("ownerEmployee"),
-      territory: opportunity.get("territory"),
+      ...(opportunity.get("territory") ? { territory: opportunity.get("territory") } : {}),
       geoNode: opportunity.get("geoNode"),
+      market: opportunity.get("market"),
       amount,
       currency: opportunity.get("currency") ?? "INR",
       transactionDate,
@@ -285,8 +296,9 @@ export const updateSalesData = async (viewer: SessionUser, entity: SalesEntityNa
         phone: item.get("phone"),
         sourceLead: item._id,
         ownerEmployee: item.get("ownerEmployee"),
-        territory: item.get("territory"),
+        ...(item.get("territory") ? { territory: item.get("territory") } : {}),
         geoNode: item.get("geoNode"),
+        market: item.get("market"),
         coordinates: item.get("coordinates"),
         status: "ACTIVE",
         customerType: "CONVERTED_LEAD",

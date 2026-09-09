@@ -56,8 +56,8 @@ const groups: { label: string; items: NavItem[] }[] = [
   },
   {
     label: "Sales setup", items: [
-      { label: "Geography (locations)", icon: MapPinned, path: "/sales/geography", permissions: ["sales.map.self", "sales.map.team", "sales.map.all"], capability: "SALES_MODULE" },
-      { label: "Territories (ownership)", icon: Route, path: "/sales/territories", permission: "sales.territory.view", capability: "SALES_MODULE" },
+      { label: "Geography (locations)", icon: MapPinned, path: "/sales/geography", roles: managementRoles, permissions: ["sales.map.self", "sales.map.team", "sales.map.all"], capability: "SALES_MODULE" },
+      { label: "Territories (ownership)", icon: Route, path: "/sales/territories", roles: managementRoles, permission: "sales.territory.view", capability: "SALES_MODULE" },
       { label: "Sales employees", icon: Users, path: "/sales/employees", permissions: ["sales.view.team", "sales.view.all"], capability: "SALES_MODULE" },
     ],
   },
