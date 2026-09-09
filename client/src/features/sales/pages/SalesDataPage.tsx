@@ -101,7 +101,7 @@ const initialForm = () => ({
   name: "", companyName: "", contactName: "", email: "", phone: "", notes: "", market: "", code: "", employee: "", territory: "", customer: "", channelPartner: "",
   value: "0", probability: "20", source: "REFERRAL", date: today(), endDate: monthEnd(),
   stage: "DISCOVERY", type: "OTHER", customerType: "BUSINESS", reference: "",
-  leadTarget: "0", conversionTarget: "0", periodType: "MONTHLY", targetScope: "EMPLOYEE", currency: "INR",
+  leadTarget: "0", conversionTarget: "0", periodType: "MONTHLY", targetScope: "EMPLOYEE", currency: "INR", justification: "",
 });
 
 const StatusControl = ({ item, path, nextStatuses, reasonRequired = false }: {
@@ -199,7 +199,7 @@ const columnsFor = (path: SalesDataPath): Column[] => {
     { label: "Employee", render: (item) => labelOf(item.employee) },
     { label: "Territory", render: (item) => labelOf(item.territory) },
     { label: "Lead target", align: "right", render: (item) => (item.leadTarget ?? 0).toLocaleString("en-IN") },
-    { label: "Revenue target", align: "right", render: (item) => money(item.currency, item.revenueTarget) },
+    { label: "Revenue target", align: "right", render: (item) => <div><div>{money(item.currency, item.revenueTarget)}</div>{item.justification && <div className="mt-1 max-w-xs whitespace-normal text-left text-xs font-normal text-slate-400" title={item.justification}>Basis: {item.justification}</div>}</div> },
   ];
   if (path === "revenue") return [
     { label: "Date", render: (item) => date(item.transactionDate) },

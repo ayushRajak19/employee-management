@@ -5,6 +5,7 @@ import * as data from "../services/salesDataService.js";
 import { employeeMap as getEmployeeMap } from "../services/employeeMapService.js";
 import * as geography from "../services/geoService.js";
 import * as territories from "../services/salesTerritoryService.js";
+import * as targetPerformance from "../services/targetPerformanceService.js";
 
 const send = (response: Response, message: string, value: unknown, status = 200) => {
   response.status(status).json({ success: true, message, data: value });
@@ -41,3 +42,6 @@ export const updateData = async (request: Request, response: Response) => send(r
 export const getConfiguration = async (_request: Request, response: Response) => send(response, "Sales configuration retrieved", { configuration: await configuration.getSalesConfiguration() });
 export const updateConfiguration = async (request: Request, response: Response) => send(response, "Sales configuration updated", { configuration: await configuration.updateSalesConfiguration(request.user!, request.body) });
 export const employeeMap = async (request: Request, response: Response) => send(response, "Employee map retrieved", await getEmployeeMap(request.user!));
+export const myTargetPerformance = async (request: Request, response: Response) => send(response, "Target performance retrieved", { items: await targetPerformance.targetPerformance(request.user!) });
+export const teamTargetPerformance = async (request: Request, response: Response) => send(response, "Team target performance retrieved", { items: await targetPerformance.targetPerformance(request.user!, true) });
+export const commitTarget = async (request: Request, response: Response) => send(response, "Commitment submitted", { item: await targetPerformance.commitToTarget(request.user!, String(request.params.targetId), request.body) }, 201);

@@ -44,6 +44,7 @@ export interface SalesRecord {
   effectiveFrom?: string;
   effectiveTo?: string;
   createdAt?: string;
+  justification?: string;
 }
 
 export interface SalesTerritory {
@@ -67,6 +68,8 @@ export interface EmployeeMapItem extends SalesEmployeeDto {
 }
 
 export const salesApi = {
+  targetPerformance: () => api.get<{ items: { target: SalesRecord; performance: { officialTarget:number; actualAchievement:number; employeeCommitment:number|null; achievementPercentage:number; remainingOfficialTarget:number; remainingCommitment:number|null; daysRemaining:number; requiredDailyRunRate:number; requiredWeeklyRunRate:number; projectedAchievementPercentage:number; status:string } }[] }>("/api/v1/sales/target-performance/me"),
+  commitment: (targetId: string, body: { committedRevenue: number }) => api.post(`/api/v1/sales/target-performance/${targetId}/commitment`, body),
   countries: () => api.get<{ items: { country: string; leads: number; customers: number; partners: number; converted: number; pipeline: Record<string, number>; revenue: Record<string, number> }[] }>("/api/v1/sales/countries"),
   selfAnalytics: () => api.get<SalesAnalytics>("/api/v1/sales/me/analytics"),
   teamAnalytics: () => api.get<SalesAnalytics>("/api/v1/sales/team/analytics"),

@@ -64,6 +64,7 @@ const groups: { label: string; items: NavItem[] }[] = [
   {
     label: "Sales workflow", items: [
       { label: "Sales dashboard", icon: TrendingUp, path: "/sales", permissions: ["sales.analytics.self", "sales.analytics.team", "sales.analytics.all"], capability: "SALES_MODULE" },
+      { label: "My target & performance", icon: Target, path: "/sales/my-target", permissions: ["sales.analytics.self", "sales.analytics.team", "sales.analytics.all"], capability: "SALES_MODULE" },
       { label: "Leads", icon: Users, path: "/sales/leads", permissions: ["sales.view.self", "sales.view.team", "sales.view.all"], capability: "SALES_MODULE" },
       { label: "Customers", icon: UserRound, path: "/sales/customers", permission: "sales.customer.view", capability: "SALES_MODULE" },
       { label: "Pipeline (deals)", icon: BriefcaseBusiness, path: "/sales/pipeline", permission: "sales.pipeline.view", capability: "SALES_MODULE" },

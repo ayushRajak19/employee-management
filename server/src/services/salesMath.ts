@@ -5,6 +5,20 @@ export const calculateCapacity = (leadCount: number, activeHeadcount: number, ca
   return { currentLeadLoad: load, configuredLeadCapacity: capacity, requiredHeadcount, activeHeadcount: headcount, headcountGap: Math.max(0, requiredHeadcount - headcount), capacityUtilization: headcount ? Number((load / (headcount * capacity) * 100).toFixed(2)) : load ? 100 : 0, coveragePercentage: requiredHeadcount ? Number((Math.min(1, headcount / requiredHeadcount) * 100).toFixed(2)) : 100 };
 };
 export const percentage = (numerator: number, denominator: number): number => denominator > 0 ? Number((numerator / denominator * 100).toFixed(2)) : 0;
+
+export type TargetRiskStatus = "NOT_STARTED" | "ON_TRACK" | "AT_RISK" | "CRITICAL" | "ACHIEVED" | "EXCEEDED" | "CLOSED";
+export interface TargetPerformanceInput { officialTarget: number; actual: number; commitment?: number; periodStart: Date; periodEnd: Date; now?: Date; overachievementThreshold?: number }
+export const calculateTargetPerformance = (input: TargetPerformanceInput) => {
+  const now = input.now ?? new Date(); const target = Math.max(0, input.officialTarget); const actual = Math.max(0, input.actual);
+  const totalDays = Math.max(1, Math.ceil((input.periodEnd.getTime() - input.periodStart.getTime()) / 86400000) + 1);
+  const elapsedDays = Math.max(0, Math.min(totalDays, Math.ceil((Math.min(now.getTime(), input.periodEnd.getTime()) - input.periodStart.getTime()) / 86400000) + 1));
+  const daysRemaining = Math.max(0, Math.ceil((input.periodEnd.getTime() - now.getTime()) / 86400000));
+  const achievementPercentage = percentage(actual, target);
+  const projectedPeriodRevenue = elapsedDays > 0 ? Number((actual / elapsedDays * totalDays).toFixed(2)) : 0;
+  const projectedAchievementPercentage = percentage(projectedPeriodRevenue, target);
+  const status: TargetRiskStatus = now < input.periodStart ? "NOT_STARTED" : now > input.periodEnd ? (achievementPercentage > (input.overachievementThreshold ?? 100) ? "EXCEEDED" : achievementPercentage >= 100 ? "ACHIEVED" : "CLOSED") : achievementPercentage > (input.overachievementThreshold ?? 100) ? "EXCEEDED" : achievementPercentage >= 100 ? "ACHIEVED" : projectedAchievementPercentage >= 100 ? "ON_TRACK" : projectedAchievementPercentage >= 75 ? "AT_RISK" : "CRITICAL";
+  return { officialTarget: target, actualAchievement: actual, employeeCommitment: input.commitment ?? null, achievementPercentage, remainingOfficialTarget: Math.max(target - actual, 0), remainingCommitment: input.commitment == null ? null : Math.max(input.commitment - actual, 0), daysRemaining, requiredDailyRunRate: daysRemaining > 0 ? Number((Math.max(target - actual, 0) / daysRemaining).toFixed(2)) : 0, requiredWeeklyRunRate: daysRemaining > 0 ? Number((Math.max(target - actual, 0) / Math.max(1, Math.ceil(daysRemaining / 7))).toFixed(2)) : 0, currentDailyRunRate: elapsedDays > 0 ? Number((actual / elapsedDays).toFixed(2)) : 0, projectedPeriodRevenue, projectedAchievementPercentage, paceGap: Number((actual - target * elapsedDays / totalDays).toFixed(2)), status };
+};
 export const weightedPipelineValue = (items: readonly { estimatedValue: number; probability: number }[]): number => Number(items.reduce((sum, item) => sum + Math.max(0, item.estimatedValue) * Math.min(100, Math.max(0, item.probability)) / 100, 0).toFixed(2));
 
 export interface OpportunityInputs { leadDemandScore: number; coverageGapScore: number; customerWhiteSpaceScore: number; pipelinePotentialScore: number; growthScore: number; conversionPotentialScore: number }

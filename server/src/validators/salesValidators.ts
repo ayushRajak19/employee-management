@@ -97,7 +97,7 @@ const targetBase = z.object({
   territory: objectId.optional(), employee: objectId.optional(), periodType: z.enum(["MONTHLY", "QUARTERLY", "YEARLY"]),
   periodStart: z.coerce.date(), periodEnd: z.coerce.date(), revenueTarget: nonNegative, currency,
   leadTarget: nonNegative.optional(), conversionTarget: z.coerce.number().min(0).max(100).optional(),
-  customerAcquisitionTarget: nonNegative.optional(), status: z.enum(["DRAFT", "ACTIVE", "CLOSED"]).default("ACTIVE"),
+  customerAcquisitionTarget: nonNegative.optional(), justification: z.string().trim().min(10, "Explain the business basis for this target").max(2000).default("Management-assigned target; business basis recorded in the approved sales plan."), status: z.enum(["DRAFT", "ACTIVE", "CLOSED"]).default("ACTIVE"),
 });
 export const targetBody = targetBase.refine((body) => body.employee || body.territory, { message: "Target requires an employee or territory" })
   .refine((body) => body.periodEnd >= body.periodStart, { message: "Period end must be after start", path: ["periodEnd"] });

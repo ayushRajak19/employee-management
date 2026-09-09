@@ -38,6 +38,9 @@ const salesMap = requireAnyPermission("sales.map.self", "sales.map.team", "sales
 const asEntity = (name: SalesEntityName): RequestHandler => (request, _response, next) => { request.params.entity = name; next(); };
 
 salesRouter.get("/me/analytics", salesAnalytics, asyncHandler(controller.selfAnalytics));
+salesRouter.get("/target-performance/me", requireAnyPermission("sales.analytics.self", "sales.analytics.team", "sales.analytics.all"), asyncHandler(controller.myTargetPerformance));
+salesRouter.get("/target-performance/team", requireAnyPermission("sales.analytics.team", "sales.analytics.all"), asyncHandler(controller.teamTargetPerformance));
+salesRouter.post("/target-performance/:targetId/commitment", requirePermission("sales.target.view"), asyncHandler(controller.commitTarget));
 salesRouter.get("/countries", salesMap, asyncHandler(controller.countrySales));
 salesRouter.get("/team/analytics", requireAnyPermission("sales.analytics.team", "sales.analytics.all"), asyncHandler(controller.teamAnalytics));
 salesRouter.get("/analytics/overview", salesAnalytics, asyncHandler(controller.overviewAnalytics));
