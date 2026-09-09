@@ -113,9 +113,12 @@ export const resolveSalesScope = async (viewer: SessionUser, at = new Date()): P
     territories = await EmployeeTerritoryAssignment.find({ employee: { $in: employeeIds }, ...activeAt(at) }).distinct("territory");
   }
 
+  const createdByUserIds = level === "SELF"
+    ? [new Types.ObjectId(viewer.id)]
+    : await Employee.find({ _id: { $in: employeeIds } }).distinct("user");
   const [globalGeoIds, createdGeoIds] = await Promise.all([
     GeoNode.find({ type: "GLOBAL", isActive: true }).distinct("_id"),
-    GeoNode.find({ createdBy: { $in: employeeIds }, isActive: true }).distinct("_id"),
+    GeoNode.find({ createdBy: { $in: createdByUserIds }, isActive: true }).distinct("_id"),
   ]);
 
   return {
