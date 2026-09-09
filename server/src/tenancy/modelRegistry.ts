@@ -58,4 +58,5 @@ import "../models/SalesLead.js";
 import "../models/SalesOpportunity.js";
 import "../models/SalesRevenueTransaction.js";
 import "../models/SalesTarget.js";
+import "../models/EmployeeTargetCommitment.js";
 import "../models/SalesTerritory.js";
