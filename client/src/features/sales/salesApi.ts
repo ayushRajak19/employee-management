@@ -9,15 +9,25 @@ export interface SalesRecord {
   stage?: string;
   currency?: string;
   estimatedValue?: number;
+  lifetimeRevenue?: number;
   amount?: number;
   revenueTarget?: number;
+  leadTarget?: number;
+  conversionTarget?: number;
   probability?: number;
+  source?: string;
+  customerType?: string;
+  type?: string;
+  reference?: string;
   ownerEmployee?: string | { _id: string; firstName: string; lastName: string };
   employee?: string | { _id: string; firstName: string; lastName: string };
   territory?: string | { _id: string; name: string; code: string };
   periodStart?: string;
   periodEnd?: string;
   transactionDate?: string;
+  expectedCloseDate?: string;
+  effectiveFrom?: string;
+  effectiveTo?: string;
   createdAt?: string;
 }
 
