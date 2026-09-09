@@ -6,6 +6,7 @@ import { useAuth } from "@/features/auth/AuthProvider";
 import { SalesMetricCards } from "../components/SalesMetricCards";
 import { SalesTrendChart } from "../components/SalesTrendChart";
 import { salesApi } from "../salesApi";
+import { CountrySales } from "../components/CountrySales";
 
 const salesFlow = [
   { label: "1. Lead", text: "Capture a potential buyer", path: "/sales/leads" },
@@ -47,6 +48,7 @@ export const SalesDashboardPage = () => {
       </div>
     </> : null}
 
+    <CountrySales/>
     <div className="mt-5 grid gap-3 sm:grid-cols-3">
       {isManagementView && <Link className="rounded-2xl border bg-white p-5 shadow-soft transition hover:border-brand-300" to="/sales/geography"><Map className="text-brand-600"/><p className="mt-3 font-semibold">Geographic intelligence</p><p className="mt-1 text-sm text-slate-400">Define real countries, states and cities.</p></Link>}
       {isManagementView && <Link className="rounded-2xl border bg-white p-5 shadow-soft transition hover:border-brand-300" to="/sales/territories"><Route className="text-brand-600"/><p className="mt-3 font-semibold">Sales territories</p><p className="mt-1 text-sm text-slate-400">Assign business ownership over geography.</p></Link>}

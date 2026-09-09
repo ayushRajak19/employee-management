@@ -122,7 +122,7 @@ export const createTargetSchema = z.object({ body: targetBody });
 export const createRevenueSchema = z.object({ body: revenueBody });
 export const createChannelPartnerSchema = z.object({ body: channelPartnerBody });
 const atLeastOneField = <T extends Record<string, unknown>>(body: T) => Object.keys(body).length > 0;
-export const updateLeadSchema = z.object({ params: z.object({ id: objectId }), body: leadBody.partial().refine(atLeastOneField, "At least one field is required") });
+export const updateLeadSchema = z.object({ params: z.object({ id: objectId }), body: leadBody.partial().extend({ saleAmount: nonNegative.optional() }).refine(atLeastOneField, "At least one field is required") });
 export const updateCustomerSchema = z.object({ params: z.object({ id: objectId }), body: customerBody.partial().refine(atLeastOneField, "At least one field is required") });
 export const updateOpportunitySchema = z.object({ params: z.object({ id: objectId }), body: opportunityBody.partial().refine(atLeastOneField, "At least one field is required") });
 export const updateTargetSchema = z.object({ params: z.object({ id: objectId }), body: targetBase.partial().refine((body) => !body.periodStart || !body.periodEnd || body.periodEnd >= body.periodStart, { message: "Period end must be after start", path: ["periodEnd"] }) });

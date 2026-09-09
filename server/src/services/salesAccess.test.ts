@@ -10,6 +10,14 @@ import { assertSalesEmployeeScope, assertSalesTerritoryScope, salesScopeLevelFor
 import { assignmentSchema, createOpportunitySchema, createRevenueSchema, createTargetSchema, updateLeadSchema } from "../validators/salesValidators.js";
 
 const id = () => new Types.ObjectId();
+test("conversion accepts an edited confirmed sale value and rejects invalid money", () => {
+  const parse = (saleAmount: unknown) => updateLeadSchema.safeParse({ params: { id: id().toString() }, body: { status: "CONVERTED", saleAmount } });
+  const result = parse(12500.50);
+  assert.equal(result.success, true);
+  if (result.success) assert.equal(result.data.body.saleAmount, 12500.50);
+  assert.equal(parse(-1).success, false);
+  assert.equal(parse(Infinity).success, false);
+});
 const scope = (level: "SELF" | "TEAM" | "ALL", employeeIds: Types.ObjectId[], territoryIds: Types.ObjectId[]) => ({ level, allowedEmployeeIds: employeeIds, allowedTerritoryIds: territoryIds, allowedGeoIds: [] });
 
 test("sales lists populate only fields defined by each entity", () => {

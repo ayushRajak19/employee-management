@@ -16,6 +16,7 @@ export interface SalesRecord {
   stage?: string;
   currency?: string;
   estimatedValue?: number;
+  confirmedSaleAmount?: number;
   lifetimeRevenue?: number;
   amount?: number;
   revenueTarget?: number;
@@ -66,6 +67,7 @@ export interface EmployeeMapItem extends SalesEmployeeDto {
 }
 
 export const salesApi = {
+  countries: () => api.get<{ items: { country: string; leads: number; customers: number; partners: number; converted: number; pipeline: Record<string, number>; revenue: Record<string, number> }[] }>("/api/v1/sales/countries"),
   selfAnalytics: () => api.get<SalesAnalytics>("/api/v1/sales/me/analytics"),
   teamAnalytics: () => api.get<SalesAnalytics>("/api/v1/sales/team/analytics"),
   overviewAnalytics: () => api.get<SalesAnalytics>("/api/v1/sales/analytics/overview"),

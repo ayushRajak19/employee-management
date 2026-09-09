@@ -9,6 +9,7 @@ import * as territories from "../services/salesTerritoryService.js";
 const send = (response: Response, message: string, value: unknown, status = 200) => {
   response.status(status).json({ success: true, message, data: value });
 };
+export const countrySales = async (request: Request, response: Response) => send(response, "Country sales retrieved", await data.countrySales(request.user!));
 
 export const selfAnalytics = async (request: Request, response: Response) => send(response, "Sales analytics retrieved", await analytics.selfAnalytics(request.user!));
 export const teamAnalytics = async (request: Request, response: Response) => send(response, "Team sales analytics retrieved", await analytics.overviewAnalytics(request.user!));

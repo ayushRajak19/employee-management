@@ -8,6 +8,7 @@ import type { CreateGeographyInput } from "../components/GeographyCreateDialog";
 import { GeoSalesMap } from "../components/GeoSalesMap";
 import { SalesMetricCards } from "../components/SalesMetricCards";
 import { salesApi } from "../salesApi";
+import { CountrySales } from "../components/CountrySales";
 
 const metricOptions = ["Revenue", "Target Achievement", "Leads", "Customers", "Pipeline", "Conversion", "Employee Coverage", "Response Time", "Capacity Gap", "Opportunity"] as const;
 const GeographyCreateDialog = lazy(() => import("../components/GeographyCreateDialog").then((module) => ({ default: module.GeographyCreateDialog })));
@@ -64,6 +65,7 @@ export const GeographicSalesPage = () => {
         <section className="mt-5 rounded-2xl border bg-white p-5 shadow-soft"><div className="flex items-center gap-2"><MapPinned size={17} className="text-brand-600"/><h2 className="font-semibold">Configured locations below {selected?.name ?? "geography"}</h2></div><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{children.length ? children.map((node) => <button key={node._id} className="rounded-xl border p-4 text-left transition hover:border-brand-300 hover:bg-brand-50" onClick={() => setSelectedId(node._id)}><p className="font-medium">{node.name}</p><p className="mt-1 text-xs text-slate-400">{node.type}</p></button>) : <p className="col-span-full py-4 text-sm text-slate-400">No configured child locations yet. Use Add geography to expand coverage.</p>}</div></section>
       </>}
       {analytics.data && <div className="mt-5"><SalesMetricCards data={analytics.data}/></div>}
+      <CountrySales/>
     </div>
     {createOpen && <Suspense fallback={<div className="fixed inset-0 z-[2000] grid place-items-center bg-ink/45 text-white">Loading country master…</div>}><GeographyCreateDialog open nodes={tree.data?.items ?? []} pending={create.isPending} error={create.error?.message} onClose={() => setCreateOpen(false)} onSubmit={(input) => create.mutate(input)}/></Suspense>}
   </main>;

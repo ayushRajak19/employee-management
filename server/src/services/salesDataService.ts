@@ -188,6 +188,34 @@ export const listSalesData = async (viewer: SessionUser, entity: SalesEntityName
   return modelFor(entity).find(scopeFilter(scope, entity)).populate(salesPopulationPaths[entity], "firstName lastName employeeId name code type").sort({ createdAt: -1 }).limit(500).lean();
 };
 
+export const countrySales = async (viewer: SessionUser) => {
+  const scope = await resolveSalesScope(viewer);
+  const geography = await GeoNode.find({}).select("name type ancestors").lean();
+  const countryForGeo = (id: unknown) => {
+    const node = geography.find((entry) => String(entry._id) === String(id));
+    return (node?.type === "COUNTRY" ? node : geography.find((entry) => entry.type === "COUNTRY" && node?.ancestors.some((ancestor) => String(ancestor) === String(entry._id))))?.name;
+  };
+  const entities = ["leads", "customers", "opportunities", "revenue", "channelPartners"] as const;
+  const groups = new Map<string, { country: string; leads: number; customers: number; partners: number; converted: number; pipeline: Record<string, number>; revenue: Record<string, number> }>();
+  for (const entity of entities) {
+    const records = await modelFor(entity).find(scopeFilter(scope, entity)).select("market geoNode customer status currency amount estimatedValue").populate(entity === "revenue" || entity === "opportunities" ? [{ path: "customer", select: "market geoNode" }] : []).lean();
+    for (const record of records) {
+      const customer = record.customer as { market?: string; geoNode?: unknown } | undefined;
+      const country = String(record.market || customer?.market || countryForGeo(record.geoNode || customer?.geoNode) || "Country not set").trim();
+      const key = country.toLowerCase();
+      const row = groups.get(key) ?? { country, leads: 0, customers: 0, partners: 0, converted: 0, pipeline: {}, revenue: {} };
+      if (entity === "leads") { row.leads++; if (record.status === "CONVERTED") row.converted++; }
+      if (entity === "customers") row.customers++;
+      if (entity === "channelPartners") row.partners++;
+      const currency = String(record.currency || "INR");
+      if (entity === "opportunities" && record.status === "OPEN") row.pipeline[currency] = (row.pipeline[currency] || 0) + Number(record.estimatedValue || 0);
+      if (entity === "revenue") row.revenue[currency] = (row.revenue[currency] || 0) + Number(record.amount || 0);
+      groups.set(key, row);
+    }
+  }
+  return { items: [...groups.values()] };
+};
+
 export const listTerritorySalesData = async (viewer: SessionUser, entity: SalesEntityName, territoryId: string) => {
   const scope = await resolveSalesScope(viewer);
   assertSalesTerritoryScope(scope, territoryId);
@@ -239,6 +267,8 @@ export const updateSalesData = async (viewer: SessionUser, entity: SalesEntityNa
   if (!item) throw new AppError("Sales record not found", 404);
   const input = { ...raw };
   const previous = item.toObject();
+  if (raw.saleAmount !== undefined && (entity !== "leads" || raw.status !== "CONVERTED")) throw new AppError("Sale amount requires lead conversion", 422);
+  delete input.saleAmount;
   if (entity === "opportunities" && item.get("status") !== "OPEN") {
     const fields = Object.keys(input);
     const isIdempotentStatusRetry = fields.length === 1 && input.status === item.get("status");
@@ -312,6 +342,22 @@ export const updateSalesData = async (viewer: SessionUser, entity: SalesEntityNa
   }
   item.set(input);
   await item.save();
+  if (entity === "leads" && input.status === "CONVERTED" && raw.saleAmount !== undefined) {
+    const result = await SalesRevenueTransaction.updateOne(
+      { sourceLead: item._id },
+      { $setOnInsert: {
+        sourceLead: item._id, customer: item.get("customer"), employee: item.get("ownerEmployee"),
+        territory: item.get("territory"), geoNode: item.get("geoNode"), amount: Number(raw.saleAmount),
+        currency: item.get("currency") ?? "INR", transactionDate: new Date(), source: "LEAD_CONVERSION",
+        reference: "LEAD-" + item.id,
+      } },
+      { upsert: true, runValidators: true },
+    );
+    if (result.upsertedCount) await adjustCustomerRevenue(optionalId(item.get("customer")), Number(raw.saleAmount), new Date());
+    const revenue = await SalesRevenueTransaction.findOne({ sourceLead: item._id }).select("amount").lean();
+    item.set("confirmedSaleAmount", revenue?.amount);
+    await item.save();
+  }
   if (entity === "opportunities" && input.status === "WON") await createWonRevenue(viewer, item);
   if (entity === "revenue") {
     const previousCustomer = optionalId(previous.customer);
