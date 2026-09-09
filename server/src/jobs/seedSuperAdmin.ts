@@ -7,6 +7,7 @@ import { User } from "../models/User.js";
 import { Department } from "../models/Department.js";
 import { Team } from "../models/Team.js";
 import { Designation } from "../models/Designation.js";
+import { GeoNode } from "../models/GeoNode.js";
 import { additionalDesignationPresets } from "../data/additionalRoleSkillCatalog.js";
 import { runWithTenant } from "../tenancy/tenantContext.js";
 import { seedSalesDemoData } from "./seedSalesDemoData.js";
@@ -17,6 +18,14 @@ export const seedPermissions = async (): Promise<void> => {
 
 export const seedTenantRoles = async (): Promise<void> => {
   await Role.bulkWrite(ROLES.map((name) => ({ updateOne: { filter: { name }, update: { $set: { description: name.replaceAll("_", " "), permissions: [...ROLE_PERMISSIONS[name]], isSystem: true } }, upsert: true } })), { timestamps: false });
+};
+
+export const seedTenantGeography = async (): Promise<void> => {
+  await GeoNode.findOneAndUpdate(
+    { type: "GLOBAL" },
+    { $set: { isActive: true }, $setOnInsert: { name: "World", code: "WORLD", ancestors: [], depth: 0 } },
+    { upsert: true, new: true, runValidators: true, timestamps: false },
+  );
 };
 
 export const seedTenantOrganizationPresets = async (): Promise<void> => {
@@ -74,6 +83,8 @@ export const seedOrganization = async (tenantId: string): Promise<void> => {
     await seedTenantRoles();
     console.log("Verifying organization presets");
     await seedTenantOrganizationPresets();
+    console.log("Verifying geographic master root");
+    await seedTenantGeography();
     if (env.NODE_ENV !== "production") {
       console.log("Verifying development Sales Intelligence sample data");
       await seedSalesDemoData();
