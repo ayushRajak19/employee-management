@@ -4,19 +4,22 @@ import { ROLE_PERMISSIONS, type SessionUser } from "@mobius-ems/shared";
 import { Types } from "mongoose";
 import { getEmployeeMapColor } from "./employeeMapService.js";
 import { expectedGeoParentType } from "./geoService.js";
-import { canTransitionLeadStatus, salesPopulationPaths } from "./salesDataService.js";
+import { canTransitionLeadStatus, canTransitionOpportunityStatus, salesPopulationPaths } from "./salesDataService.js";
 import { effectivePeriodsOverlap } from "./salesTerritoryService.js";
 import { assertSalesEmployeeScope, assertSalesTerritoryScope, salesScopeLevelForPermissions } from "./salesScopeService.js";
-import { assignmentSchema, createOpportunitySchema, createRevenueSchema, createTargetSchema } from "../validators/salesValidators.js";
+import { assignmentSchema, createOpportunitySchema, createRevenueSchema, createTargetSchema, updateLeadSchema } from "../validators/salesValidators.js";
 
 const id = () => new Types.ObjectId();
 const scope = (level: "SELF" | "TEAM" | "ALL", employeeIds: Types.ObjectId[], territoryIds: Types.ObjectId[]) => ({ level, allowedEmployeeIds: employeeIds, allowedTerritoryIds: territoryIds, allowedGeoIds: [] });
 
 test("sales lists populate only fields defined by each entity", () => {
   assert.equal(salesPopulationPaths.leads.includes(" employee"), false);
+  assert.ok(salesPopulationPaths.leads.includes("customer"));
   assert.equal(salesPopulationPaths.targets.includes("ownerEmployee"), false);
   assert.equal(salesPopulationPaths.targets, "employee territory");
-  assert.equal(salesPopulationPaths.revenue, "employee territory geoNode");
+  assert.equal(salesPopulationPaths.revenue, "employee territory geoNode customer channelPartner sourceOpportunity");
+  assert.ok(salesPopulationPaths.opportunities.includes("customer"));
+  assert.ok(salesPopulationPaths.customers.includes("sourceLead"));
 });
 
 test("Sales Agent resolves to SELF and cannot request another employee", () => {
@@ -31,6 +34,8 @@ test("Sales Manager resolves to TEAM and remains limited to resolved employees a
   const employee = id(); const territory = id(); const resolved = scope("TEAM", [employee], [territory]);
   assert.doesNotThrow(() => assertSalesEmployeeScope(resolved, employee.toString()));
   assert.throws(() => assertSalesTerritoryScope(resolved, id().toString()), /outside your authorized scope/);
+  assert.ok(ROLE_PERMISSIONS.MANAGER.includes("sales.territory.manage"));
+  assert.ok(ROLE_PERMISSIONS.MANAGER.includes("sales.target.manage"));
 });
 
 test("HR receives read-only all-sales analytics permissions", () => {
@@ -65,6 +70,13 @@ test("lead lifecycle moves forward and converted or lost leads are terminal", ()
   assert.equal(canTransitionLeadStatus("LOST", "QUALIFIED"), false);
 });
 
+test("opportunity lifecycle closes once and cannot be reopened", () => {
+  assert.equal(canTransitionOpportunityStatus("OPEN", "WON"), true);
+  assert.equal(canTransitionOpportunityStatus("OPEN", "LOST"), true);
+  assert.equal(canTransitionOpportunityStatus("WON", "OPEN"), false);
+  assert.equal(canTransitionOpportunityStatus("LOST", "WON"), false);
+});
+
 test("employees without a sales permission have no sales scope", () => {
   assert.equal(salesScopeLevelForPermissions(["employee.view"]), null);
 });
@@ -89,6 +101,8 @@ test("sales validation rejects negative money and invalid probability", () => {
   assert.equal(createOpportunitySchema.safeParse({ body: { ...common, estimatedValue: -1, probability: 50 } }).success, false);
   assert.equal(createOpportunitySchema.safeParse({ body: { ...common, estimatedValue: 100, probability: 101 } }).success, false);
   assert.equal(createRevenueSchema.safeParse({ body: { employee: id().toString(), territory: id().toString(), amount: -1, currency: "INR", transactionDate: new Date(), source: "invoice" } }).success, false);
+  assert.equal(updateLeadSchema.safeParse({ params: { id: id().toString() }, body: {} }).success, false);
+  assert.equal(updateLeadSchema.safeParse({ params: { id: id().toString() }, body: { status: "LOST", lostReason: "No budget" } }).success, true);
 });
 
 test("target validation requires ownership and a valid period", () => {

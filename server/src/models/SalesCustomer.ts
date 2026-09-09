@@ -3,6 +3,9 @@ import { tenantModel } from "../tenancy/tenantModel.js";
 
 export interface SalesCustomerDocument {
   name: string;
+  primaryContactName?: string;
+  email?: string;
+  phone?: string;
   sourceLead?: Types.ObjectId;
   ownerEmployee: Types.ObjectId;
   territory: Types.ObjectId;
@@ -17,6 +20,9 @@ export interface SalesCustomerDocument {
 
 const schema = new Schema<SalesCustomerDocument>({
   name: { type: String, required: true, trim: true, maxlength: 160 },
+  primaryContactName: { type: String, trim: true, maxlength: 160 },
+  email: { type: String, trim: true, lowercase: true, maxlength: 254 },
+  phone: { type: String, trim: true, maxlength: 40 },
   sourceLead: { type: Schema.Types.ObjectId, ref: "SalesLead" },
   ownerEmployee: { type: Schema.Types.ObjectId, ref: "Employee", required: true, index: true },
   territory: { type: Schema.Types.ObjectId, ref: "SalesTerritory", required: true, index: true },

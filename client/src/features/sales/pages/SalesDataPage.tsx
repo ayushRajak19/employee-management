@@ -1,7 +1,8 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { PermissionName } from "@mobius-ems/shared";
-import { Database, Plus } from "lucide-react";
+import { ArrowRight, Database, Plus } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -10,6 +11,8 @@ import { salesApi, type SalesRecord } from "../salesApi";
 
 type SalesDataPath = "leads" | "customers" | "pipeline" | "targets" | "revenue" | "channel-partners";
 type Column = { label: string; align?: "right"; render: (item: SalesRecord) => ReactNode };
+type LeadStatus = "NEW" | "CONTACTED" | "QUALIFIED" | "CONVERTED" | "LOST";
+type OpportunityStatus = "OPEN" | "WON" | "LOST";
 
 const managePermissions: Record<SalesDataPath, PermissionName[]> = {
   leads: ["sales.lead.manage.self", "sales.lead.manage.team", "sales.lead.manage.all"],
@@ -20,15 +23,66 @@ const managePermissions: Record<SalesDataPath, PermissionName[]> = {
   "channel-partners": ["sales.channel_partner.manage", "sales.channel_partner.manage.self"],
 };
 
-const sectionCopy: Record<SalesDataPath, { description: string; empty: string }> = {
-  leads: { description: "Capture prospects, their source, owner, territory, status and expected business value.", empty: "No leads have been captured in your scope." },
-  customers: { description: "Manage converted accounts, customer type, ownership and lifetime revenue.", empty: "No customers are available in your scope." },
-  pipeline: { description: "Track active sales opportunities by stage, probability, expected close date and value.", empty: "No opportunities are currently in your pipeline." },
-  targets: { description: "Review revenue and lead goals assigned to employees or territories for each period.", empty: "No targets have been assigned in your scope." },
-  revenue: { description: "Record realized sales transactions with their date, source, reference and territory.", empty: "No revenue transactions are available in your scope." },
-  "channel-partners": { description: "Manage distributors, dealers, resellers and other partners operating in your territories.", empty: "No channel partners are available in your scope." },
+const sectionMeta: Record<SalesDataPath, { purpose: string; next: string; hr: string; empty: string }> = {
+  leads: {
+    purpose: "Capture a potential buyer and move it through first contact, qualification and conversion.",
+    next: "When a lead is converted, its customer account is created automatically.",
+    hr: "Review lead ownership, response discipline and conversion health without changing sales records.",
+    empty: "No leads have been captured in your scope.",
+  },
+  customers: {
+    purpose: "Keep confirmed buyers in one account list. Customers can come from converted leads or direct sales.",
+    next: "Create an opportunity for the customer when a real deal is being discussed.",
+    hr: "Review account ownership and customer coverage; commercial records remain Sales-controlled.",
+    empty: "No customers are available in your scope.",
+  },
+  pipeline: {
+    purpose: "Track real deals for customers, including stage, expected value, close date and win probability.",
+    next: "Marking a deal WON automatically records revenue and updates the customer's lifetime revenue.",
+    hr: "Use pipeline and win/loss patterns for capacity and performance conversations, not payroll decisions alone.",
+    empty: "No opportunities are currently in your pipeline.",
+  },
+  targets: {
+    purpose: "Show approved monthly, quarterly or yearly goals for an employee or territory.",
+    next: "Sales employees view their goal; authorized leadership owns target creation and closure.",
+    hr: "Compare target load and attainment for workforce planning while keeping targets read-only.",
+    empty: "No targets have been assigned in your scope.",
+  },
+  revenue: {
+    purpose: "Show realized sales value. Won opportunities generate these records automatically.",
+    next: "Authorized administrators can also enter an exceptional manual transaction with a customer reference.",
+    hr: "Use revenue as one business outcome alongside role, opportunity and capacity context.",
+    empty: "No revenue transactions are available in your scope.",
+  },
+  "channel-partners": {
+    purpose: "Register a distributor, dealer, reseller or service partner that helps generate or deliver sales.",
+    next: "Attach partner-assisted revenue to the partner so contribution remains traceable.",
+    hr: "Review who owns each partner relationship and where additional partner capacity is needed.",
+    empty: "No channel partners are available in your scope.",
+  },
 };
 
+const leadTransitions: Record<LeadStatus, LeadStatus[]> = {
+  NEW: ["CONTACTED", "QUALIFIED", "CONVERTED", "LOST"],
+  CONTACTED: ["QUALIFIED", "CONVERTED", "LOST"],
+  QUALIFIED: ["CONVERTED", "LOST"],
+  CONVERTED: [],
+  LOST: [],
+};
+const opportunityTransitions: Record<OpportunityStatus, OpportunityStatus[]> = { OPEN: ["WON", "LOST"], WON: [], LOST: [] };
+const targetTransitions: Record<string, string[]> = { DRAFT: ["ACTIVE"], ACTIVE: ["CLOSED"], CLOSED: [] };
+const pipelineStages = [
+  { value: "DISCOVERY", label: "Discovery", probability: 20 },
+  { value: "QUALIFICATION", label: "Qualification", probability: 40 },
+  { value: "PROPOSAL", label: "Proposal", probability: 60 },
+  { value: "NEGOTIATION", label: "Negotiation", probability: 80 },
+] as const;
+
+const idOf = (value: unknown) => {
+  if (typeof value === "string") return value;
+  if (value && typeof value === "object" && "_id" in value) return String((value as { _id: unknown })._id);
+  return "";
+};
 const labelOf = (value: unknown) => {
   if (!value) return "—";
   if (typeof value === "string") return value;
@@ -40,67 +94,124 @@ const labelOf = (value: unknown) => {
 };
 const money = (currency = "INR", value?: number) => `${currency} ${(value ?? 0).toLocaleString("en-IN")}`;
 const date = (value?: string) => value ? new Date(value).toLocaleDateString("en-IN") : "—";
+const today = () => new Date().toISOString().slice(0, 10);
 const monthEnd = () => { const now = new Date(); return new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10); };
 const initialForm = () => ({
-  name: "", code: "", employee: "", territory: "", value: "0", probability: "50",
-  source: "MANUAL", date: new Date().toISOString().slice(0, 10), endDate: monthEnd(),
-  stage: "QUALIFIED", type: "OTHER", customerType: "", reference: "", leadTarget: "0", conversionTarget: "0",
+  name: "", companyName: "", contactName: "", email: "", phone: "", notes: "", code: "", employee: "", territory: "", customer: "", channelPartner: "",
+  value: "0", probability: "20", source: "REFERRAL", date: today(), endDate: monthEnd(),
+  stage: "DISCOVERY", type: "OTHER", customerType: "BUSINESS", reference: "",
+  leadTarget: "0", conversionTarget: "0", periodType: "MONTHLY", targetScope: "EMPLOYEE", currency: "INR",
 });
 
-type LeadStatus = "NEW" | "CONTACTED" | "QUALIFIED" | "CONVERTED" | "LOST";
-const nextLeadStatuses: Record<LeadStatus, LeadStatus[]> = {
-  NEW: ["CONTACTED", "QUALIFIED", "CONVERTED", "LOST"],
-  CONTACTED: ["QUALIFIED", "CONVERTED", "LOST"],
-  QUALIFIED: ["CONVERTED", "LOST"],
-  CONVERTED: [],
-  LOST: [],
-};
-const LeadStatusControl = ({ item }: { item: SalesRecord }) => {
+const StatusControl = ({ item, path, nextStatuses, reasonRequired = false }: {
+  item: SalesRecord;
+  path: SalesDataPath;
+  nextStatuses: string[];
+  reasonRequired?: boolean;
+}) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const status = (item.status ?? "NEW") as LeadStatus;
-  const canUpdate = managePermissions.leads.some((permission) => user?.permissions.includes(permission));
+  const [candidate, setCandidate] = useState("");
+  const [reason, setReason] = useState("");
+  const canUpdate = managePermissions[path].some((permission) => user?.permissions.includes(permission));
   const update = useMutation({
-    mutationFn: (nextStatus: LeadStatus) => salesApi.updateRecord("leads", item._id, { status: nextStatus }),
+    mutationFn: () => salesApi.updateRecord(path, item._id, {
+      status: candidate,
+      ...(candidate === "LOST" ? { lostReason: reason.trim() } : {}),
+    }),
+    onSuccess: async () => {
+      setCandidate("");
+      setReason("");
+      await queryClient.invalidateQueries({ queryKey: ["sales"] });
+    },
+  });
+  if (!canUpdate || nextStatuses.length === 0) return <div><span className="font-semibold">{item.status}</span>{item.lostReason && <p className="mt-1 max-w-52 whitespace-normal text-xs text-slate-400">{item.lostReason}</p>}</div>;
+  return <div className="min-w-40">
+    <select aria-label={`Update ${item.name ?? "record"} status`} disabled={update.isPending} className="h-9 rounded-lg border bg-white px-2 text-xs font-semibold" value={candidate || item.status} onChange={(event) => setCandidate(event.target.value)}>
+      <option value={item.status}>{item.status}</option>
+      {nextStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
+    </select>
+    {candidate && <div className="mt-2 space-y-2 whitespace-normal">
+      {candidate === "LOST" && <Input aria-label="Lost reason" required={reasonRequired} placeholder="Reason for loss" className="h-9 text-xs" value={reason} onChange={(event) => setReason(event.target.value)}/>}
+      <div className="flex gap-1">
+        <Button type="button" className="h-8 px-2 text-xs" disabled={update.isPending || (candidate === "LOST" && reasonRequired && !reason.trim())} onClick={() => update.mutate()}>Confirm</Button>
+        <Button type="button" variant="ghost" className="h-8 px-2 text-xs" onClick={() => { setCandidate(""); setReason(""); }}>Cancel</Button>
+      </div>
+    </div>}
+    {update.error && <p className="mt-1 max-w-52 whitespace-normal text-xs text-red-600">{update.error.message}</p>}
+  </div>;
+};
+
+const PipelineStageControl = ({ item }: { item: SalesRecord }) => {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const canUpdate = user?.permissions.includes("sales.pipeline.manage") && item.status === "OPEN";
+  const current = pipelineStages.find((stage) => stage.value === item.stage?.toUpperCase());
+  const update = useMutation({
+    mutationFn: (stageValue: string) => {
+      const stage = pipelineStages.find((candidate) => candidate.value === stageValue)!;
+      return salesApi.updateRecord("pipeline", item._id, { stage: stage.value, probability: stage.probability });
+    },
     onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["sales"] }); },
   });
-  if (!canUpdate) return status;
-  return <div><select aria-label={`Update ${item.name ?? "lead"} status`} disabled={update.isPending || nextLeadStatuses[status].length === 0} className="h-9 rounded-lg border bg-white px-2 text-xs font-semibold disabled:bg-slate-50" value={status} onChange={(event) => update.mutate(event.target.value as LeadStatus)}><option value={status}>{status}</option>{nextLeadStatuses[status].map((next) => <option key={next} value={next}>{next}</option>)}</select>{update.error && <p className="mt-1 max-w-44 whitespace-normal text-xs text-red-600">{update.error.message}</p>}</div>;
+  if (!canUpdate) return item.stage?.replaceAll("_", " ") ?? "—";
+  return <div><select aria-label={`Update ${item.name ?? "opportunity"} stage`} disabled={update.isPending} className="h-9 rounded-lg border bg-white px-2 text-xs" value={current?.value ?? item.stage} onChange={(event) => update.mutate(event.target.value)}>{!current && item.stage && <option value={item.stage}>{item.stage}</option>}{pipelineStages.map((stage) => <option key={stage.value} value={stage.value}>{stage.label} · {stage.probability}%</option>)}</select>{update.error && <p className="mt-1 max-w-52 whitespace-normal text-xs text-red-600">{update.error.message}</p>}</div>;
 };
 
 const columnsFor = (path: SalesDataPath): Column[] => {
   if (path === "leads") return [
-    { label: "Lead", render: (item) => item.name ?? "—" }, { label: "Status / action", render: (item) => <LeadStatusControl item={item}/> },
-    { label: "Source", render: (item) => item.source ?? "—" }, { label: "Owner", render: (item) => labelOf(item.ownerEmployee) },
-    { label: "Territory", render: (item) => labelOf(item.territory) }, { label: "Estimated value", align: "right", render: (item) => money(item.currency, item.estimatedValue) },
-  ];
-  if (path === "customers") return [
-    { label: "Customer", render: (item) => item.name ?? "—" }, { label: "Status", render: (item) => item.status ?? "—" },
-    { label: "Customer type", render: (item) => item.customerType ?? "—" }, { label: "Owner", render: (item) => labelOf(item.ownerEmployee) },
-    { label: "Territory", render: (item) => labelOf(item.territory) }, { label: "Lifetime revenue", align: "right", render: (item) => money(item.currency, item.lifetimeRevenue) },
-  ];
-  if (path === "pipeline") return [
-    { label: "Opportunity", render: (item) => item.name ?? "—" }, { label: "Stage", render: (item) => item.stage ?? "—" },
-    { label: "Probability", render: (item) => `${item.probability ?? 0}%` }, { label: "Expected close", render: (item) => date(item.expectedCloseDate) },
-    { label: "Owner", render: (item) => labelOf(item.ownerEmployee) }, { label: "Territory", render: (item) => labelOf(item.territory) },
+    { label: "Lead", render: (item) => <div><p>{item.name ?? "—"}</p>{item.companyName && <p className="mt-1 text-xs font-normal text-slate-400">{item.companyName}</p>}</div> },
+    { label: "Status / action", render: (item) => <StatusControl item={item} path="leads" nextStatuses={leadTransitions[(item.status ?? "NEW") as LeadStatus] ?? []} reasonRequired/> },
+    { label: "Customer", render: (item) => item.customer ? labelOf(item.customer) : "—" },
+    { label: "Contact", render: (item) => <div><p>{item.phone ?? "—"}</p>{item.email && <p className="mt-1 text-xs text-slate-400">{item.email}</p>}</div> },
+    { label: "Source", render: (item) => item.source ?? "—" },
+    { label: "Owner", render: (item) => labelOf(item.ownerEmployee) },
+    { label: "Territory", render: (item) => labelOf(item.territory) },
     { label: "Estimated value", align: "right", render: (item) => money(item.currency, item.estimatedValue) },
   ];
+  if (path === "customers") return [
+    { label: "Customer", render: (item) => <div><p>{item.name ?? "—"}</p>{item.primaryContactName && <p className="mt-1 text-xs font-normal text-slate-400">Contact: {item.primaryContactName}</p>}</div> },
+    { label: "Contact", render: (item) => <div><p>{item.phone ?? "—"}</p>{item.email && <p className="mt-1 text-xs text-slate-400">{item.email}</p>}</div> },
+    { label: "Status / action", render: (item) => <StatusControl item={item} path="customers" nextStatuses={[item.status === "ACTIVE" ? "INACTIVE" : "ACTIVE"]}/> },
+    { label: "Origin", render: (item) => item.sourceLead ? "Converted lead" : "Direct customer" },
+    { label: "Owner", render: (item) => labelOf(item.ownerEmployee) },
+    { label: "Territory", render: (item) => labelOf(item.territory) },
+    { label: "Lifetime revenue", align: "right", render: (item) => money(item.currency, item.lifetimeRevenue) },
+  ];
+  if (path === "pipeline") return [
+    { label: "Opportunity", render: (item) => item.name ?? "—" },
+    { label: "Status / action", render: (item) => <StatusControl item={item} path="pipeline" nextStatuses={opportunityTransitions[(item.status ?? "OPEN") as OpportunityStatus] ?? []} reasonRequired/> },
+    { label: "Customer", render: (item) => labelOf(item.customer) },
+    { label: "Stage / action", render: (item) => <PipelineStageControl item={item}/> },
+    { label: "Probability", render: (item) => `${item.probability ?? 0}%` },
+    { label: "Expected close", render: (item) => date(item.expectedCloseDate) },
+    { label: "Value", align: "right", render: (item) => money(item.currency, item.estimatedValue) },
+  ];
   if (path === "targets") return [
-    { label: "Period", render: (item) => `${date(item.periodStart)} – ${date(item.periodEnd)}` }, { label: "Status", render: (item) => item.status ?? "—" },
-    { label: "Employee", render: (item) => labelOf(item.employee) }, { label: "Territory", render: (item) => labelOf(item.territory) },
+    { label: "Period", render: (item) => `${date(item.periodStart)} – ${date(item.periodEnd)}` },
+    { label: "Status / action", render: (item) => <StatusControl item={item} path="targets" nextStatuses={targetTransitions[item.status ?? "ACTIVE"] ?? []}/> },
+    { label: "Employee", render: (item) => labelOf(item.employee) },
+    { label: "Territory", render: (item) => labelOf(item.territory) },
     { label: "Lead target", align: "right", render: (item) => (item.leadTarget ?? 0).toLocaleString("en-IN") },
     { label: "Revenue target", align: "right", render: (item) => money(item.currency, item.revenueTarget) },
   ];
   if (path === "revenue") return [
-    { label: "Transaction date", render: (item) => date(item.transactionDate) }, { label: "Source", render: (item) => item.source ?? "—" },
-    { label: "Reference", render: (item) => item.reference ?? "—" }, { label: "Employee", render: (item) => labelOf(item.employee) },
-    { label: "Territory", render: (item) => labelOf(item.territory) }, { label: "Amount", align: "right", render: (item) => money(item.currency, item.amount) },
+    { label: "Date", render: (item) => date(item.transactionDate) },
+    { label: "Customer", render: (item) => labelOf(item.customer) },
+    { label: "Source", render: (item) => item.source?.replaceAll("_", " ") ?? "—" },
+    { label: "Reference", render: (item) => item.reference ?? "—" },
+    { label: "Employee", render: (item) => labelOf(item.employee) },
+    { label: "Territory", render: (item) => labelOf(item.territory) },
+    { label: "Amount", align: "right", render: (item) => money(item.currency, item.amount) },
   ];
   return [
-    { label: "Partner", render: (item) => item.name ?? "—" }, { label: "Code", render: (item) => item.code ?? "—" },
-    { label: "Partner type", render: (item) => item.type?.replaceAll("_", " ") ?? "—" }, { label: "Status", render: (item) => item.status ?? "—" },
-    { label: "Owner", render: (item) => labelOf(item.ownerEmployee) }, { label: "Territory", render: (item) => labelOf(item.territory) },
-    { label: "Effective from", render: (item) => date(item.effectiveFrom) },
+    { label: "Partner", render: (item) => item.name ?? "—" },
+    { label: "Code", render: (item) => item.code ?? "—" },
+    { label: "Type", render: (item) => item.type?.replaceAll("_", " ") ?? "—" },
+    { label: "Contact", render: (item) => <div><p>{item.contactName ?? "—"}</p>{item.phone && <p className="mt-1 text-xs text-slate-400">{item.phone}</p>}{item.email && <p className="text-xs text-slate-400">{item.email}</p>}</div> },
+    { label: "Status / action", render: (item) => <StatusControl item={item} path="channel-partners" nextStatuses={[item.status === "ACTIVE" ? "INACTIVE" : "ACTIVE"]}/> },
+    { label: "Owner", render: (item) => labelOf(item.ownerEmployee) },
+    { label: "Territory", render: (item) => labelOf(item.territory) },
   ];
 };
 
@@ -108,32 +219,93 @@ export const SalesDataPage = ({ path, title }: { path: SalesDataPath; title: str
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [notice, setNotice] = useState("");
   const [form, setForm] = useState(initialForm);
   const canManage = managePermissions[path].some((permission) => user?.permissions.includes(permission));
+  const hasTeamScope = Boolean(user?.permissions.includes("sales.view.team") || user?.permissions.includes("sales.view.all"));
+  const isHrView = user?.role === "HR_ADMIN";
   const query = useQuery({ queryKey: ["sales", path], queryFn: () => salesApi.records(path) });
-  const employees = useQuery({ queryKey: ["sales", "employees", "form"], queryFn: salesApi.employees, enabled: open });
+  const employees = useQuery({ queryKey: ["sales", "employees", "form"], queryFn: salesApi.employees, enabled: open && hasTeamScope });
   const territories = useQuery({ queryKey: ["sales", "territories", "form"], queryFn: salesApi.territories, enabled: open });
+  const customers = useQuery({ queryKey: ["sales", "customers", "form"], queryFn: () => salesApi.records("customers"), enabled: open && ["pipeline", "revenue"].includes(path) });
+  const partners = useQuery({ queryKey: ["sales", "channel-partners", "form"], queryFn: () => salesApi.records("channel-partners"), enabled: open && path === "revenue" });
   const columns = columnsFor(path);
+
   useEffect(() => {
     if (!open) return;
-    setForm((current) => ({ ...current, employee: current.employee || employees.data?.items[0]?._id || "", territory: current.territory || territories.data?.items[0]?._id || "" }));
+    setForm((current) => ({
+      ...current,
+      employee: current.employee || employees.data?.items[0]?._id || "",
+      territory: current.territory || territories.data?.items[0]?._id || "",
+    }));
   }, [employees.data, open, territories.data]);
 
   const create = useMutation({
     mutationFn: () => {
       const value = Number(form.value);
-      const common = { ownerEmployee: form.employee || undefined, territory: form.territory, currency: "INR" };
-      if (path === "leads") return salesApi.createRecord(path, { ...common, name: form.name, status: "NEW", estimatedValue: value, source: form.source });
-      if (path === "customers") return salesApi.createRecord(path, { ...common, name: form.name, status: "ACTIVE", customerType: form.customerType || undefined, lifetimeRevenue: value });
-      if (path === "pipeline") return salesApi.createRecord(path, { ...common, name: form.name, stage: form.stage, status: "OPEN", estimatedValue: value, probability: Number(form.probability), expectedCloseDate: form.date });
-      if (path === "targets") return salesApi.createRecord(path, { employee: form.employee || undefined, territory: form.territory || undefined, periodType: "MONTHLY", periodStart: form.date, periodEnd: form.endDate, revenueTarget: value, leadTarget: Number(form.leadTarget), conversionTarget: Number(form.conversionTarget), currency: "INR", status: "ACTIVE" });
-      if (path === "revenue") return salesApi.createRecord(path, { employee: form.employee || undefined, territory: form.territory, amount: value, currency: "INR", transactionDate: form.date, source: form.source, reference: form.reference || undefined });
-      return salesApi.createRecord(path, { name: form.name, code: form.code, type: form.type, territory: form.territory, ownerEmployee: form.employee || undefined, status: "ACTIVE", effectiveFrom: form.date });
+      const common = { ownerEmployee: form.employee || undefined, territory: form.territory, currency: form.currency };
+      if (path === "leads") return salesApi.createRecord(path, { ...common, name: form.name, companyName: form.companyName || undefined, email: form.email || undefined, phone: form.phone || undefined, notes: form.notes || undefined, estimatedValue: value, source: form.source });
+      if (path === "customers") return salesApi.createRecord(path, { ...common, name: form.name, primaryContactName: form.contactName || undefined, email: form.email || undefined, phone: form.phone || undefined, customerType: form.customerType, lifetimeRevenue: 0 });
+      if (path === "pipeline") return salesApi.createRecord(path, { ...common, customer: form.customer, name: form.name, stage: form.stage, estimatedValue: value, probability: Number(form.probability), expectedCloseDate: form.date });
+      if (path === "targets") return salesApi.createRecord(path, { employee: form.targetScope === "EMPLOYEE" ? form.employee : undefined, territory: form.targetScope === "TERRITORY" ? form.territory : undefined, periodType: form.periodType, periodStart: form.date, periodEnd: form.endDate, revenueTarget: value, leadTarget: Number(form.leadTarget), conversionTarget: Number(form.conversionTarget), currency: form.currency, status: "ACTIVE" });
+      if (path === "revenue") return salesApi.createRecord(path, { customer: form.customer, employee: form.employee || undefined, territory: form.territory, amount: value, currency: form.currency, transactionDate: form.date, source: form.source, reference: form.reference || undefined, channelPartner: form.channelPartner || undefined });
+      return salesApi.createRecord(path, { name: form.name, code: form.code, type: form.type, contactName: form.contactName || undefined, email: form.email || undefined, phone: form.phone || undefined, territory: form.territory, ownerEmployee: form.employee || undefined, status: "ACTIVE", effectiveFrom: form.date });
     },
-    onSuccess: async () => { setOpen(false); setForm(initialForm()); await queryClient.invalidateQueries({ queryKey: ["sales", path] }); },
+    onSuccess: async () => {
+      setOpen(false);
+      setForm(initialForm());
+      setNotice(`${title === "Pipeline" ? "Opportunity" : title.replace(/s$/, "")} created successfully.`);
+      await queryClient.invalidateQueries({ queryKey: ["sales"] });
+    },
   });
 
-  const commonOwnership = <><label className="text-sm font-medium">Employee<select className="mt-2 h-11 w-full rounded-xl border bg-white px-3" value={form.employee} onChange={(event) => setForm({ ...form, employee: event.target.value })}><option value="">My employee</option>{employees.data?.items.map((employee) => <option key={employee._id} value={employee._id}>{employee.firstName} {employee.lastName}</option>)}</select></label><label className="text-sm font-medium">Territory<select required className="mt-2 h-11 w-full rounded-xl border bg-white px-3" value={form.territory} onChange={(event) => setForm({ ...form, territory: event.target.value })}><option value="">Select territory</option>{territories.data?.items.map((territory) => <option key={territory._id} value={territory._id}>{territory.name}</option>)}</select></label></>;
+  const chooseCustomer = (customerId: string) => {
+    const customer = customers.data?.items.find((item) => item._id === customerId);
+    setForm((current) => ({
+      ...current,
+      customer: customerId,
+      employee: idOf(customer?.ownerEmployee) || current.employee,
+      territory: idOf(customer?.territory) || current.territory,
+      currency: customer?.currency || current.currency,
+    }));
+  };
+  const openCreate = () => {
+    setNotice("");
+    setForm({ ...initialForm(), source: path === "revenue" ? "INVOICE" : "REFERRAL" });
+    setOpen(true);
+  };
+  const addLabel = title === "Pipeline" ? "opportunity" : title.toLowerCase().replace(/s$/, "");
+  const employeeField = hasTeamScope && <label className="text-sm font-medium">{path === "targets" ? "Target employee" : "Owner employee"}<select required={path !== "channel-partners"} className="mt-2 h-11 w-full rounded-xl border bg-white px-3" value={form.employee} onChange={(event) => setForm({ ...form, employee: event.target.value })}><option value="">Select employee</option>{employees.data?.items.map((employee) => <option key={employee._id} value={employee._id}>{employee.firstName} {employee.lastName}</option>)}</select></label>;
+  const territoryField = <label className="text-sm font-medium">Territory<select required={path !== "targets" || form.targetScope === "TERRITORY"} className="mt-2 h-11 w-full rounded-xl border bg-white px-3" value={form.territory} onChange={(event) => setForm({ ...form, territory: event.target.value })}><option value="">Select territory</option>{territories.data?.items.map((territory) => <option key={territory._id} value={territory._id}>{territory.name}</option>)}</select></label>;
 
-  return <main className="flex-1 px-5 py-8 sm:px-8"><div className="mx-auto max-w-[1440px]"><div className="flex items-end justify-between gap-4"><div><p className="text-sm font-medium text-brand-700">Sales Intelligence</p><h1 className="mt-1 text-3xl font-semibold">{title}</h1><p className="mt-2 text-sm text-slate-500">{sectionCopy[path].description}</p></div>{canManage && <Button onClick={() => setOpen(true)}><Plus size={16}/> Add {title === "Pipeline" ? "opportunity" : title.toLowerCase().replace(/s$/, "")}</Button>}</div><section className="mt-7 overflow-hidden rounded-2xl border bg-white shadow-soft">{query.isLoading ? <div className="p-5"><Skeleton className="h-64"/></div> : query.isError ? <p className="p-5 text-sm text-red-700">{query.error.message}</p> : !query.data?.items.length ? <div className="grid min-h-64 place-items-center text-center"><div><Database className="mx-auto text-slate-300"/><p className="mt-3 font-medium">Nothing here yet</p><p className="mt-1 text-sm text-slate-400">{sectionCopy[path].empty}</p></div></div> : <div className="overflow-x-auto"><table className="min-w-full text-left text-sm"><thead className="border-b bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr>{columns.map((column) => <th key={column.label} className={`px-5 py-3 ${column.align === "right" ? "text-right" : ""}`}>{column.label}</th>)}</tr></thead><tbody className="divide-y">{query.data.items.map((item) => <tr key={item._id}>{columns.map((column) => <td key={column.label} className={`whitespace-nowrap px-5 py-4 ${column.align === "right" ? "text-right font-medium" : "text-slate-600 first:font-medium first:text-ink"}`}>{column.render(item)}</td>)}</tr>)}</tbody></table></div>}</section></div>{open && <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-ink/35 p-4 backdrop-blur-sm"><form className="my-6 w-full max-w-xl rounded-2xl bg-white p-6 shadow-2xl" onSubmit={(event) => { event.preventDefault(); create.mutate(); }}><h2 className="text-xl font-semibold">Add {title === "Pipeline" ? "opportunity" : title.toLowerCase().replace(/s$/, "")}</h2><p className="mt-1 text-sm text-slate-500">{sectionCopy[path].description}</p><div className="mt-5 grid gap-4 sm:grid-cols-2">{["leads", "customers", "pipeline", "channel-partners"].includes(path) && <label className="text-sm font-medium sm:col-span-2">{path === "channel-partners" ? "Partner name" : path === "pipeline" ? "Opportunity name" : path === "customers" ? "Customer name" : "Lead name"}<Input required className="mt-2" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })}/></label>}{path === "channel-partners" && <><label className="text-sm font-medium">Partner code<Input required className="mt-2" value={form.code} onChange={(event) => setForm({ ...form, code: event.target.value.toUpperCase() })}/></label><label className="text-sm font-medium">Partner type<select className="mt-2 h-11 w-full rounded-xl border bg-white px-3" value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value })}>{["DISTRIBUTOR", "DEALER", "RESELLER", "RETAILER", "SERVICE_PARTNER", "OTHER"].map((type) => <option key={type}>{type.replaceAll("_", " ")}</option>)}</select></label></>}{commonOwnership}{path === "leads" && <><label className="text-sm font-medium">Lead source<Input required className="mt-2" value={form.source} onChange={(event) => setForm({ ...form, source: event.target.value })}/></label><label className="text-sm font-medium">Estimated value<Input required type="number" min="0" className="mt-2" value={form.value} onChange={(event) => setForm({ ...form, value: event.target.value })}/></label></>}{path === "customers" && <><label className="text-sm font-medium">Customer type<Input className="mt-2" value={form.customerType} onChange={(event) => setForm({ ...form, customerType: event.target.value })}/></label><label className="text-sm font-medium">Lifetime revenue<Input required type="number" min="0" className="mt-2" value={form.value} onChange={(event) => setForm({ ...form, value: event.target.value })}/></label></>}{path === "pipeline" && <><label className="text-sm font-medium">Stage<Input required className="mt-2" value={form.stage} onChange={(event) => setForm({ ...form, stage: event.target.value })}/></label><label className="text-sm font-medium">Win probability %<Input required type="number" min="0" max="100" className="mt-2" value={form.probability} onChange={(event) => setForm({ ...form, probability: event.target.value })}/></label><label className="text-sm font-medium">Estimated value<Input required type="number" min="0" className="mt-2" value={form.value} onChange={(event) => setForm({ ...form, value: event.target.value })}/></label><label className="text-sm font-medium">Expected close date<Input required type="date" className="mt-2" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })}/></label></>}{path === "targets" && <><label className="text-sm font-medium">Period start<Input required type="date" className="mt-2" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })}/></label><label className="text-sm font-medium">Period end<Input required type="date" min={form.date} className="mt-2" value={form.endDate} onChange={(event) => setForm({ ...form, endDate: event.target.value })}/></label><label className="text-sm font-medium">Revenue target<Input required type="number" min="0" className="mt-2" value={form.value} onChange={(event) => setForm({ ...form, value: event.target.value })}/></label><label className="text-sm font-medium">Lead target<Input required type="number" min="0" className="mt-2" value={form.leadTarget} onChange={(event) => setForm({ ...form, leadTarget: event.target.value })}/></label><label className="text-sm font-medium">Conversion target %<Input required type="number" min="0" max="100" className="mt-2" value={form.conversionTarget} onChange={(event) => setForm({ ...form, conversionTarget: event.target.value })}/></label></>}{path === "revenue" && <><label className="text-sm font-medium">Amount<Input required type="number" min="0" className="mt-2" value={form.value} onChange={(event) => setForm({ ...form, value: event.target.value })}/></label><label className="text-sm font-medium">Transaction date<Input required type="date" className="mt-2" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })}/></label><label className="text-sm font-medium">Revenue source<Input required className="mt-2" value={form.source} onChange={(event) => setForm({ ...form, source: event.target.value })}/></label><label className="text-sm font-medium">Invoice/reference<Input className="mt-2" value={form.reference} onChange={(event) => setForm({ ...form, reference: event.target.value })}/></label></>}{path === "channel-partners" && <label className="text-sm font-medium">Effective from<Input required type="date" className="mt-2" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })}/></label>}</div>{create.error && <p className="mt-4 text-sm text-red-600">{create.error.message}</p>}<div className="mt-6 flex justify-end gap-2"><Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancel</Button><Button disabled={create.isPending}>{create.isPending ? "Saving..." : "Save"}</Button></div></form></div>}</main>;
+  return <main className="flex-1 px-5 py-8 sm:px-8"><div className="mx-auto max-w-[1440px]">
+    <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="text-sm font-medium text-brand-700">Sales Intelligence</p><h1 className="mt-1 text-3xl font-semibold">{title}</h1><p className="mt-2 max-w-3xl text-sm text-slate-500">{sectionMeta[path].purpose}</p></div>{canManage && <Button onClick={openCreate}><Plus size={16}/> Add {addLabel}</Button>}</div>
+    <div className={`mt-5 rounded-xl border p-4 text-sm ${isHrView ? "border-blue-100 bg-blue-50 text-blue-900" : "border-emerald-100 bg-emerald-50 text-emerald-900"}`}><p className="font-medium">{isHrView ? "HR view · Read only" : hasTeamScope ? "Team workflow" : "Your sales workflow"}</p><p className="mt-1 text-xs opacity-80">{isHrView ? sectionMeta[path].hr : sectionMeta[path].next}</p></div>
+    {notice && <p role="status" className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{notice}</p>}
+    <section className="mt-5 overflow-hidden rounded-2xl border bg-white shadow-soft">{query.isLoading ? <div className="p-5"><Skeleton className="h-64"/></div> : query.isError ? <p className="p-5 text-sm text-red-700">{query.error.message}</p> : !query.data?.items.length ? <div className="grid min-h-64 place-items-center p-6 text-center"><div><Database className="mx-auto text-slate-300"/><p className="mt-3 font-medium">Nothing here yet</p><p className="mt-1 text-sm text-slate-400">{sectionMeta[path].empty}</p>{canManage && <Button className="mt-4" variant="secondary" onClick={openCreate}><Plus size={15}/> Add first {addLabel}</Button>}</div></div> : <div className="overflow-x-auto"><table className="min-w-full text-left text-sm"><thead className="border-b bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr>{columns.map((column) => <th key={column.label} className={`px-5 py-3 ${column.align === "right" ? "text-right" : ""}`}>{column.label}</th>)}</tr></thead><tbody className="divide-y">{query.data.items.map((item) => <tr key={item._id}>{columns.map((column) => <td key={column.label} className={`whitespace-nowrap px-5 py-4 align-top ${column.align === "right" ? "text-right font-medium" : "text-slate-600 first:font-medium first:text-ink"}`}>{column.render(item)}</td>)}</tr>)}</tbody></table></div>}</section>
+  </div>
+  {open && <div className="fixed inset-0 z-[2000] grid place-items-center overflow-y-auto bg-ink/35 p-4 backdrop-blur-sm"><form className="my-6 w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl" onSubmit={(event) => { event.preventDefault(); create.mutate(); }}><h2 className="text-xl font-semibold">Add {addLabel}</h2><p className="mt-1 text-sm text-slate-500">{sectionMeta[path].purpose}</p>
+    {!territories.isLoading && !territories.data?.items.length && path !== "targets" && <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">Create or join a territory before adding this record. <Link className="inline-flex items-center gap-1 font-semibold underline" to="/sales/territories">Open territories <ArrowRight size={13}/></Link></div>}
+    <div className="mt-5 grid gap-4 sm:grid-cols-2">
+      {["leads", "customers", "pipeline", "channel-partners"].includes(path) && <label className="text-sm font-medium sm:col-span-2">{path === "channel-partners" ? "Partner name" : path === "pipeline" ? "Opportunity name" : path === "customers" ? "Customer name" : "Lead name"}<Input required className="mt-2" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })}/></label>}
+      {path === "leads" && <><label className="text-sm font-medium">Company/account (optional)<Input className="mt-2" value={form.companyName} onChange={(event) => setForm({ ...form, companyName: event.target.value })}/></label><label className="text-sm font-medium">Phone<Input required inputMode="tel" className="mt-2" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })}/></label><label className="text-sm font-medium">Email (optional)<Input type="email" className="mt-2" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })}/></label><label className="text-sm font-medium sm:col-span-2">Follow-up notes (optional)<textarea className="mt-2 min-h-20 w-full rounded-xl border bg-white px-3 py-2" maxLength={2000} value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })}/></label></>}
+      {path === "customers" && <><label className="text-sm font-medium">Primary contact<Input className="mt-2" value={form.contactName} onChange={(event) => setForm({ ...form, contactName: event.target.value })}/></label><label className="text-sm font-medium">Phone<Input required inputMode="tel" className="mt-2" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })}/></label><label className="text-sm font-medium">Email (optional)<Input type="email" className="mt-2" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })}/></label></>}
+      {path === "pipeline" && <label className="text-sm font-medium sm:col-span-2">Customer<select required className="mt-2 h-11 w-full rounded-xl border bg-white px-3" value={form.customer} onChange={(event) => chooseCustomer(event.target.value)}><option value="">Select confirmed customer</option>{customers.data?.items.filter((item) => item.status === "ACTIVE").map((item) => <option key={item._id} value={item._id}>{item.name}</option>)}</select><span className="mt-1 block text-xs font-normal text-slate-400">Convert a lead or add a direct customer first.</span></label>}
+      {path === "revenue" && <><label className="text-sm font-medium">Customer<select required className="mt-2 h-11 w-full rounded-xl border bg-white px-3" value={form.customer} onChange={(event) => chooseCustomer(event.target.value)}><option value="">Select customer</option>{customers.data?.items.filter((item) => item.status === "ACTIVE").map((item) => <option key={item._id} value={item._id}>{item.name}</option>)}</select></label><label className="text-sm font-medium">Channel partner (optional)<select className="mt-2 h-11 w-full rounded-xl border bg-white px-3" value={form.channelPartner} onChange={(event) => setForm({ ...form, channelPartner: event.target.value })}><option value="">Direct sale</option>{partners.data?.items.filter((item) => item.status === "ACTIVE").map((item) => <option key={item._id} value={item._id}>{item.name}</option>)}</select></label></>}
+      {path === "channel-partners" && <><label className="text-sm font-medium">Partner code<Input required className="mt-2" value={form.code} onChange={(event) => setForm({ ...form, code: event.target.value.toUpperCase() })}/></label><label className="text-sm font-medium">Partner type<select className="mt-2 h-11 w-full rounded-xl border bg-white px-3" value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value })}>{["DISTRIBUTOR", "DEALER", "RESELLER", "RETAILER", "SERVICE_PARTNER", "OTHER"].map((type) => <option key={type}>{type.replaceAll("_", " ")}</option>)}</select></label></>}
+      {path === "channel-partners" && <><label className="text-sm font-medium">Contact person<Input required className="mt-2" value={form.contactName} onChange={(event) => setForm({ ...form, contactName: event.target.value })}/></label><label className="text-sm font-medium">Phone<Input required inputMode="tel" className="mt-2" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })}/></label><label className="text-sm font-medium">Email (optional)<Input type="email" className="mt-2" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })}/></label></>}
+      {!["targets", "pipeline", "revenue"].includes(path) && <>{employeeField}{territoryField}</>}
+      {["pipeline", "revenue"].includes(path) && form.customer && <div className="rounded-xl border bg-slate-50 p-3 text-xs text-slate-600 sm:col-span-2">Owner and territory are inherited from <span className="font-semibold">{customers.data?.items.find((item) => item._id === form.customer)?.name}</span>.</div>}
+      {path === "leads" && <><label className="text-sm font-medium">Lead source<select className="mt-2 h-11 w-full rounded-xl border bg-white px-3" value={form.source} onChange={(event) => setForm({ ...form, source: event.target.value })}>{["REFERRAL", "WEBSITE", "OUTBOUND", "EVENT", "CHANNEL_PARTNER", "OTHER"].map((source) => <option key={source}>{source.replaceAll("_", " ")}</option>)}</select></label><label className="text-sm font-medium">Potential value<Input required type="number" min="0" className="mt-2" value={form.value} onChange={(event) => setForm({ ...form, value: event.target.value })}/></label></>}
+      {path === "customers" && <label className="text-sm font-medium">Customer type<select className="mt-2 h-11 w-full rounded-xl border bg-white px-3" value={form.customerType} onChange={(event) => setForm({ ...form, customerType: event.target.value })}>{["BUSINESS", "INDIVIDUAL", "GOVERNMENT", "NON_PROFIT", "OTHER"].map((type) => <option key={type}>{type.replaceAll("_", " ")}</option>)}</select></label>}
+      {path === "pipeline" && <><label className="text-sm font-medium">Stage<select className="mt-2 h-11 w-full rounded-xl border bg-white px-3" value={form.stage} onChange={(event) => { const stage = pipelineStages.find((item) => item.value === event.target.value)!; setForm({ ...form, stage: stage.value, probability: String(stage.probability) }); }}>{pipelineStages.map((stage) => <option key={stage.value} value={stage.value}>{stage.label}</option>)}</select></label><label className="text-sm font-medium">Win probability %<Input required type="number" min="0" max="100" className="mt-2" value={form.probability} onChange={(event) => setForm({ ...form, probability: event.target.value })}/></label><label className="text-sm font-medium">Deal value<Input required type="number" min="0" className="mt-2" value={form.value} onChange={(event) => setForm({ ...form, value: event.target.value })}/></label><label className="text-sm font-medium">Expected close date<Input required type="date" min={today()} className="mt-2" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })}/></label></>}
+      {path === "targets" && <><label className="text-sm font-medium">Assign target to<select className="mt-2 h-11 w-full rounded-xl border bg-white px-3" value={form.targetScope} onChange={(event) => setForm({ ...form, targetScope: event.target.value })}><option value="EMPLOYEE">Employee</option><option value="TERRITORY">Territory</option></select></label><label className="text-sm font-medium">Period type<select className="mt-2 h-11 w-full rounded-xl border bg-white px-3" value={form.periodType} onChange={(event) => setForm({ ...form, periodType: event.target.value })}>{["MONTHLY", "QUARTERLY", "YEARLY"].map((type) => <option key={type}>{type}</option>)}</select></label>{form.targetScope === "EMPLOYEE" ? employeeField : territoryField}<label className="text-sm font-medium">Period start<Input required type="date" className="mt-2" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })}/></label><label className="text-sm font-medium">Period end<Input required type="date" min={form.date} className="mt-2" value={form.endDate} onChange={(event) => setForm({ ...form, endDate: event.target.value })}/></label><label className="text-sm font-medium">Revenue target<Input required type="number" min="0" className="mt-2" value={form.value} onChange={(event) => setForm({ ...form, value: event.target.value })}/></label><label className="text-sm font-medium">Lead target<Input required type="number" min="0" className="mt-2" value={form.leadTarget} onChange={(event) => setForm({ ...form, leadTarget: event.target.value })}/></label><label className="text-sm font-medium">Conversion target %<Input required type="number" min="0" max="100" className="mt-2" value={form.conversionTarget} onChange={(event) => setForm({ ...form, conversionTarget: event.target.value })}/></label></>}
+      {path === "revenue" && <><label className="text-sm font-medium">Amount<Input required type="number" min="0" className="mt-2" value={form.value} onChange={(event) => setForm({ ...form, value: event.target.value })}/></label><label className="text-sm font-medium">Transaction date<Input required type="date" max={today()} className="mt-2" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })}/></label><label className="text-sm font-medium">Revenue source<select className="mt-2 h-11 w-full rounded-xl border bg-white px-3" value={form.source} onChange={(event) => setForm({ ...form, source: event.target.value })}>{["INVOICE", "RECEIPT", "ADJUSTMENT", "OTHER"].map((source) => <option key={source}>{source}</option>)}</select></label><label className="text-sm font-medium">Invoice/reference<Input required className="mt-2" value={form.reference} onChange={(event) => setForm({ ...form, reference: event.target.value })}/></label></>}
+      {path === "channel-partners" && <label className="text-sm font-medium">Effective from<Input required type="date" className="mt-2" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })}/></label>}
+    </div>
+    {!hasTeamScope && path !== "targets" && <p className="mt-4 text-xs text-slate-400">Owner is set to your employee profile automatically.</p>}
+    {create.error && <p className="mt-4 text-sm text-red-600">{create.error.message}</p>}
+    <div className="mt-6 flex justify-end gap-2"><Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancel</Button><Button disabled={create.isPending || (path !== "targets" && !territories.data?.items.length)}>{create.isPending ? "Saving..." : "Save"}</Button></div>
+  </form></div>}
+  </main>;
 };

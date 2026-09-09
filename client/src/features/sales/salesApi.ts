@@ -4,6 +4,12 @@ import { api } from "@/api/client";
 export interface SalesRecord {
   _id: string;
   name?: string;
+  companyName?: string;
+  primaryContactName?: string;
+  contactName?: string;
+  email?: string;
+  phone?: string;
+  notes?: string;
   code?: string;
   status?: string;
   stage?: string;
@@ -19,6 +25,12 @@ export interface SalesRecord {
   customerType?: string;
   type?: string;
   reference?: string;
+  lostReason?: string;
+  lead?: string | { _id: string; name: string };
+  customer?: string | { _id: string; name: string };
+  sourceLead?: string | { _id: string; name: string };
+  channelPartner?: string | { _id: string; name: string; code?: string };
+  sourceOpportunity?: string | { _id: string; name: string };
   ownerEmployee?: string | { _id: string; firstName: string; lastName: string };
   employee?: string | { _id: string; firstName: string; lastName: string };
   territory?: string | { _id: string; name: string; code: string };
@@ -26,6 +38,7 @@ export interface SalesRecord {
   periodEnd?: string;
   transactionDate?: string;
   expectedCloseDate?: string;
+  actualCloseDate?: string;
   effectiveFrom?: string;
   effectiveTo?: string;
   createdAt?: string;

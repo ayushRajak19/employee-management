@@ -32,7 +32,7 @@ const HR_SALES_PERMISSIONS: readonly PermissionName[] = [
 ];
 const TEAM_SALES_PERMISSIONS: readonly PermissionName[] = [
   "sales.view.self", "sales.view.team", "sales.analytics.self", "sales.analytics.team",
-  "sales.lead.manage.self", "sales.lead.manage.team", "sales.territory.view", "sales.territory.create.self", "sales.geography.create.self", "sales.target.view",
+  "sales.lead.manage.self", "sales.lead.manage.team", "sales.territory.view", "sales.territory.manage", "sales.territory.create.self", "sales.geography.create.self", "sales.target.view", "sales.target.manage",
   "sales.customer.view", "sales.customer.manage.self", "sales.customer.manage.team", "sales.pipeline.view", "sales.pipeline.manage", "sales.revenue.view",
   "sales.channel_partner.view", "sales.channel_partner.manage.self", "employee_map.team", "sales.map.team",
 ];

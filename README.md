@@ -29,6 +29,8 @@ docs/                      Architecture and database reference
 .env.example               Safe configuration template
 ```
 
+See [docs/sales-workflow.md](docs/sales-workflow.md) for the role boundaries and connected Sales Intelligence lifecycle.
+
 ## Local installation
 
 Requirements: Node.js 20+, npm 10+, and MongoDB 7+ (local or Atlas).

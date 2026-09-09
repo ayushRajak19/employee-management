@@ -7,6 +7,8 @@ import { TERRITORY_STATUSES } from "../models/SalesTerritory.js";
 const objectId = z.string().regex(/^[a-f\d]{24}$/i, "Invalid identifier");
 const currency = z.string().trim().length(3).transform((value) => value.toUpperCase());
 const nonNegative = z.coerce.number().finite().min(0);
+const email = z.string().trim().email().max(254).transform((value) => value.toLowerCase()).optional();
+const phone = z.string().trim().min(5).max(40).regex(/^[+()\-\s\d]+$/, "Invalid phone number").optional();
 const coordinates = z.object({
   type: z.literal("Point").default("Point"),
   coordinates: z.tuple([z.number().min(-180).max(180), z.number().min(-90).max(90)]),
@@ -70,13 +72,16 @@ const ownerAndLocation = {
 };
 export const leadBody = z.object({
   name: z.string().trim().min(1).max(160), ...ownerAndLocation,
+  companyName: z.string().trim().min(1).max(160).optional(), email, phone, notes: z.string().trim().max(2000).optional(),
   status: z.enum(LEAD_STATUSES).default("NEW"), source: z.string().trim().max(120).optional(),
   estimatedValue: nonNegative.default(0), currency: currency.default("INR"),
+  lostReason: z.string().trim().min(1).max(500).optional(),
   firstResponseAt: z.coerce.date().optional(), qualifiedAt: z.coerce.date().optional(),
   convertedAt: z.coerce.date().optional(), customer: objectId.optional(),
 });
 export const customerBody = z.object({
   name: z.string().trim().min(1).max(160), ...ownerAndLocation,
+  primaryContactName: z.string().trim().min(1).max(160).optional(), email, phone,
   status: z.enum(["ACTIVE", "INACTIVE"]).default("ACTIVE"), customerType: z.string().trim().max(80).optional(),
   lifetimeRevenue: nonNegative.default(0), currency: currency.default("INR"), lastOrderDate: z.coerce.date().optional(),
 });
@@ -103,6 +108,7 @@ export const revenueBody = z.object({
 const channelPartnerBase = z.object({
   name: z.string().trim().min(1).max(160), code: z.string().trim().min(1).max(40).transform((value) => value.toUpperCase()),
   type: z.enum(["DISTRIBUTOR", "DEALER", "RESELLER", "RETAILER", "SERVICE_PARTNER", "OTHER"]),
+  contactName: z.string().trim().min(1).max(160).optional(), email, phone,
   territory: objectId, ownerEmployee: objectId.optional(), geoNode: objectId.optional(),
   status: z.enum(["ACTIVE", "INACTIVE"]).default("ACTIVE"), effectiveFrom: z.coerce.date(), effectiveTo: z.coerce.date().optional(),
 });
@@ -114,12 +120,13 @@ export const createOpportunitySchema = z.object({ body: opportunityBody });
 export const createTargetSchema = z.object({ body: targetBody });
 export const createRevenueSchema = z.object({ body: revenueBody });
 export const createChannelPartnerSchema = z.object({ body: channelPartnerBody });
-export const updateLeadSchema = z.object({ params: z.object({ id: objectId }), body: leadBody.partial() });
-export const updateCustomerSchema = z.object({ params: z.object({ id: objectId }), body: customerBody.partial() });
-export const updateOpportunitySchema = z.object({ params: z.object({ id: objectId }), body: opportunityBody.partial() });
+const atLeastOneField = <T extends Record<string, unknown>>(body: T) => Object.keys(body).length > 0;
+export const updateLeadSchema = z.object({ params: z.object({ id: objectId }), body: leadBody.partial().refine(atLeastOneField, "At least one field is required") });
+export const updateCustomerSchema = z.object({ params: z.object({ id: objectId }), body: customerBody.partial().refine(atLeastOneField, "At least one field is required") });
+export const updateOpportunitySchema = z.object({ params: z.object({ id: objectId }), body: opportunityBody.partial().refine(atLeastOneField, "At least one field is required") });
 export const updateTargetSchema = z.object({ params: z.object({ id: objectId }), body: targetBase.partial().refine((body) => !body.periodStart || !body.periodEnd || body.periodEnd >= body.periodStart, { message: "Period end must be after start", path: ["periodEnd"] }) });
-export const updateRevenueSchema = z.object({ params: z.object({ id: objectId }), body: revenueBody.partial() });
-export const updateChannelPartnerSchema = z.object({ params: z.object({ id: objectId }), body: channelPartnerBase.partial().refine(validEffectiveRange, { message: "Effective end must be after start", path: ["effectiveTo"] }) });
+export const updateRevenueSchema = z.object({ params: z.object({ id: objectId }), body: revenueBody.partial().refine(atLeastOneField, "At least one field is required") });
+export const updateChannelPartnerSchema = z.object({ params: z.object({ id: objectId }), body: channelPartnerBase.partial().refine(validEffectiveRange, { message: "Effective end must be after start", path: ["effectiveTo"] }).refine(atLeastOneField, "At least one field is required") });
 
 export const configurationSchema = z.object({ body: z.object({
   defaultLeadCapacityPerEmployee: z.coerce.number().int().min(1),

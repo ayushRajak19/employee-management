@@ -10,7 +10,7 @@ import { SalesTerritory, type SalesTerritoryDocument } from "../models/SalesTerr
 import { SalesCustomer } from "../models/SalesCustomer.js";
 import { AppError } from "../utils/AppError.js";
 import { writeAudit } from "./auditService.js";
-import { assertSalesGeoScope, assertSalesTerritoryScope, resolveSalesScope } from "./salesScopeService.js";
+import { assertSalesEmployeeScope, assertSalesGeoScope, assertSalesTerritoryScope, resolveSalesScope } from "./salesScopeService.js";
 
 type TerritoryInput = Pick<SalesTerritoryDocument, "name" | "code" | "status" | "effectiveFrom" | "coverageRules"> & {
   parentTerritory?: string;
@@ -69,14 +69,15 @@ export const getTerritory = async (viewer: SessionUser, id: string) => {
 export const createTerritory = async (viewer: SessionUser, input: TerritoryInput) => {
   const scope = await resolveSalesScope(viewer);
   if (input.parentTerritory) assertSalesTerritoryScope(scope, input.parentTerritory);
+  if (input.ownerEmployee) assertSalesEmployeeScope(scope, input.ownerEmployee);
   for (const geoId of input.coverageRules?.geoNodeIds ?? []) {
     assertSalesGeoScope(scope, geoId.toString());
   }
-  const normalized = scope.level === "SELF" && scope.employeeId
+  const normalized = scope.level !== "ALL" && scope.employeeId
     ? { ...input, ownerEmployee: scope.employeeId }
     : input;
   const item = await SalesTerritory.create({ ...normalized, ancestors: await validateTerritoryInput(normalized) ?? [] });
-  if (scope.level === "SELF" && scope.employeeId) {
+  if (scope.employeeId) {
     await EmployeeTerritoryAssignment.create({
       employee: scope.employeeId,
       territory: item._id,
@@ -91,6 +92,11 @@ export const createTerritory = async (viewer: SessionUser, input: TerritoryInput
 };
 
 export const updateTerritory = async (viewer: SessionUser, id: string, input: Partial<TerritoryInput>) => {
+  const scope = await resolveSalesScope(viewer);
+  assertSalesTerritoryScope(scope, id);
+  if (input.parentTerritory) assertSalesTerritoryScope(scope, input.parentTerritory);
+  if (input.ownerEmployee) assertSalesEmployeeScope(scope, input.ownerEmployee);
+  for (const geoId of input.coverageRules?.geoNodeIds ?? []) assertSalesGeoScope(scope, geoId.toString());
   const item = await SalesTerritory.findById(id);
   if (!item) throw new AppError("Territory not found", 404);
   const previous = item.toObject();
@@ -121,9 +127,10 @@ export const effectivePeriodsOverlap = (firstStart: Date, firstEnd: Date | undef
 
 export const assignEmployee = async (viewer: SessionUser, input: AssignmentInput) => {
   const scope = await resolveSalesScope(viewer);
+  assertSalesEmployeeScope(scope, input.employee);
+  assertSalesTerritoryScope(scope, input.territory);
   if (scope.level === "SELF") {
     if (scope.employeeId !== input.employee) throw new AppError("Sales employees can only assign themselves", 403, "SALES_SCOPE_FORBIDDEN");
-    assertSalesTerritoryScope(scope, input.territory);
   }
   if (input.effectiveTo && input.effectiveTo < input.effectiveFrom) throw new AppError("Effective end must be after start", 422);
   const employee = await Employee.findOne({ _id: input.employee, isActive: true }).select("department").lean();
