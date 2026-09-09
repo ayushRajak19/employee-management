@@ -19,6 +19,7 @@ export const SalesDashboardPage = () => {
   const all = user?.permissions.includes("sales.analytics.all");
   const team = user?.permissions.includes("sales.analytics.team");
   const isHrView = user?.role === "HR_ADMIN";
+  const isManagementView = Boolean(all || ["HR_ADMIN", "DEPARTMENT_HEAD", "MANAGER"].includes(user?.role ?? ""));
   const query = useQuery({
     queryKey: ["sales", "analytics", all ? "all" : team ? "team" : "self"],
     queryFn: all ? salesApi.overviewAnalytics : team ? salesApi.teamAnalytics : salesApi.selfAnalytics,
@@ -30,8 +31,8 @@ export const SalesDashboardPage = () => {
     <p className="mt-2 text-sm text-slate-500">One connected view from prospect and customer ownership to pipeline and realized revenue.</p>
 
     <section className={`mt-5 rounded-2xl border p-5 ${isHrView ? "border-blue-100 bg-blue-50" : "border-emerald-100 bg-emerald-50"}`}>
-      <h2 className="font-semibold">{isHrView ? "HR responsibility" : "Your daily sales flow"}</h2>
-      <p className="mt-1 text-xs text-slate-600">{isHrView ? "Use coverage, workload, capacity and outcome trends for workforce planning. Sales records remain read-only for HR." : "Start with a lead. Geography and territory are optional reporting setup; do not create the same buyer again in Customers or Pipeline."}</p>
+      <h2 className="font-semibold">{isHrView ? "HR responsibility" : isManagementView ? "Company sales flow" : "Your daily sales flow"}</h2>
+      <p className="mt-1 text-xs text-slate-600">{isHrView ? "Use coverage, workload, capacity and outcome trends for workforce planning. Sales records remain read-only for HR." : isManagementView ? "Review the complete Lead → Customer → Pipeline → Revenue flow. Use Geography and Territories only for reporting and ownership." : "Start with a lead. Geography and territory are optional reporting setup; do not create the same buyer again in Customers or Pipeline."}</p>
       {!isHrView && <div className="mt-4 grid gap-2 md:grid-cols-4">{salesFlow.map((step, index) => <Link key={step.path} to={step.path} className="relative rounded-xl border border-emerald-100 bg-white p-3 hover:border-brand-300"><p className="text-sm font-semibold text-brand-700">{step.label}</p><p className="mt-1 text-xs text-slate-500">{step.text}</p>{index < salesFlow.length - 1 && <ArrowRight className="absolute -right-3 top-7 z-10 hidden rounded-full bg-white text-brand-500 md:block" size={20}/>}</Link>)}</div>}
     </section>
 
@@ -47,8 +48,8 @@ export const SalesDashboardPage = () => {
     </> : null}
 
     <div className="mt-5 grid gap-3 sm:grid-cols-3">
-      <Link className="rounded-2xl border bg-white p-5 shadow-soft transition hover:border-brand-300" to="/sales/geography"><Map className="text-brand-600"/><p className="mt-3 font-semibold">Geographic intelligence</p><p className="mt-1 text-sm text-slate-400">Define real countries, states and cities.</p></Link>
-      <Link className="rounded-2xl border bg-white p-5 shadow-soft transition hover:border-brand-300" to="/sales/territories"><Route className="text-brand-600"/><p className="mt-3 font-semibold">Sales territories</p><p className="mt-1 text-sm text-slate-400">Assign business ownership over geography.</p></Link>
+      {isManagementView && <Link className="rounded-2xl border bg-white p-5 shadow-soft transition hover:border-brand-300" to="/sales/geography"><Map className="text-brand-600"/><p className="mt-3 font-semibold">Geographic intelligence</p><p className="mt-1 text-sm text-slate-400">Define real countries, states and cities.</p></Link>}
+      {isManagementView && <Link className="rounded-2xl border bg-white p-5 shadow-soft transition hover:border-brand-300" to="/sales/territories"><Route className="text-brand-600"/><p className="mt-3 font-semibold">Sales territories</p><p className="mt-1 text-sm text-slate-400">Assign business ownership over geography.</p></Link>}
       <Link className="rounded-2xl border bg-white p-5 shadow-soft transition hover:border-brand-300" to="/sales/leads"><Users className="text-brand-600"/><p className="mt-3 font-semibold">Start with a lead</p><p className="mt-1 text-sm text-slate-400">Capture a prospect and move it forward.</p></Link>
     </div>
   </div></main>;
