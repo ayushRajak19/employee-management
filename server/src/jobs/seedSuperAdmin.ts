@@ -10,7 +10,6 @@ import { Designation } from "../models/Designation.js";
 import { GeoNode } from "../models/GeoNode.js";
 import { additionalDesignationPresets } from "../data/additionalRoleSkillCatalog.js";
 import { runWithTenant } from "../tenancy/tenantContext.js";
-import { seedSalesDemoData } from "./seedSalesDemoData.js";
 
 export const seedPermissions = async (): Promise<void> => {
   await Permission.bulkWrite(PERMISSIONS.map((key) => ({ updateOne: { filter: { key }, update: { $set: { description: key.replace(".", " ") } }, upsert: true } })), { timestamps: false });
@@ -85,10 +84,6 @@ export const seedOrganization = async (tenantId: string): Promise<void> => {
     await seedTenantOrganizationPresets();
     console.log("Verifying geographic master root");
     await seedTenantGeography();
-    if (env.SEED_SALES_DEMO_DATA) {
-      console.log("Verifying development Sales Intelligence sample data");
-      await seedSalesDemoData();
-    }
     if (!env.SUPER_ADMIN_NAME || !env.SUPER_ADMIN_EMAIL || !env.SUPER_ADMIN_PASSWORD) {
       console.warn("Super Admin seed credentials are not configured; existing accounts remain unchanged");
       return;
