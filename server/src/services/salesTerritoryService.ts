@@ -139,6 +139,15 @@ export const assignEmployee = async (viewer: SessionUser, input: AssignmentInput
   if (!await Department.exists({ _id: employee.department, capabilities: "SALES_MODULE", isActive: true })) {
     throw new AppError("Employee is not eligible for Sales", 422, "SALES_NOT_ENABLED");
   }
+  const existingAssignment = await EmployeeTerritoryAssignment.findOne({
+    employee: input.employee,
+    territory: input.territory,
+    isActive: true,
+    assignmentRole: input.assignmentRole,
+    effectiveFrom: { $lte: input.effectiveFrom },
+    $or: [{ effectiveTo: { $exists: false } }, { effectiveTo: { $gte: input.effectiveFrom } }],
+  }).sort({ effectiveFrom: -1 });
+  if (existingAssignment) return existingAssignment;
   const overlap = await EmployeeTerritoryAssignment.exists({
     employee: input.employee,
     territory: input.territory,
@@ -146,7 +155,7 @@ export const assignEmployee = async (viewer: SessionUser, input: AssignmentInput
     effectiveFrom: { $lte: input.effectiveTo ?? new Date("9999-12-31") },
     $or: [{ effectiveTo: { $exists: false } }, { effectiveTo: { $gte: input.effectiveFrom } }],
   });
-  if (overlap) throw new AppError("This assignment overlaps an existing effective period", 409, "ASSIGNMENT_OVERLAP");
+  if (overlap) throw new AppError("This employee is already assigned to this territory for the selected period", 409, "ASSIGNMENT_OVERLAP");
   const item = await EmployeeTerritoryAssignment.create({ ...input, isActive: true });
   await writeAudit({ user: viewer.id, action: "SALES_TERRITORY_ASSIGNED", entityType: "EmployeeTerritoryAssignment", entityId: item.id, newValue: input });
   return item;
