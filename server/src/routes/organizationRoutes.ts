@@ -2,8 +2,8 @@ import { Router } from "express"; import * as controller from "../controllers/or
 export const organizationRouter = Router(); organizationRouter.use(authenticate);
 organizationRouter.get("/", requirePermission("department.view"), asyncHandler(controller.list));
 organizationRouter.post("/departments", requirePermission("department.create"), validate(departmentSchema), asyncHandler(controller.createDepartment));
-organizationRouter.patch("/departments/:id", requirePermission("department.create"), validate(updateDepartmentSchema), asyncHandler(controller.updateDepartment));
+organizationRouter.patch("/departments/:id", requirePermission("department.update"), validate(updateDepartmentSchema), asyncHandler(controller.updateDepartment));
 organizationRouter.post("/teams", requirePermission("department.create"), validate(teamSchema), asyncHandler(controller.createTeam));
-organizationRouter.patch("/teams/:id", requirePermission("department.create"), validate(updateTeamSchema), asyncHandler(controller.updateTeam));
+organizationRouter.patch("/teams/:id", requirePermission("department.update"), validate(updateTeamSchema), asyncHandler(controller.updateTeam));
 organizationRouter.post("/designations", requirePermission("department.create"), validate(designationSchema), asyncHandler(controller.createDesignation));
-organizationRouter.patch("/designations/:id", requirePermission("department.create"), validate(updateDesignationSchema), asyncHandler(controller.updateDesignation));
+organizationRouter.patch("/designations/:id", requirePermission("department.update"), validate(updateDesignationSchema), asyncHandler(controller.updateDesignation));

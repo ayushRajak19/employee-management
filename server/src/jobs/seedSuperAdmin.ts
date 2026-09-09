@@ -1,5 +1,5 @@
 import bcrypt from "bcrypt";
-import { PERMISSIONS, ROLE_PERMISSIONS, ROLES } from "@mobius-ems/shared";
+import { PERMISSIONS, ROLE_PERMISSIONS, ROLES, type CapabilityName } from "@mobius-ems/shared";
 import { env } from "../config/env.js";
 import { Permission } from "../models/Permission.js";
 import { Role } from "../models/Role.js";
@@ -9,6 +9,7 @@ import { Team } from "../models/Team.js";
 import { Designation } from "../models/Designation.js";
 import { additionalDesignationPresets } from "../data/additionalRoleSkillCatalog.js";
 import { runWithTenant } from "../tenancy/tenantContext.js";
+import { seedSalesDemoData } from "./seedSalesDemoData.js";
 
 export const seedPermissions = async (): Promise<void> => {
   await Permission.bulkWrite(PERMISSIONS.map((key) => ({ updateOne: { filter: { key }, update: { $set: { description: key.replace(".", " ") } }, upsert: true } })), { timestamps: false });
@@ -19,19 +20,27 @@ export const seedTenantRoles = async (): Promise<void> => {
 };
 
 export const seedTenantOrganizationPresets = async (): Promise<void> => {
-  const departmentPresets = [
+  const departmentPresets: { name: string; code: string; capabilities?: CapabilityName[] }[] = [
     { name: "IT", code: "IT" },
-    { name: "Sales", code: "SALE" },
+    { name: "Sales", code: "SALE", capabilities: ["SALES_MODULE"] },
     { name: "Marketing", code: "MARK" },
     { name: "HR", code: "HR" },
     { name: "Operations", code: "OPER" },
     { name: "Administration", code: "ADMIN" },
   ];
-  await Department.bulkWrite(departmentPresets.map((preset) => ({ updateOne: {
-    filter: { code: preset.code },
-    update: { $setOnInsert: { ...preset, description: `${preset.name} department`, isActive: true } },
-    upsert: true,
-  } })), { timestamps: false });
+  await Department.bulkWrite(departmentPresets.map((preset) => {
+    const { capabilities, ...insertData } = preset;
+    return {
+      updateOne: {
+        filter: { code: preset.code },
+        update: {
+          $setOnInsert: { ...insertData, description: `${preset.name} department`, isActive: true },
+          ...(capabilities ? { $addToSet: { capabilities: { $each: capabilities } } } : {}),
+        },
+        upsert: true,
+      },
+    };
+  }), { timestamps: false });
   const departmentRecords = await Department.find({ code: { $in: departmentPresets.map((preset) => preset.code) } });
   const departments = new Map(departmentRecords.map((department) => [department.name, department]));
   await Team.findOneAndUpdate(
@@ -65,6 +74,10 @@ export const seedOrganization = async (tenantId: string): Promise<void> => {
     await seedTenantRoles();
     console.log("Verifying organization presets");
     await seedTenantOrganizationPresets();
+    if (env.NODE_ENV !== "production") {
+      console.log("Verifying development Sales Intelligence sample data");
+      await seedSalesDemoData();
+    }
     if (!env.SUPER_ADMIN_NAME || !env.SUPER_ADMIN_EMAIL || !env.SUPER_ADMIN_PASSWORD) {
       console.warn("Super Admin seed credentials are not configured; existing accounts remain unchanged");
       return;

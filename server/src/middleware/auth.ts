@@ -25,3 +25,10 @@ export const requirePermission = (...permissions: PermissionName[]): RequestHand
   next();
 };
 
+export const requireAnyPermission = (...permissions: PermissionName[]): RequestHandler => (request, _response, next) => {
+  if (!request.user || !permissions.some((permission) => request.user?.permissions.includes(permission))) {
+    return next(new AppError("You do not have permission to perform this action", 403, "FORBIDDEN"));
+  }
+  next();
+};
+

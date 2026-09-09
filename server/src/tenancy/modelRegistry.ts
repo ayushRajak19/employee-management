@@ -48,4 +48,14 @@ import "../models/User.js";
 import "../models/VendorContact.js";
 import "../models/VoiceCommand.js";
 import "../models/WeeklyUpdate.js";
-
+import "../models/ChannelPartner.js";
+import "../models/EmployeeTerritoryAssignment.js";
+import "../models/GeoNode.js";
+import "../models/GeoSalesMetricSnapshot.js";
+import "../models/SalesConfiguration.js";
+import "../models/SalesCustomer.js";
+import "../models/SalesLead.js";
+import "../models/SalesOpportunity.js";
+import "../models/SalesRevenueTransaction.js";
+import "../models/SalesTarget.js";
+import "../models/SalesTerritory.js";

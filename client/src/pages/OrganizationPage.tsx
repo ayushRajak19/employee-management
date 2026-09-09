@@ -8,7 +8,7 @@ import { organizationApi } from "@/features/organization/organizationApi";
 import type { NamedEntity } from "@/features/organization/types";
 
 type Kind = "department" | "team" | "designation";
-const emptyForm = () => ({ name: "", code: "", department: "", description: "", level: "", catalogRole: "" });
+const emptyForm = () => ({ name: "", code: "", department: "", description: "", level: "", catalogRole: "", salesEnabled: false });
 
 export const OrganizationPage = () => {
   const qc = useQueryClient();
@@ -20,7 +20,7 @@ export const OrganizationPage = () => {
 
   const mutation = useMutation({
     mutationFn: () => kind === "department"
-      ? organizationApi.createDepartment(form)
+      ? organizationApi.createDepartment({ ...form, capabilities: form.salesEnabled ? ["SALES_MODULE"] : [] })
       : kind === "team"
         ? organizationApi.createTeam({ ...form, department: form.department })
         : organizationApi.createDesignation({ ...form, department: form.department || undefined, catalogRole: form.catalogRole }),
@@ -30,11 +30,11 @@ export const OrganizationPage = () => {
   const updateMutation = useMutation({
     mutationFn: () => {
       if (!editTarget) throw new Error("No item selected");
-      const body: Record<string, string> = {};
+      const body: Record<string, unknown> = {};
       if (editForm.name) body.name = editForm.name;
       if (editForm.code) body.code = editForm.code;
       if (editForm.description) body.description = editForm.description;
-      if (editTarget.kind === "department") return organizationApi.updateDepartment(editTarget.item._id, body);
+      if (editTarget.kind === "department") { body.capabilities = editForm.salesEnabled ? ["SALES_MODULE"] : []; return organizationApi.updateDepartment(editTarget.item._id, body); }
       if (editForm.department) body.department = editForm.department;
       if (editTarget.kind === "team") return organizationApi.updateTeam(editTarget.item._id, body);
       if (editForm.catalogRole) body.catalogRole = editForm.catalogRole;
@@ -52,6 +52,7 @@ export const OrganizationPage = () => {
       description: item.description ?? "",
       level: "",
       catalogRole: item.catalogRole ?? "",
+      salesEnabled: item.capabilities?.includes("SALES_MODULE") ?? false,
     });
   };
 
@@ -85,6 +86,7 @@ export const OrganizationPage = () => {
                 </div>
                 {item.department && <p className="mt-1 text-xs text-slate-400">{item.department.name}</p>}
                 {item.catalogRole && <p className="mt-1 text-xs font-medium text-brand-700">Skills: {item.catalogRole}</p>}
+                {item.capabilities?.includes("SALES_MODULE") && <p className="mt-1 text-xs font-medium text-emerald-700">Sales enabled</p>}
               </div>)}
             </div>}
           </div>
@@ -101,6 +103,7 @@ export const OrganizationPage = () => {
           <label className="block text-sm font-medium">Code<Input required className="mt-2 uppercase" value={form.code} onChange={(event) => setForm({ ...form, code: event.target.value })}/></label>
           {kind !== "department" && <label className="block text-sm font-medium">Department<select required={kind === "team"} className="mt-2 h-11 w-full rounded-xl border bg-white px-3 text-sm" value={form.department} onChange={(event) => setForm({ ...form, department: event.target.value })}><option value="">Company-wide</option>{query.data?.departments.map((department) => <option key={department._id} value={department._id}>{department.name}</option>)}</select></label>}
           {kind === "designation" && <label className="block text-sm font-medium">Skills for this designation<select required className="mt-2 h-11 w-full rounded-xl border bg-white px-3 text-sm" value={form.catalogRole} onChange={(event) => setForm({ ...form, catalogRole: event.target.value })}><option value="">Select skill catalogue</option>{query.data?.skillCatalogRoles.map((item) => <option key={item.role} value={item.role}>{item.role} ({item.skillCount} skills)</option>)}</select><span className="mt-1 block text-xs font-normal text-slate-400">Employees receive these skills automatically. They cannot change this selection.</span></label>}
+          {kind === "department" && <label className="flex items-center gap-3 rounded-xl border p-3 text-sm font-medium"><input type="checkbox" checked={form.salesEnabled} onChange={(event) => setForm({ ...form, salesEnabled: event.target.checked })}/> Enable Sales Intelligence</label>}
           <label className="block text-sm font-medium">Description<Input className="mt-2" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })}/></label>
         </div>
         {mutation.error && <p className="mt-3 text-sm text-red-600">{mutation.error.message}</p>}
@@ -117,6 +120,7 @@ export const OrganizationPage = () => {
           <label className="block text-sm font-medium">Code<Input required className="mt-2 uppercase" value={editForm.code} onChange={(event) => setEditForm({ ...editForm, code: event.target.value })}/></label>
           {editTarget.kind !== "department" && <label className="block text-sm font-medium">Department<select required={editTarget.kind === "team"} className="mt-2 h-11 w-full rounded-xl border bg-white px-3 text-sm" value={editForm.department} onChange={(event) => setEditForm({ ...editForm, department: event.target.value })}><option value="">Company-wide</option>{query.data?.departments.map((department) => <option key={department._id} value={department._id}>{department.name}</option>)}</select></label>}
           {editTarget.kind === "designation" && <label className="block text-sm font-medium">Skills for this designation<select required className="mt-2 h-11 w-full rounded-xl border bg-white px-3 text-sm" value={editForm.catalogRole} onChange={(event) => setEditForm({ ...editForm, catalogRole: event.target.value })}><option value="">Select skill catalogue</option>{query.data?.skillCatalogRoles.map((item) => <option key={item.role} value={item.role}>{item.role} ({item.skillCount} skills)</option>)}</select></label>}
+          {editTarget.kind === "department" && <label className="flex items-center gap-3 rounded-xl border p-3 text-sm font-medium"><input type="checkbox" checked={editForm.salesEnabled} onChange={(event) => setEditForm({ ...editForm, salesEnabled: event.target.checked })}/> Enable Sales Intelligence</label>}
           <label className="block text-sm font-medium">Description<Input className="mt-2" value={editForm.description} onChange={(event) => setEditForm({ ...editForm, description: event.target.value })}/></label>
         </div>
         {updateMutation.error && <p className="mt-3 text-sm text-red-600">{updateMutation.error.message}</p>}

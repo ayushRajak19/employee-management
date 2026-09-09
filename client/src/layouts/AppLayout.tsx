@@ -1,11 +1,11 @@
 import { useEffect, useState, type ComponentType } from "react";
 import logoMark from "@/assets/mobius-mark.png";
 import { useMutation } from "@tanstack/react-query";
-import type { PermissionName, RoleName } from "@mobius-ems/shared";
+import type { CapabilityName, PermissionName, RoleName } from "@mobius-ems/shared";
 import {
   Activity, BarChart3, Bot, BrainCircuit, BriefcaseBusiness, Building2, CalendarCheck2,
   ChevronLeft, CircleGauge, FileText, GraduationCap, ListTodo, LogOut, Menu,
-  MailPlus, Settings, ShieldCheck, Sparkles, Target, TrendingUp, UserCog, UserRound, Users, X,
+  MailPlus, MapPinned, Route, Settings, ShieldCheck, Sparkles, Target, TrendingUp, UserCog, UserRound, Users, X,
 } from "lucide-react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { HeaderSearch } from "@/components/HeaderSearch";
@@ -21,6 +21,8 @@ type NavItem = {
   path: string;
   roles?: RoleName[];
   permission?: PermissionName;
+  permissions?: PermissionName[];
+  capability?: CapabilityName;
   platformOnly?: boolean;
 };
 
@@ -49,6 +51,21 @@ const groups: { label: string; items: NavItem[] }[] = [
     label: "People", items: [
       { label: "Employees", icon: Users, path: "/employees", roles: managementRoles },
       { label: "Organization", icon: Building2, path: "/organization", roles: managementRoles },
+      { label: "Employee map", icon: MapPinned, path: "/employee-map", permissions: ["employee_map.self", "employee_map.team", "employee_map.all"] },
+    ],
+  },
+  {
+    label: "Sales", items: [
+      { label: "Sales dashboard", icon: TrendingUp, path: "/sales", permissions: ["sales.analytics.self", "sales.analytics.team", "sales.analytics.all"], capability: "SALES_MODULE" },
+      { label: "Geographic intelligence", icon: MapPinned, path: "/sales/geography", permissions: ["sales.map.self", "sales.map.team", "sales.map.all"], capability: "SALES_MODULE" },
+      { label: "Territories", icon: Route, path: "/sales/territories", permission: "sales.territory.view", capability: "SALES_MODULE" },
+      { label: "Sales employees", icon: Users, path: "/sales/employees", permissions: ["sales.view.team", "sales.view.all"], capability: "SALES_MODULE" },
+      { label: "Leads", icon: Users, path: "/sales/leads", permissions: ["sales.view.self", "sales.view.team", "sales.view.all"], capability: "SALES_MODULE" },
+      { label: "Customers", icon: UserRound, path: "/sales/customers", permission: "sales.customer.view", capability: "SALES_MODULE" },
+      { label: "Pipeline", icon: BriefcaseBusiness, path: "/sales/pipeline", permission: "sales.pipeline.view", capability: "SALES_MODULE" },
+      { label: "Targets", icon: Target, path: "/sales/targets", permission: "sales.target.view", capability: "SALES_MODULE" },
+      { label: "Revenue", icon: TrendingUp, path: "/sales/revenue", permission: "sales.revenue.view", capability: "SALES_MODULE" },
+      { label: "Channel partners", icon: Building2, path: "/sales/channel-partners", permission: "sales.channel_partner.view", capability: "SALES_MODULE" },
     ],
   },
   {
@@ -121,6 +138,8 @@ export const AppLayout = () => {
         (item) =>
           (!item.roles || item.roles.includes(user!.role)) &&
           (!item.permission || user!.permissions.includes(item.permission)) &&
+          (!item.permissions || item.permissions.some((permission) => user!.permissions.includes(permission))) &&
+          (!item.capability || user!.capabilities.includes(item.capability)) &&
           (!item.platformOnly || user!.isPlatformAdmin)
       ),
     }))

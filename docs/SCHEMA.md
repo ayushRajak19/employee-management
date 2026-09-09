@@ -39,3 +39,16 @@ All business entities use timestamps and an immutable `tenantId`. Employee, Depa
 - **VoiceCommand**: actor/role, transcript, language, duration, interpreted intent, confidence, editable structured draft, lifecycle status and resulting task reference. Raw audio is deleted after local transcription.
 
 Primary query indexes include unique email/employeeId/code, employee/period, employee/skill, department/team, task assignee/status/deadline, project/status, notification recipient/read/createdAt and audit entity/id/createdAt.
+
+## Sales Intelligence and maps
+
+- **GeoNode**: tenant-local canonical hierarchy, type, parent, ancestor path, depth, optional point and optional GeoJSON boundary.
+- **SalesTerritory**: independent business hierarchy, effective dates, owner and multidimensional coverage rules headed by GeoNode references.
+- **EmployeeTerritoryAssignment**: employee, territory, role, primary flag, effective period, capacity and active state. History is append-only across assignment periods.
+- **SalesLead / SalesCustomer / SalesOpportunity**: employee and territory ownership, canonical geography, optional point, commercial status and deterministic pipeline inputs.
+- **SalesTarget / SalesRevenueTransaction**: effective target periods and transaction-level actual revenue. Currency remains explicit.
+- **ChannelPartner**: effective-dated partner relationship to a territory, owner and geography.
+- **SalesConfiguration**: tenant-level capacity, response SLA, healthy conversion and transparent opportunity weights.
+- **GeoSalesMetricSnapshot**: indexed periodic aggregate shape for scheduled snapshotting as volume grows. Current dashboards use scoped live aggregation.
+
+Employee `workLocation` is optional for backward compatibility. It references GeoNode and may include an organizational point. It does not represent live GPS tracking.

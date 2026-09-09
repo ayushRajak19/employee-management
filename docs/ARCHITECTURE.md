@@ -25,6 +25,9 @@ All business models are tenant-scoped through a central fail-closed Mongoose mod
 | Outcomes | Goal, KPI, EmployeeKPI, PerformanceReview, PerformanceSnapshot | employee/period indexes; historical snapshots |
 | Growth | Training, EmployeeTraining | employee/status and skill indexes |
 | Governance | Document, Notification, AuditLog | owner/entity indexes; audit entries append-only |
+| Sales Intelligence | GeoNode, SalesTerritory, EmployeeTerritoryAssignment, SalesLead, SalesCustomer, SalesOpportunity, SalesTarget, SalesRevenueTransaction, ChannelPartner, GeoSalesMetricSnapshot | capability eligibility; centralized self/team/all scope; effective-dated territory ownership; deterministic analytics |
+
+Sales geography and sales territory are separate hierarchies. `GeoNode` supplies canonical Global-to-Area work geography. `SalesTerritory` supplies business coverage and can reference any combination of geography nodes. Sales APIs resolve employee, territory, and geography scope once before every query. Workforce-map services remain separate from sales metric aggregation while reusing GeoNode and map rendering components.
 
 Phase 1 implements identity plus the employee shell. Later models follow the same base conventions: timestamps, soft-delete fields for business entities, explicit field allowlists, references for growing data and compound indexes matching list queries.
 

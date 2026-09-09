@@ -3,7 +3,11 @@
   "type": "module",
   "private": true,
   "version": "0.1.0",
-  "workspaces": ["client", "server", "shared"],
+  "workspaces": [
+    "client",
+    "server",
+    "shared"
+  ],
   "scripts": {
     "postinstall": "npm run build",
     "predev": "npm run build -w shared",
@@ -23,7 +27,21 @@
     "migrate:tenants": "npm run migrate:tenants -w server --",
     "test": "npm run test -w server"
   },
-  "devDependencies": { "concurrently": "^9.2.0" },
-  "engines": { "node": ">=20" }
+  "devDependencies": {
+    "concurrently": "^9.2.0"
+  },
+  "overrides": {
+    "express": {
+      "qs": "6.16.0"
+    },
+    "body-parser": {
+      "qs": "6.16.0"
+    }
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "qs": "^6.16.0"
+  }
 }
-

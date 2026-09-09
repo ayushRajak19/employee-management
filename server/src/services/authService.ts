@@ -10,10 +10,17 @@ import type { RoleDocument } from "../models/Role.js";
 import { runWithTenant } from "../tenancy/tenantContext.js";
 import { requireActiveTenant, resolveTenantForLogin, tenantIdForRefreshTokenHash, type ActiveTenant } from "../tenancy/tenantResolver.js";
 import { isPlatformAdminEmail } from "../middleware/platformAdmin.js";
+import { Employee } from "../models/Employee.js";
+import { Department } from "../models/Department.js";
+import type { CapabilityName } from "@mobius-ems/shared";
 
 type PopulatedUser = Awaited<ReturnType<typeof getPopulatedUser>>;
 const getPopulatedUser = async (id: string) => User.findById(id).populate<{ role: RoleDocument }>("role").exec();
-const sessionUser = (user: NonNullable<PopulatedUser>, tenant: ActiveTenant): SessionUser => ({
+const sessionUser = async (user: NonNullable<PopulatedUser>, tenant: ActiveTenant): Promise<SessionUser> => {
+  const departmentCapabilities = user.role.permissions.includes("sales.view.all")
+    ? (await Department.exists({ capabilities: "SALES_MODULE", isActive: true }) ? ["SALES_MODULE" as CapabilityName] : [])
+    : ((await Employee.findOne({ user: user._id, isActive: true }).populate<{ department: { capabilities?: CapabilityName[] } }>("department", "capabilities").select("department").lean())?.department.capabilities ?? []);
+  return ({
   id: user.id,
   name: user.name,
   email: user.email,
@@ -23,9 +30,11 @@ const sessionUser = (user: NonNullable<PopulatedUser>, tenant: ActiveTenant): Se
   isPlatformAdmin: user.role.name === "SUPER_ADMIN" && isPlatformAdminEmail(user.email),
   role: user.role.name,
   permissions: user.role.permissions,
+  capabilities: departmentCapabilities,
   forcePasswordChange: user.forcePasswordChange,
   onboardingComplete: user.onboardingComplete,
-});
+  });
+};
 const requestMeta = (request: Request) => ({ ip: request.ip, userAgent: request.get("user-agent")?.slice(0, 500) });
 
 export const login = async (email: string, password: string, tenantSlug: string | undefined, request: Request) => {
@@ -38,7 +47,7 @@ export const login = async (email: string, password: string, tenantSlug: string 
     await RefreshSession.create({ user: user._id, tokenHash: hashToken(refresh.token), family: refresh.family, expiresAt: refresh.expiresAt, ...requestMeta(request) });
     user.lastLoginAt = new Date(); await user.save();
     await writeAudit({ user: user._id, action: "AUTH_LOGIN", entityType: "User", entityId: user.id, ipAddress: request.ip, userAgent: request.get("user-agent") });
-    return { user: sessionUser(user, tenant), accessToken: createAccessToken(user.id, tenantId), refreshToken: refresh.token };
+    return { user: await sessionUser(user, tenant), accessToken: createAccessToken(user.id, tenantId), refreshToken: refresh.token };
   });
 };
 
@@ -60,7 +69,7 @@ export const rotateRefreshToken = async (token: string, request: Request) => {
     const refresh = createRefreshToken(user.id, tenantId, payload.family);
     existing.revokedAt = new Date(); existing.replacedByHash = hashToken(refresh.token); await existing.save();
     await RefreshSession.create({ user: user._id, tokenHash: hashToken(refresh.token), family: refresh.family, expiresAt: refresh.expiresAt, ...requestMeta(request) });
-    return { user: sessionUser(user, tenant), accessToken: createAccessToken(user.id, tenantId), refreshToken: refresh.token };
+    return { user: await sessionUser(user, tenant), accessToken: createAccessToken(user.id, tenantId), refreshToken: refresh.token };
   });
 };
 

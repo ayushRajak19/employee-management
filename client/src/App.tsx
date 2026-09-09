@@ -3,7 +3,7 @@ import { Route, Routes } from "react-router-dom";
 import { AppLayout } from "@/layouts/AppLayout";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { LandingPage } from "@/pages/LandingPage";
-import { OnboardingRoute, PasswordChangeRoute, PlatformRoute, ProtectedRoute, RoleRoute } from "@/routes/ProtectedRoute";
+import { OnboardingRoute, PasswordChangeRoute, PermissionRoute, PlatformRoute, ProtectedRoute, RoleRoute } from "@/routes/ProtectedRoute";
 
 const LoginPage = lazy(() => import("@/pages/LoginPage").then((module) => ({ default: module.LoginPage })));
 const SolutionsIndexPage = lazy(() => import("@/pages/SolutionsPage").then((module) => ({ default: module.SolutionsIndexPage })));
@@ -34,6 +34,12 @@ const ContributionPage = lazy(() => import("@/pages/ContributionPage").then((mod
 const AiWorkspacePage = lazy(() => import("@/pages/AiWorkspacePage").then((module) => ({ default: module.AiWorkspacePage })));
 const TaskTrackerPage = lazy(() => import("@/pages/TaskTrackerPage").then((module) => ({ default: module.TaskTrackerPage })));
 const TenantsPage = lazy(() => import("@/pages/TenantsPage").then((module) => ({ default: module.TenantsPage })));
+const SalesDashboardPage = lazy(() => import("@/features/sales/pages/SalesDashboardPage").then((module) => ({ default: module.SalesDashboardPage })));
+const GeographicSalesPage = lazy(() => import("@/features/sales/pages/GeographicSalesPage").then((module) => ({ default: module.GeographicSalesPage })));
+const SalesTerritoriesPage = lazy(() => import("@/features/sales/pages/SalesTerritoriesPage").then((module) => ({ default: module.SalesTerritoriesPage })));
+const SalesDataPage = lazy(() => import("@/features/sales/pages/SalesDataPage").then((module) => ({ default: module.SalesDataPage })));
+const EmployeeMapPage = lazy(() => import("@/features/sales/pages/EmployeeMapPage").then((module) => ({ default: module.EmployeeMapPage })));
+const SalesAgentsPage = lazy(() => import("@/features/sales/pages/SalesAgentsPage").then((module) => ({ default: module.SalesAgentsPage })));
 
 const PageLoader = () => <div className="space-y-4 p-8" aria-label="Loading page"><Skeleton className="h-9 w-64"/><Skeleton className="h-48 w-full"/><Skeleton className="h-48 w-full"/></div>;
 
@@ -52,6 +58,11 @@ export const App = () => <Suspense fallback={<PageLoader/>}><Routes>
     <Route path="assessments" element={<AssessmentsPage/>}/><Route path="work" element={<WorkPage/>}/><Route path="attendance" element={<AttendancePage/>}/><Route path="performance" element={<PerformancePage/>}/><Route path="contribution" element={<ContributionPage/>}/>
     <Route element={<RoleRoute roles={["SUPER_ADMIN","EMPLOYEE"]}/>}> <Route path="task-tracker" element={<TaskTrackerPage/>}/></Route>
     <Route path="development" element={<DevelopmentPage/>}/><Route path="governance" element={<GovernancePage/>}/><Route element={<RoleRoute roles={["SUPER_ADMIN","EMPLOYEE"]}/>}> <Route path="resumes" element={<ResumesPage/>}/></Route><Route element={<RoleRoute roles={["SUPER_ADMIN","HR_ADMIN"]}/>}> <Route path="applicants" element={<ApplicantsPage/>}/></Route><Route path="people-ops" element={<PeopleOpsPage/>}/><Route element={<RoleRoute roles={["SUPER_ADMIN"]}/>}> <Route path="resume-screener" element={<ResumeScreenerPage/>}/><Route path="administrators" element={<AdministratorsPage/>}/><Route path="email-automation" element={<EmailAutomationPage/>}/></Route><Route element={<PlatformRoute/>}><Route path="platform/tenants" element={<TenantsPage/>}/></Route>
+    <Route element={<PermissionRoute permissions={["sales.analytics.self","sales.analytics.team","sales.analytics.all"]}/>}> <Route path="sales" element={<SalesDashboardPage/>}/></Route>
+    <Route element={<PermissionRoute permissions={["sales.map.self","sales.map.team","sales.map.all"]}/>}> <Route path="sales/geography" element={<GeographicSalesPage/>}/></Route>
+    <Route element={<PermissionRoute permissions={["sales.territory.view"]}/>}> <Route path="sales/territories" element={<SalesTerritoriesPage/>}/></Route>
+    <Route element={<PermissionRoute permissions={["sales.view.self","sales.view.team","sales.view.all"]}/>}> <Route path="sales/employees" element={<SalesAgentsPage/>}/><Route path="sales/leads" element={<SalesDataPage path="leads" title="Leads"/>}/><Route path="sales/customers" element={<SalesDataPage path="customers" title="Customers"/>}/><Route path="sales/pipeline" element={<SalesDataPage path="pipeline" title="Pipeline"/>}/><Route path="sales/targets" element={<SalesDataPage path="targets" title="Targets"/>}/><Route path="sales/revenue" element={<SalesDataPage path="revenue" title="Revenue"/>}/><Route path="sales/channel-partners" element={<SalesDataPage path="channel-partners" title="Channel partners"/>}/></Route>
+    <Route element={<PermissionRoute permissions={["employee_map.self","employee_map.team","employee_map.all"]}/>}> <Route path="employee-map" element={<EmployeeMapPage/>}/></Route>
   </Route></Route>
   <Route path="*" element={<div className="grid min-h-screen place-items-center"><p>Page not found</p></div>}/>
 </Routes></Suspense>;
