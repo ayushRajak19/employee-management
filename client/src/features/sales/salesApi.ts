@@ -48,6 +48,7 @@ export const salesApi = {
   employeeAnalytics: (id: string) => api.get<SalesAnalytics>(`/api/v1/sales/employees/${id}/analytics`),
   employees: () => api.get<{ items: SalesEmployeeDto[] }>("/api/v1/sales/employees"),
   geography: () => api.get<{ items: GeoNodeDto[] }>("/api/v1/sales/geography/tree"),
+  createGeography: (body: Record<string, unknown>) => api.post<{ item: GeoNodeDto }>("/api/v1/sales/geography", body),
   geoAnalytics: (id: string) => api.get<SalesAnalytics>(`/api/v1/sales/geography/${id}/analytics`),
   territories: () => api.get<{ items: SalesTerritory[] }>("/api/v1/sales/territories"),
   territoryAnalytics: (id: string) => api.get<SalesAnalytics>(`/api/v1/sales/territories/${id}/analytics`),

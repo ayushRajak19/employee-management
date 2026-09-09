@@ -48,7 +48,10 @@ const scopeFilter = (scope: ResolvedSalesScope, entity: SalesEntityName): Record
       { territory: { $in: scope.allowedTerritoryIds } },
     ] };
   }
-  if (entity === "channelPartners") return { territory: { $in: scope.allowedTerritoryIds } };
+  if (entity === "channelPartners") return {
+    territory: { $in: scope.allowedTerritoryIds },
+    ...(scope.level === "SELF" && scope.employeeId ? { ownerEmployee: scope.employeeId } : {}),
+  };
   const employeeField = entity === "revenue" ? "employee" : "ownerEmployee";
   return {
     [employeeField]: { $in: scope.allowedEmployeeIds },
@@ -88,6 +91,7 @@ export const createSalesData = async (viewer: SessionUser, entity: SalesEntityNa
   const input = { ...raw };
   const employeeKey = entity === "targets" || entity === "revenue" ? "employee" : "ownerEmployee";
   if (scope.level === "SELF" && entity !== "channelPartners") input[employeeKey] = scope.employeeId;
+  if (scope.level === "SELF" && entity === "channelPartners") input.ownerEmployee = scope.employeeId;
   if (!["targets", "channelPartners"].includes(entity) && !input[employeeKey]) throw new AppError("Employee is required", 422);
   await validateReferences(scope, input);
   const item = await modelFor(entity).create(input);

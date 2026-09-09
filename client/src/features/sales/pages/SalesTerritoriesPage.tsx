@@ -14,7 +14,7 @@ export const SalesTerritoriesPage = () => {
   const [selectedId, setSelectedId] = useState<string>();
   const [dialog, setDialog] = useState<"territory" | "assignment" | null>(null);
   const [form, setForm] = useState({ name: "", code: "", parentTerritory: "", geoNode: "", employee: "", assignmentRole: "MEMBER", effectiveFrom: new Date().toISOString().slice(0, 10) });
-  const canManage = user?.permissions.includes("sales.territory.manage") ?? false;
+  const canManage = (user?.permissions.includes("sales.territory.manage") || user?.permissions.includes("sales.territory.create.self")) ?? false;
   const territories = useQuery({ queryKey: ["sales", "territories"], queryFn: salesApi.territories });
   const geography = useQuery({ queryKey: ["sales", "geography", "territory-form"], queryFn: salesApi.geography, enabled: dialog === "territory" });
   const employees = useQuery({ queryKey: ["sales", "employees", "territory-form"], queryFn: salesApi.employees, enabled: dialog === "assignment" });

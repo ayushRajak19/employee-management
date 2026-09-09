@@ -12,11 +12,11 @@ export const PERMISSIONS = [
   "sales.view.self", "sales.view.team", "sales.view.all",
   "sales.analytics.self", "sales.analytics.team", "sales.analytics.all",
   "sales.lead.manage.self", "sales.lead.manage.team", "sales.lead.manage.all",
-  "sales.territory.view", "sales.territory.manage",
+  "sales.territory.view", "sales.territory.manage", "sales.territory.create.self", "sales.geography.create.self",
   "sales.target.view", "sales.target.manage", "sales.customer.view",
   "sales.pipeline.view", "sales.pipeline.manage", "sales.revenue.view",
   "sales.revenue.manage",
-  "sales.channel_partner.view", "sales.channel_partner.manage", "sales.configuration.manage",
+  "sales.channel_partner.view", "sales.channel_partner.manage", "sales.channel_partner.manage.self", "sales.configuration.manage",
   "employee_map.self", "employee_map.team", "employee_map.all",
   "sales.map.self", "sales.map.team", "sales.map.all"
 ] as const;
@@ -32,14 +32,15 @@ const HR_SALES_PERMISSIONS: readonly PermissionName[] = [
 ];
 const TEAM_SALES_PERMISSIONS: readonly PermissionName[] = [
   "sales.view.self", "sales.view.team", "sales.analytics.self", "sales.analytics.team",
-  "sales.lead.manage.self", "sales.lead.manage.team", "sales.territory.view", "sales.target.view",
+  "sales.lead.manage.self", "sales.lead.manage.team", "sales.territory.view", "sales.territory.create.self", "sales.geography.create.self", "sales.target.view",
   "sales.customer.view", "sales.pipeline.view", "sales.pipeline.manage", "sales.revenue.view",
-  "sales.channel_partner.view", "employee_map.team", "sales.map.team",
+  "sales.channel_partner.view", "sales.channel_partner.manage.self", "employee_map.team", "sales.map.team",
 ];
 const SELF_SALES_PERMISSIONS: readonly PermissionName[] = [
   "sales.view.self", "sales.analytics.self", "sales.lead.manage.self", "sales.territory.view",
+  "sales.territory.create.self", "sales.geography.create.self",
   "sales.target.view", "sales.customer.view", "sales.pipeline.view", "sales.pipeline.manage",
-  "sales.revenue.view", "sales.channel_partner.view", "employee_map.self", "sales.map.self",
+  "sales.revenue.view", "sales.channel_partner.view", "sales.channel_partner.manage.self", "employee_map.self", "sales.map.self",
 ];
 
 export const ROLE_PERMISSIONS: Record<RoleName, readonly PermissionName[]> = {

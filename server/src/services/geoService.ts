@@ -38,7 +38,9 @@ const hierarchy = async (type: GeoNodeType, parentId?: string, excludeId?: strin
 };
 
 export const createGeoNode = async (viewer: SessionUser, input: GeoInput) => {
-  const item = await GeoNode.create({ ...input, ...(await hierarchy(input.type, input.parent)), isActive: true });
+  const scope = await resolveSalesScope(viewer);
+  if (input.parent) assertSalesGeoScope(scope, input.parent);
+  const item = await GeoNode.create({ ...input, createdBy: viewer.id, ...(await hierarchy(input.type, input.parent)), isActive: true });
   await writeAudit({ user: viewer.id, action: "SALES_GEOGRAPHY_CREATED", entityType: "GeoNode", entityId: item.id, newValue: input });
   return item;
 };

@@ -48,6 +48,13 @@ test("Super Admin receives tenant-wide sales actions", () => {
   assert.ok(ROLE_PERMISSIONS.SUPER_ADMIN.includes("sales.revenue.manage"));
 });
 
+test("Sales employees can create their own geography, territory, and channel partner records", () => {
+  assert.ok(ROLE_PERMISSIONS.EMPLOYEE.includes("sales.geography.create.self"));
+  assert.ok(ROLE_PERMISSIONS.EMPLOYEE.includes("sales.territory.create.self"));
+  assert.ok(ROLE_PERMISSIONS.EMPLOYEE.includes("sales.channel_partner.manage.self"));
+  assert.ok(ROLE_PERMISSIONS.EMPLOYEE.includes("sales.lead.manage.self"));
+});
+
 test("employees without a sales permission have no sales scope", () => {
   assert.equal(salesScopeLevelForPermissions(["employee.view"]), null);
 });

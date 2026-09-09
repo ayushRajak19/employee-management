@@ -24,7 +24,7 @@ const managePermissions: Record<string, PermissionName[]> = {
   pipeline: ["sales.pipeline.manage"],
   targets: ["sales.target.manage"],
   revenue: ["sales.revenue.manage"],
-  "channel-partners": ["sales.channel_partner.manage"],
+  "channel-partners": ["sales.channel_partner.manage", "sales.channel_partner.manage.self"],
 };
 const initialForm = () => ({ name: "", employee: "", territory: "", value: "0", probability: "50", source: "MANUAL", date: new Date().toISOString().slice(0, 10) });
 

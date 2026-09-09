@@ -113,12 +113,17 @@ export const resolveSalesScope = async (viewer: SessionUser, at = new Date()): P
     territories = await EmployeeTerritoryAssignment.find({ employee: { $in: employeeIds }, ...activeAt(at) }).distinct("territory");
   }
 
+  const [globalGeoIds, createdGeoIds] = await Promise.all([
+    GeoNode.find({ type: "GLOBAL", isActive: true }).distinct("_id"),
+    GeoNode.find({ createdBy: { $in: employeeIds }, isActive: true }).distinct("_id"),
+  ]);
+
   return {
     level,
     employeeId: employee._id.toString(),
     allowedEmployeeIds: uniqueIds(employeeIds),
     allowedTerritoryIds: uniqueIds(territories),
-    allowedGeoIds: await geographyForTerritories(territories),
+    allowedGeoIds: uniqueIds([...globalGeoIds, ...createdGeoIds, ...await geographyForTerritories(territories)]),
   };
 };
 
