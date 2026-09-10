@@ -6,5 +6,5 @@ export const PasswordChangeRoute = () => { const { user, isLoading } = useAuth()
 export const OnboardingRoute = () => { const { user, isLoading } = useAuth(); if (isLoading) return null; if (!user) return <Navigate to="/login" replace/>; if (user.forcePasswordChange) return <Navigate to="/change-password" replace/>; if (user.onboardingComplete) return <Navigate to="/" replace/>; return <Outlet/>; };
 export const RoleRoute = ({ roles }: { roles: RoleName[] }) => { const { user } = useAuth(); return user && roles.includes(user.role) ? <Outlet/> : <Navigate to="/" replace/>; };
 export const PlatformRoute = () => { const { user } = useAuth(); return user?.isPlatformAdmin ? <Outlet/> : <Navigate to="/" replace/>; };
-export const PermissionRoute = ({ permissions }: { permissions: PermissionName[] }) => { const { user } = useAuth(); return user && permissions.some((permission) => user.permissions.includes(permission)) ? <Outlet/> : <Navigate to="/" replace/>; };
+export const PermissionRoute = ({ permissions }: { permissions: PermissionName[] }) => { const { user } = useAuth(); return user && permissions.some((permission) => user.permissions.includes(permission)) ? <Outlet/> : <Navigate to="/access-denied" replace/>; };
 

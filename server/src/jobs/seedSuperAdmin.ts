@@ -1,5 +1,5 @@
 import bcrypt from "bcrypt";
-import { PERMISSIONS, ROLE_PERMISSIONS, ROLES, type CapabilityName } from "@mobius-ems/shared";
+import { PERMISSIONS, ROLE_PERMISSIONS, ROLES, SECTION_PERMISSIONS, type CapabilityName } from "@mobius-ems/shared";
 import { env } from "../config/env.js";
 import { Permission } from "../models/Permission.js";
 import { Role } from "../models/Role.js";
@@ -16,7 +16,21 @@ export const seedPermissions = async (): Promise<void> => {
 };
 
 export const seedTenantRoles = async (): Promise<void> => {
-  await Role.bulkWrite(ROLES.map((name) => ({ updateOne: { filter: { name }, update: { $set: { description: name.replaceAll("_", " "), permissions: [...ROLE_PERMISSIONS[name]], isSystem: true } }, upsert: true } })), { timestamps: false });
+  for (const name of ROLES) {
+    const existing = await Role.findOne({ name });
+    if (!existing) {
+      await Role.create({ name, description: name.replaceAll("_", " "), permissions: [...ROLE_PERMISSIONS[name]], isSystem: true });
+      continue;
+    }
+    existing.description = name.replaceAll("_", " ");
+    existing.isSystem = true;
+    if (name === "SUPER_ADMIN") existing.permissions = [...PERMISSIONS];
+    else if (!existing.permissions.some((permission) => SECTION_PERMISSIONS.includes(permission as never))) {
+      const defaultSections = ROLE_PERMISSIONS[name].filter((permission) => SECTION_PERMISSIONS.includes(permission as never));
+      existing.permissions = [...new Set([...existing.permissions, ...defaultSections])];
+    }
+    await existing.save();
+  }
 };
 
 export const seedTenantGeography = async (): Promise<void> => {

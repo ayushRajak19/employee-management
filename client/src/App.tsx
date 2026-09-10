@@ -43,6 +43,7 @@ const SalesAgentsPage = lazy(() => import("@/features/sales/pages/SalesAgentsPag
 const TargetPerformancePage = lazy(() => import("@/features/sales/pages/TargetPerformancePage").then((module) => ({ default: module.TargetPerformancePage })));
 
 const PageLoader = () => <div className="space-y-4 p-8" aria-label="Loading page"><Skeleton className="h-9 w-64"/><Skeleton className="h-48 w-full"/><Skeleton className="h-48 w-full"/></div>;
+const AccessDeniedPage = () => <main className="grid min-h-[60vh] flex-1 place-items-center p-8 text-center"><div><p className="text-sm font-semibold text-brand-700">Access restricted</p><h1 className="mt-2 text-3xl font-semibold">This section is not assigned to your role</h1><p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-slate-500">Ask your Super Admin to enable this section in Administration → Access hierarchy.</p></div></main>;
 
 export const App = () => <Suspense fallback={<PageLoader/>}><Routes>
   <Route path="/welcome" element={<LandingPage/>}/>
@@ -53,18 +54,37 @@ export const App = () => <Suspense fallback={<PageLoader/>}><Routes>
   <Route element={<PasswordChangeRoute/>}><Route path="/change-password" element={<ChangePasswordPage/>}/></Route>
   <Route element={<OnboardingRoute/>}><Route path="/onboarding" element={<OnboardingPage/>}/></Route>
   <Route element={<ProtectedRoute/>}><Route element={<AppLayout/>}>
-    <Route index element={<DashboardPage/>}/><Route path="ai-workspace" element={<AiWorkspacePage/>}/><Route path="me" element={<MyProfilePage/>}/><Route path="employees/:id" element={<EmployeeProfilePage/>}/>
-    <Route element={<RoleRoute roles={["SUPER_ADMIN","HR_ADMIN","DEPARTMENT_HEAD","MANAGER"]}/>}> <Route path="employees" element={<EmployeesPage/>}/><Route path="organization" element={<OrganizationPage/>}/><Route path="skill-matrix" element={<SkillMatrixPage/>}/></Route>
-    <Route path="skills" element={<SkillsPage/>}/>
-    <Route path="assessments" element={<AssessmentsPage/>}/><Route path="work" element={<WorkPage/>}/><Route path="attendance" element={<AttendancePage/>}/><Route path="performance" element={<PerformancePage/>}/><Route path="contribution" element={<ContributionPage/>}/>
-    <Route element={<RoleRoute roles={["SUPER_ADMIN","EMPLOYEE"]}/>}> <Route path="task-tracker" element={<TaskTrackerPage/>}/></Route>
-    <Route path="development" element={<DevelopmentPage/>}/><Route path="governance" element={<GovernancePage/>}/><Route element={<RoleRoute roles={["SUPER_ADMIN","EMPLOYEE"]}/>}> <Route path="resumes" element={<ResumesPage/>}/></Route><Route element={<RoleRoute roles={["SUPER_ADMIN","HR_ADMIN"]}/>}> <Route path="applicants" element={<ApplicantsPage/>}/></Route><Route path="people-ops" element={<PeopleOpsPage/>}/><Route element={<RoleRoute roles={["SUPER_ADMIN"]}/>}> <Route path="resume-screener" element={<ResumeScreenerPage/>}/><Route path="administrators" element={<AdministratorsPage/>}/><Route path="email-automation" element={<EmailAutomationPage/>}/></Route><Route element={<PlatformRoute/>}><Route path="platform/tenants" element={<TenantsPage/>}/></Route>
-    <Route element={<PermissionRoute permissions={["sales.analytics.self","sales.analytics.team","sales.analytics.all"]}/>}> <Route path="sales" element={<SalesDashboardPage/>}/></Route>
-    <Route element={<RoleRoute roles={["EMPLOYEE"]}/>}> <Route element={<PermissionRoute permissions={["sales.analytics.self"]}/>}> <Route path="sales/my-target" element={<TargetPerformancePage/>}/></Route></Route>
-    <Route element={<PermissionRoute permissions={["sales.map.self","sales.map.team","sales.map.all"]}/>}> <Route path="sales/geography" element={<GeographicSalesPage/>}/></Route>
-    <Route element={<PermissionRoute permissions={["sales.territory.view"]}/>}> <Route path="sales/territories" element={<SalesTerritoriesPage/>}/></Route>
-    <Route element={<PermissionRoute permissions={["sales.view.self","sales.view.team","sales.view.all"]}/>}> <Route path="sales/employees" element={<SalesAgentsPage/>}/><Route path="sales/leads" element={<SalesDataPage path="leads" title="Leads"/>}/><Route path="sales/customers" element={<SalesDataPage path="customers" title="Customers"/>}/><Route path="sales/pipeline" element={<Navigate to="/sales/leads" replace/>}/><Route path="sales/targets" element={<SalesDataPage path="targets" title="Targets"/>}/><Route path="sales/revenue" element={<SalesDataPage path="revenue" title="Revenue"/>}/><Route path="sales/channel-partners" element={<SalesDataPage path="channel-partners" title="Channel partners"/>}/></Route>
-    <Route element={<PermissionRoute permissions={["employee_map.self","employee_map.team","employee_map.all"]}/>}> <Route path="employee-map" element={<EmployeeMapPage/>}/></Route>
+    <Route path="access-denied" element={<AccessDeniedPage/>}/>
+    <Route element={<PermissionRoute permissions={["section.dashboard"]}/>}><Route index element={<DashboardPage/>}/></Route>
+    <Route element={<PermissionRoute permissions={["section.ai_workspace"]}/>}><Route path="ai-workspace" element={<AiWorkspacePage/>}/></Route>
+    <Route element={<PermissionRoute permissions={["section.profile"]}/>}><Route path="me" element={<MyProfilePage/>}/></Route>
+    <Route element={<PermissionRoute permissions={["section.employees"]}/>}><Route path="employees" element={<EmployeesPage/>}/><Route path="employees/:id" element={<EmployeeProfilePage/>}/></Route>
+    <Route element={<PermissionRoute permissions={["section.organization"]}/>}><Route path="organization" element={<OrganizationPage/>}/></Route>
+    <Route element={<PermissionRoute permissions={["section.skills"]}/>}><Route path="skills" element={<SkillsPage/>}/></Route>
+    <Route element={<PermissionRoute permissions={["section.skill_matrix"]}/>}><Route path="skill-matrix" element={<SkillMatrixPage/>}/></Route>
+    <Route element={<PermissionRoute permissions={["section.assessments"]}/>}><Route path="assessments" element={<AssessmentsPage/>}/></Route>
+    <Route element={<PermissionRoute permissions={["section.work"]}/>}><Route path="work" element={<WorkPage/>}/></Route>
+    <Route element={<PermissionRoute permissions={["section.attendance"]}/>}><Route path="attendance" element={<AttendancePage/>}/></Route>
+    <Route element={<PermissionRoute permissions={["section.performance"]}/>}><Route path="performance" element={<PerformancePage/>}/></Route>
+    <Route element={<PermissionRoute permissions={["section.contribution"]}/>}><Route path="contribution" element={<ContributionPage/>}/></Route>
+    <Route element={<PermissionRoute permissions={["section.task_tracker"]}/>}><Route path="task-tracker" element={<TaskTrackerPage/>}/></Route>
+    <Route element={<PermissionRoute permissions={["section.development"]}/>}><Route path="development" element={<DevelopmentPage/>}/></Route>
+    <Route element={<PermissionRoute permissions={["section.governance"]}/>}><Route path="governance" element={<GovernancePage/>}/></Route>
+    <Route element={<PermissionRoute permissions={["section.resumes"]}/>}><Route path="resumes" element={<ResumesPage/>}/></Route>
+    <Route element={<PermissionRoute permissions={["section.applicants"]}/>}><Route path="applicants" element={<ApplicantsPage/>}/></Route>
+    <Route element={<PermissionRoute permissions={["section.people_ops"]}/>}><Route path="people-ops" element={<PeopleOpsPage/>}/></Route>
+    <Route element={<PermissionRoute permissions={["section.resume_screener"]}/>}><Route path="resume-screener" element={<ResumeScreenerPage/>}/></Route>
+    <Route element={<RoleRoute roles={["SUPER_ADMIN"]}/>}> <Route path="administrators" element={<AdministratorsPage/>}/></Route>
+    <Route element={<PermissionRoute permissions={["section.email_automation"]}/>}><Route path="email-automation" element={<EmailAutomationPage/>}/></Route>
+    <Route element={<PlatformRoute/>}><Route path="platform/tenants" element={<TenantsPage/>}/></Route>
+    <Route element={<PermissionRoute permissions={["section.sales"]}/>}>
+      <Route element={<PermissionRoute permissions={["sales.analytics.self","sales.analytics.team","sales.analytics.all"]}/>}> <Route path="sales" element={<SalesDashboardPage/>}/></Route>
+      <Route element={<PermissionRoute permissions={["sales.analytics.self"]}/>}> <Route path="sales/my-target" element={<TargetPerformancePage/>}/></Route>
+      <Route element={<PermissionRoute permissions={["sales.map.self","sales.map.team","sales.map.all"]}/>}> <Route path="sales/geography" element={<GeographicSalesPage/>}/></Route>
+      <Route element={<PermissionRoute permissions={["sales.territory.view"]}/>}> <Route path="sales/territories" element={<SalesTerritoriesPage/>}/></Route>
+      <Route element={<PermissionRoute permissions={["sales.view.self","sales.view.team","sales.view.all"]}/>}> <Route path="sales/employees" element={<SalesAgentsPage/>}/><Route path="sales/leads" element={<SalesDataPage path="leads" title="Leads"/>}/><Route path="sales/customers" element={<SalesDataPage path="customers" title="Customers"/>}/><Route path="sales/pipeline" element={<Navigate to="/sales/leads" replace/>}/><Route path="sales/targets" element={<SalesDataPage path="targets" title="Targets"/>}/><Route path="sales/revenue" element={<SalesDataPage path="revenue" title="Revenue"/>}/><Route path="sales/channel-partners" element={<SalesDataPage path="channel-partners" title="Channel partners"/>}/></Route>
+    </Route>
+    <Route element={<PermissionRoute permissions={["section.employee_map"]}/>}><Route element={<PermissionRoute permissions={["employee_map.self","employee_map.team","employee_map.all"]}/>}> <Route path="employee-map" element={<EmployeeMapPage/>}/></Route></Route>
   </Route></Route>
   <Route path="*" element={<div className="grid min-h-screen place-items-center"><p>Page not found</p></div>}/>
 </Routes></Suspense>;

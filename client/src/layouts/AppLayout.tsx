@@ -1,11 +1,11 @@
 import { useEffect, useState, type ComponentType } from "react";
 import logoMark from "@/assets/mobius-mark.png";
 import { useMutation } from "@tanstack/react-query";
-import type { CapabilityName, PermissionName, RoleName } from "@mobius-ems/shared";
+import type { CapabilityName, PermissionName, RoleName, SectionPermissionName } from "@mobius-ems/shared";
 import {
-  Activity, BarChart3, Bot, BrainCircuit, BriefcaseBusiness, Building2, CalendarCheck2,
+  BarChart3, Bot, BrainCircuit, BriefcaseBusiness, Building2, CalendarCheck2,
   ChevronLeft, CircleGauge, FileText, GraduationCap, ListTodo, LogOut, Menu,
-  MailPlus, MapPinned, Route, Settings, ShieldCheck, Sparkles, Target, TrendingUp, UserCog, UserRound, Users, X,
+  MailPlus, MapPinned, Route, ShieldCheck, Sparkles, Target, TrendingUp, UserCog, UserRound, Users, X,
 } from "lucide-react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { HeaderSearch } from "@/components/HeaderSearch";
@@ -24,92 +24,82 @@ type NavItem = {
   permissions?: PermissionName[];
   capability?: CapabilityName;
   platformOnly?: boolean;
+  section?: SectionPermissionName;
 };
 
-const managementRoles: RoleName[] = ["SUPER_ADMIN", "HR_ADMIN", "DEPARTMENT_HEAD", "MANAGER"];
-const employeeRole: RoleName[] = ["EMPLOYEE"];
 const superAdminRole: RoleName[] = ["SUPER_ADMIN"];
-const applicantRoles: RoleName[] = ["SUPER_ADMIN", "HR_ADMIN"];
 
 const groups: { label: string; items: NavItem[] }[] = [
   { label: "Overview", items: [
-    { label: "Dashboard", icon: CircleGauge, path: "/" },
+    { label: "Dashboard", icon: CircleGauge, path: "/", section: "section.dashboard" },
   ] },
   {
     label: "People operations", items: [
-      { label: "My attendance", icon: CalendarCheck2, path: "/attendance", roles: employeeRole },
-      { label: "Attendance register", icon: CalendarCheck2, path: "/attendance", roles: superAdminRole },
-      { label: "Leave & recognition", icon: Users, path: "/people-ops", roles: employeeRole },
-      { label: "People operations", icon: Users, path: "/people-ops", roles: managementRoles },
+      { label: "Attendance", icon: CalendarCheck2, path: "/attendance", section: "section.attendance" },
+      { label: "Leave & recognition", icon: Users, path: "/people-ops", section: "section.people_ops" },
     ],
   },
   { label: "My workspace", items: [
-    { label: "AI Workspace", icon: Bot, path: "/ai-workspace" },
-    { label: "My profile", icon: UserRound, path: "/me", roles: employeeRole },
+    { label: "AI Workspace", icon: Bot, path: "/ai-workspace", section: "section.ai_workspace" },
+    { label: "My profile", icon: UserRound, path: "/me", section: "section.profile" },
   ] },
   {
     label: "People", items: [
-      { label: "Employees", icon: Users, path: "/employees", roles: managementRoles },
-      { label: "Organization", icon: Building2, path: "/organization", roles: managementRoles },
-      { label: "Employee map", icon: MapPinned, path: "/employee-map", permissions: ["employee_map.self", "employee_map.team", "employee_map.all"] },
+      { label: "Employees", icon: Users, path: "/employees", section: "section.employees" },
+      { label: "Organization", icon: Building2, path: "/organization", section: "section.organization" },
+      { label: "Employee map", icon: MapPinned, path: "/employee-map", permissions: ["employee_map.self", "employee_map.team", "employee_map.all"], section: "section.employee_map" },
     ],
   },
   {
     label: "Sales setup", items: [
-      { label: "Territories (ownership)", icon: Route, path: "/sales/territories", roles: managementRoles, permission: "sales.territory.view", capability: "SALES_MODULE" },
-      { label: "Sales employees", icon: Users, path: "/sales/employees", permissions: ["sales.view.team", "sales.view.all"], capability: "SALES_MODULE" },
+      { label: "Territories (ownership)", icon: Route, path: "/sales/territories", permission: "sales.territory.view", capability: "SALES_MODULE", section: "section.sales" },
+      { label: "Sales employees", icon: Users, path: "/sales/employees", permissions: ["sales.view.team", "sales.view.all"], capability: "SALES_MODULE", section: "section.sales" },
     ],
   },
   {
     label: "Sales workflow", items: [
-      { label: "Sales dashboard", icon: TrendingUp, path: "/sales", permissions: ["sales.analytics.self", "sales.analytics.team", "sales.analytics.all"], capability: "SALES_MODULE" },
-      { label: "Country sales & map", icon: MapPinned, path: "/sales/geography", permissions: ["sales.map.self", "sales.map.team", "sales.map.all"], capability: "SALES_MODULE" },
-      { label: "My target & performance", icon: Target, path: "/sales/my-target", roles: employeeRole, permission: "sales.analytics.self", capability: "SALES_MODULE" },
-      { label: "Leads", icon: Users, path: "/sales/leads", permissions: ["sales.view.self", "sales.view.team", "sales.view.all"], capability: "SALES_MODULE" },
-      { label: "Customers", icon: UserRound, path: "/sales/customers", permission: "sales.customer.view", capability: "SALES_MODULE" },
-      { label: "Targets", icon: Target, path: "/sales/targets", permission: "sales.target.view", capability: "SALES_MODULE" },
-      { label: "Revenue", icon: TrendingUp, path: "/sales/revenue", permission: "sales.revenue.view", capability: "SALES_MODULE" },
-      { label: "Channel partners", icon: Building2, path: "/sales/channel-partners", permission: "sales.channel_partner.view", capability: "SALES_MODULE" },
+      { label: "Sales dashboard", icon: TrendingUp, path: "/sales", permissions: ["sales.analytics.self", "sales.analytics.team", "sales.analytics.all"], capability: "SALES_MODULE", section: "section.sales" },
+      { label: "Country sales & map", icon: MapPinned, path: "/sales/geography", permissions: ["sales.map.self", "sales.map.team", "sales.map.all"], capability: "SALES_MODULE", section: "section.sales" },
+      { label: "My target & performance", icon: Target, path: "/sales/my-target", permission: "sales.analytics.self", capability: "SALES_MODULE", section: "section.sales" },
+      { label: "Leads", icon: Users, path: "/sales/leads", permissions: ["sales.view.self", "sales.view.team", "sales.view.all"], capability: "SALES_MODULE", section: "section.sales" },
+      { label: "Customers", icon: UserRound, path: "/sales/customers", permission: "sales.customer.view", capability: "SALES_MODULE", section: "section.sales" },
+      { label: "Targets", icon: Target, path: "/sales/targets", permission: "sales.target.view", capability: "SALES_MODULE", section: "section.sales" },
+      { label: "Revenue", icon: TrendingUp, path: "/sales/revenue", permission: "sales.revenue.view", capability: "SALES_MODULE", section: "section.sales" },
+      { label: "Channel partners", icon: Building2, path: "/sales/channel-partners", permission: "sales.channel_partner.view", capability: "SALES_MODULE", section: "section.sales" },
     ],
   },
   {
     label: "Capability", items: [
-      { label: "Skills", icon: Sparkles, path: "/skills" },
-      { label: "Skill matrix", icon: BarChart3, path: "/skill-matrix", roles: managementRoles },
-      { label: "Assessments", icon: ShieldCheck, path: "/assessments" },
+      { label: "Skills", icon: Sparkles, path: "/skills", section: "section.skills" },
+      { label: "Skill matrix", icon: BarChart3, path: "/skill-matrix", section: "section.skill_matrix" },
+      { label: "Assessments", icon: ShieldCheck, path: "/assessments", section: "section.assessments" },
     ],
   },
   { label: "Work", items: [
-    { label: "Tasks & projects", icon: BriefcaseBusiness, path: "/work" },
-    { label: "My task tracker", icon: ListTodo, path: "/task-tracker", roles: employeeRole },
-    { label: "Employee task tracker", icon: ListTodo, path: "/task-tracker", roles: superAdminRole },
+    { label: "Tasks & projects", icon: BriefcaseBusiness, path: "/work", section: "section.work" },
+    { label: "Task tracker", icon: ListTodo, path: "/task-tracker", section: "section.task_tracker" },
   ] },
   {
     label: "Performance", items: [
-      { label: "Goals & performance", icon: Target, path: "/performance", roles: employeeRole },
-      { label: "Goals, KPIs & reviews", icon: Activity, path: "/performance", roles: managementRoles },
-      { label: "My contribution", icon: TrendingUp, path: "/contribution", roles: employeeRole },
-      { label: "Contribution & support", icon: TrendingUp, path: "/contribution", roles: managementRoles },
+      { label: "Goals & performance", icon: Target, path: "/performance", section: "section.performance" },
+      { label: "Contribution & support", icon: TrendingUp, path: "/contribution", section: "section.contribution" },
     ],
   },
-  { label: "Development", items: [{ label: "Learning & training", icon: GraduationCap, path: "/development" }] },
+  { label: "Development", items: [{ label: "Learning & training", icon: GraduationCap, path: "/development", section: "section.development" }] },
   {
     label: "Records", items: [
-      { label: "My resume", icon: FileText, path: "/resumes", roles: employeeRole },
-      { label: "My documents", icon: FileText, path: "/governance", roles: employeeRole },
-      { label: "Applicants", icon: Users, path: "/applicants", roles: applicantRoles },
-      { label: "Resume screener", icon: BrainCircuit, path: "/resume-screener", roles: superAdminRole },
-      { label: "Resume library", icon: FileText, path: "/resumes", roles: superAdminRole },
-      { label: "Documents & reports", icon: FileText, path: "/governance", roles: managementRoles },
+      { label: "Resume library", icon: FileText, path: "/resumes", section: "section.resumes" },
+      { label: "Applicants", icon: Users, path: "/applicants", section: "section.applicants" },
+      { label: "Resume screener", icon: BrainCircuit, path: "/resume-screener", section: "section.resume_screener" },
+      { label: "Documents & reports", icon: FileText, path: "/governance", section: "section.governance" },
     ],
   },
   {
     label: "Administration", items: [
       { label: "Administrators", icon: UserCog, path: "/administrators", roles: superAdminRole },
-      { label: "Email automation", icon: MailPlus, path: "/email-automation", roles: superAdminRole },
+      { label: "Email automation", icon: MailPlus, path: "/email-automation", section: "section.email_automation" },
       { label: "Vendor organizations", icon: Building2, path: "/platform/tenants", platformOnly: true },
-      { label: "Access & audit", icon: ShieldCheck, path: "/governance", permission: "audit.view" },
-      { label: "Settings", icon: Settings, path: "/people-ops", permission: "settings.manage" },
+      { label: "Access & audit", icon: ShieldCheck, path: "/governance", permission: "audit.view", section: "section.governance" },
     ],
   },
 ];
@@ -141,6 +131,7 @@ export const AppLayout = () => {
       items: group.items.filter(
         (item) =>
           (!item.roles || item.roles.includes(user!.role)) &&
+          (!item.section || user!.permissions.includes(item.section)) &&
           (!item.permission || user!.permissions.includes(item.permission)) &&
           (!item.permissions || item.permissions.some((permission) => user!.permissions.includes(permission))) &&
           (!item.capability || user!.capabilities.includes(item.capability)) &&

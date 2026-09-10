@@ -1,6 +1,33 @@
 export const ROLES = ["SUPER_ADMIN", "HR_ADMIN", "DEPARTMENT_HEAD", "MANAGER", "EMPLOYEE"] as const;
 export type RoleName = (typeof ROLES)[number];
 
+export const SECTION_ACCESS = [
+  { key: "section.dashboard", label: "Dashboard", group: "Overview" },
+  { key: "section.ai_workspace", label: "AI Workspace", group: "Overview" },
+  { key: "section.attendance", label: "Attendance", group: "People operations" },
+  { key: "section.people_ops", label: "Leave & recognition", group: "People operations" },
+  { key: "section.profile", label: "My profile", group: "People operations" },
+  { key: "section.employees", label: "Employees", group: "People" },
+  { key: "section.organization", label: "Organization", group: "People" },
+  { key: "section.employee_map", label: "Employee map", group: "People" },
+  { key: "section.sales", label: "Sales", group: "Sales" },
+  { key: "section.skills", label: "Skills", group: "Capability" },
+  { key: "section.skill_matrix", label: "Skill matrix", group: "Capability" },
+  { key: "section.assessments", label: "Assessments", group: "Capability" },
+  { key: "section.work", label: "Tasks & projects", group: "Work" },
+  { key: "section.task_tracker", label: "Task tracker", group: "Work" },
+  { key: "section.performance", label: "Goals & performance", group: "Performance" },
+  { key: "section.contribution", label: "Contribution", group: "Performance" },
+  { key: "section.development", label: "Learning & training", group: "Development" },
+  { key: "section.resumes", label: "Resume library", group: "Records" },
+  { key: "section.applicants", label: "Applicants", group: "Records" },
+  { key: "section.resume_screener", label: "Resume screener", group: "Records" },
+  { key: "section.governance", label: "Documents & audit", group: "Records" },
+  { key: "section.email_automation", label: "Email automation", group: "Administration" },
+] as const;
+export type SectionPermissionName = (typeof SECTION_ACCESS)[number]["key"];
+export const SECTION_PERMISSIONS = SECTION_ACCESS.map((section) => section.key) as unknown as readonly [SectionPermissionName, ...SectionPermissionName[]];
+
 export const PERMISSIONS = [
   "employee.view", "employee.create", "employee.update", "employee.deactivate",
   "department.view", "department.create", "department.update",
@@ -18,7 +45,8 @@ export const PERMISSIONS = [
   "sales.revenue.manage",
   "sales.channel_partner.view", "sales.channel_partner.manage", "sales.channel_partner.manage.self", "sales.configuration.manage",
   "employee_map.self", "employee_map.team", "employee_map.all",
-  "sales.map.self", "sales.map.team", "sales.map.all"
+  "sales.map.self", "sales.map.team", "sales.map.all",
+  ...SECTION_PERMISSIONS,
 ] as const;
 export type PermissionName = (typeof PERMISSIONS)[number];
 
@@ -44,10 +72,10 @@ const SELF_SALES_PERMISSIONS: readonly PermissionName[] = [
 
 export const ROLE_PERMISSIONS: Record<RoleName, readonly PermissionName[]> = {
   SUPER_ADMIN: PERMISSIONS,
-  HR_ADMIN: [...PERMISSIONS.filter((permission) => !["settings.manage", "skill.verify"].includes(permission) && !permission.startsWith("sales.") && !permission.startsWith("employee_map.")), ...HR_SALES_PERMISSIONS],
-  DEPARTMENT_HEAD: ["employee.view", "department.view", "skill.verify", "task.create", "task.assign", "task.update", "task.review", "performance.view", "performance.review", "goal.create", "goal.update", "kpi.evaluate", "document.view", "report.view", ...TEAM_SALES_PERMISSIONS],
-  MANAGER: ["employee.view", "department.view", "task.create", "task.assign", "task.update", "task.review", "performance.view", "performance.review", "goal.create", "goal.update", "kpi.evaluate", "document.view", "report.view", ...TEAM_SALES_PERMISSIONS],
-  EMPLOYEE: ["employee.view", "department.view", "task.update", "performance.view", "goal.update", "document.view", "document.upload", ...SELF_SALES_PERMISSIONS]
+  HR_ADMIN: [...PERMISSIONS.filter((permission) => !permission.startsWith("section.") && !["settings.manage", "skill.verify"].includes(permission) && !permission.startsWith("sales.") && !permission.startsWith("employee_map.")), ...HR_SALES_PERMISSIONS, ...SECTION_PERMISSIONS.filter((permission) => !["section.attendance", "section.profile", "section.task_tracker", "section.resumes", "section.resume_screener", "section.email_automation"].includes(permission))],
+  DEPARTMENT_HEAD: ["employee.view", "department.view", "skill.verify", "task.create", "task.assign", "task.update", "task.review", "performance.view", "performance.review", "goal.create", "goal.update", "kpi.evaluate", "document.view", "report.view", ...TEAM_SALES_PERMISSIONS, ...SECTION_PERMISSIONS.filter((permission) => !["section.attendance", "section.profile", "section.task_tracker", "section.resumes", "section.applicants", "section.resume_screener", "section.email_automation"].includes(permission))],
+  MANAGER: ["employee.view", "department.view", "task.create", "task.assign", "task.update", "task.review", "performance.view", "performance.review", "goal.create", "goal.update", "kpi.evaluate", "document.view", "report.view", ...TEAM_SALES_PERMISSIONS, ...SECTION_PERMISSIONS.filter((permission) => !["section.attendance", "section.profile", "section.task_tracker", "section.resumes", "section.applicants", "section.resume_screener", "section.email_automation"].includes(permission))],
+  EMPLOYEE: ["employee.view", "department.view", "task.update", "performance.view", "goal.update", "document.view", "document.upload", ...SELF_SALES_PERMISSIONS, ...SECTION_PERMISSIONS.filter((permission) => !["section.employees", "section.organization", "section.skill_matrix", "section.applicants", "section.resume_screener", "section.email_automation"].includes(permission))]
 };
 
 export interface SessionUser {
