@@ -1,5 +1,5 @@
 import type { SessionUser } from "@mobius-ems/shared";
-import type { HydratedDocument, Model } from "mongoose";
+import { type HydratedDocument, type Model, Types } from "mongoose";
 import { ChannelPartner } from "../models/ChannelPartner.js";
 import { Employee } from "../models/Employee.js";
 import { EmployeeTerritoryAssignment } from "../models/EmployeeTerritoryAssignment.js";
@@ -10,6 +10,7 @@ import { OPPORTUNITY_STATUSES, SalesOpportunity } from "../models/SalesOpportuni
 import { SalesRevenueTransaction } from "../models/SalesRevenueTransaction.js";
 import { SalesTarget } from "../models/SalesTarget.js";
 import { SalesTerritory } from "../models/SalesTerritory.js";
+import { calculateTargetProgress } from "./salesMath.js";
 import { AppError } from "../utils/AppError.js";
 import { writeAudit } from "./auditService.js";
 import {
@@ -193,7 +194,61 @@ const createWonRevenue = async (viewer: SessionUser, opportunity: SalesRecordDoc
 
 export const listSalesData = async (viewer: SessionUser, entity: SalesEntityName) => {
   const scope = await resolveSalesScope(viewer);
-  return modelFor(entity).find(scopeFilter(scope, entity)).populate(salesPopulationPaths[entity], "firstName lastName employeeId name code type").sort({ createdAt: -1 }).limit(500).lean();
+  const items = await modelFor(entity)
+    .find(scopeFilter(scope, entity))
+    .populate(salesPopulationPaths[entity], "firstName lastName employeeId name code type")
+    .sort({ createdAt: -1 })
+    .limit(500)
+    .lean();
+
+  if (entity === "targets") {
+    return Promise.all(
+      (items as unknown as Array<Record<string, unknown>>).map(async (target) => {
+        const employeeId = (target.employee as { _id?: unknown } | undefined)?._id ?? target.employee;
+        const territoryId = (target.territory as { _id?: unknown } | undefined)?._id ?? target.territory;
+        let actual = 0;
+        const pStart = target.periodStart ? new Date(target.periodStart as string | Date) : undefined;
+        const pEnd = target.periodEnd ? new Date(target.periodEnd as string | Date) : undefined;
+
+        if (pStart && pEnd) {
+          if (employeeId) {
+            const res = await SalesRevenueTransaction.aggregate([
+              {
+                $match: {
+                  employee: new Types.ObjectId(String(employeeId)),
+                  transactionDate: { $gte: pStart, $lte: pEnd },
+                },
+              },
+              { $group: { _id: null, total: { $sum: "$amount" } } },
+            ]);
+            actual = res[0]?.total ?? 0;
+          } else if (territoryId) {
+            const res = await SalesRevenueTransaction.aggregate([
+              {
+                $match: {
+                  territory: new Types.ObjectId(String(territoryId)),
+                  transactionDate: { $gte: pStart, $lte: pEnd },
+                },
+              },
+              { $group: { _id: null, total: { $sum: "$amount" } } },
+            ]);
+            actual = res[0]?.total ?? 0;
+          }
+        }
+        const progress = calculateTargetProgress(Number(target.revenueTarget || 0), actual);
+        return {
+          ...target,
+          actualSales: actual,
+          achievedAmount: progress.achievedAmount,
+          achievementPercentage: progress.achievementPercentage,
+          remainingAmount: progress.remainingAmount,
+          remainingPercentage: progress.remainingPercentage,
+        };
+      }),
+    );
+  }
+
+  return items;
 };
 
 export const countrySales = async (viewer: SessionUser) => {

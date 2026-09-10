@@ -201,7 +201,39 @@ const columnsFor = (path: SalesDataPath): Column[] => {
     { label: "Employee", render: (item) => labelOf(item.employee) },
     { label: "Territory", render: (item) => labelOf(item.territory) },
     { label: "Lead target", align: "right", render: (item) => (item.leadTarget ?? 0).toLocaleString("en-IN") },
-    { label: "Revenue target", align: "right", render: (item) => <div><div>{money(item.currency, item.revenueTarget)}</div>{item.justification && <div className="mt-1 max-w-xs whitespace-normal text-left text-xs font-normal text-slate-400" title={item.justification}>Basis: {item.justification}</div>}</div> },
+    {
+      label: "Revenue Target & Progress",
+      align: "right",
+      render: (item) => {
+        const achieved = item.achievedAmount ?? 0;
+        const remaining = item.remainingAmount ?? item.revenueTarget ?? 0;
+        const pct = item.achievementPercentage ?? 0;
+        return (
+          <div className="text-right">
+            <div className="font-semibold text-slate-900">{money(item.currency, item.revenueTarget)}</div>
+            <div className="mt-1 flex items-center justify-end gap-1.5 text-xs text-slate-500">
+              <span>Achieved:</span>
+              <span className="font-semibold text-emerald-600">{money(item.currency, achieved)} ({pct}%)</span>
+            </div>
+            <div className="flex items-center justify-end gap-1.5 text-xs text-slate-500">
+              <span>Remaining:</span>
+              <span className="font-medium text-amber-600">{money(item.currency, remaining)}</span>
+            </div>
+            <div className="mt-1.5 h-1.5 w-full min-w-[110px] overflow-hidden rounded-full bg-slate-100">
+              <div
+                className="h-full rounded-full bg-emerald-500 transition-all"
+                style={{ width: `${Math.min(100, pct)}%` }}
+              />
+            </div>
+            {item.justification && (
+              <div className="mt-1 max-w-xs whitespace-normal text-left text-xs font-normal text-slate-400" title={item.justification}>
+                Basis: {item.justification}
+              </div>
+            )}
+          </div>
+        );
+      },
+    },
   ];
   if (path === "revenue") return [
     { label: "Date", render: (item) => date(item.transactionDate) },

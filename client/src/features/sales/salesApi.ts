@@ -49,6 +49,11 @@ export interface SalesRecord {
   changeReason?: string;
   createdAt?: string;
   justification?: string;
+  actualSales?: number;
+  achievedAmount?: number;
+  achievementPercentage?: number;
+  remainingAmount?: number;
+  remainingPercentage?: number;
 }
 
 export interface SalesTerritory {
