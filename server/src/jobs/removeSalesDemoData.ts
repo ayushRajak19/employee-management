@@ -27,9 +27,10 @@ const run = async (): Promise<void> => {
       }).select("_id code").lean();
       const geoIds = demoGeographies.map((item) => item._id);
       const demoTerritories = await SalesTerritory.find({
-        code: { $in: demoTerritoryCodes },
-        ownerEmployee: { $exists: false },
-        effectiveFrom: new Date("2026-01-01"),
+        $or: [
+          { code: { $in: demoTerritoryCodes }, ownerEmployee: { $exists: false }, effectiveFrom: new Date("2026-01-01") },
+          { code: "1212", name: /^sales tery$/i },
+        ],
       }).select("_id code").lean();
       const territoryIds = demoTerritories.map((item) => item._id);
 
@@ -86,6 +87,11 @@ const run = async (): Promise<void> => {
         EmployeeTerritoryAssignment.deleteMany({ _id: { $in: assignments.map((item) => item._id) } }),
       ]);
       await SalesCustomer.deleteMany({ _id: { $in: customers.map((item) => item._id) } });
+      await Promise.all([
+        SalesLead.updateMany({ territory: { $in: territoryIds } }, { $unset: { territory: 1 } }),
+        SalesCustomer.updateMany({ territory: { $in: territoryIds } }, { $unset: { territory: 1 } }),
+        EmployeeTerritoryAssignment.deleteMany({ territory: { $in: territoryIds } }),
+      ]);
       if (seededEmployeeLocations) {
         await Employee.updateMany(
           { _id: { $in: assignedEmployeeIds }, "workLocation.geoNode": { $in: geoIds } },
