@@ -177,7 +177,7 @@ export const RegisterPage = () => {
             </label>
 
             <label className="block text-sm font-medium">
-              Administrator password
+              Set your login password
               <Input
                 className="mt-2"
                 required
@@ -190,7 +190,7 @@ export const RegisterPage = () => {
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
               />
               <span className="mt-1 block text-xs text-slate-500">
-                At least 12 characters with uppercase, lowercase, a number and a symbol.
+                At least 12 characters (uppercase, lowercase, number & symbol). You will use this password to sign into your account.
               </span>
             </label>
 
@@ -231,7 +231,7 @@ export const RegisterPage = () => {
         {step === "legacy" && (
           <form className="mt-6 space-y-4" onSubmit={handleLegacyComplete}>
             <label className="block text-sm font-medium">
-              Administrator password
+              Set your login password
               <Input
                 className="mt-2"
                 required
@@ -244,7 +244,7 @@ export const RegisterPage = () => {
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
               />
               <span className="mt-1 block text-xs text-slate-500">
-                At least 12 characters with uppercase, lowercase, a number and a symbol.
+                At least 12 characters (uppercase, lowercase, number & symbol). You will use this password to sign into your account.
               </span>
             </label>
 
