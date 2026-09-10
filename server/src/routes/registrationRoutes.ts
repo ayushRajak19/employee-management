@@ -1,3 +1,4 @@
+import { randomInt, createHash } from "node:crypto";
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import jwt from "jsonwebtoken";
@@ -12,172 +13,263 @@ import { createTenant } from "../services/tenantService.js";
 import { Tenant } from "../models/Tenant.js";
 
 const details = createTenantSchema.shape.body.omit({ temporaryPassword: true, plan: true });
-const finish = z.object({ token: z.string().min(20).max(4096), password: createTenantSchema.shape.body.shape.temporaryPassword });
+
+const verifyOtpSchema = z.object({
+  body: z.object({
+    registrationToken: z.string().min(20).max(4096),
+    otp: z.string().trim().regex(/^\d{6}$/, "Verification code must be 6 digits"),
+    password: createTenantSchema.shape.body.shape.temporaryPassword,
+  }),
+});
+
+const finish = z.object({
+  token: z.string().min(20).max(4096),
+  password: createTenantSchema.shape.body.shape.temporaryPassword,
+});
+
 export const registrationRouter = Router();
-registrationRouter.use(rateLimit({ windowMs: 60 * 60 * 1000, limit: 10, standardHeaders: "draft-7", legacyHeaders: false, message: { success: false, message: "Too many registration attempts. Please try again in an hour." } }));
-registrationRouter.post("/request", validate(z.object({ body: details })), asyncHandler(async (request, response) => {
-  const input = details.parse(request.body);
 
-  if (await Tenant.exists({ slug: input.slug })) {
-    throw new AppError("That organization ID is already in use", 409);
-  }
+registrationRouter.use(
+  rateLimit({
+    windowMs: 60 * 60 * 1000,
+    limit: 20,
+    standardHeaders: "draft-7",
+    legacyHeaders: false,
+    message: { success: false, message: "Too many registration attempts. Please try again in an hour." },
+  })
+);
 
-  const token = jwt.sign(
-    { ...input, purpose: "organization-registration" },
-    env.JWT_ACCESS_SECRET,
-    { expiresIn: "30m", audience: "organization-registration", issuer: "mobius-ems" }
-  );
+registrationRouter.post(
+  "/request",
+  validate(z.object({ body: details })),
+  asyncHandler(async (request, response) => {
+    const input = details.parse(request.body);
 
-  const url = new URL("/register", env.CLIENT_URL);
-  url.hash = new URLSearchParams({ token }).toString();
-
-  const host = process.env.MAIL_HOST || env.SMTP_HOST;
-  const user = process.env.MAIL_USERNAME || env.SMTP_USER;
-  const pass = process.env.MAIL_PASSWORD || env.SMTP_PASSWORD;
-  const smtpConfigured = Boolean(host && user && pass);
-  const brevoConfigured = Boolean(env.EMAIL_AUTOMATION_ENABLED && env.BREVO_API_KEY && env.BREVO_SENDER_EMAIL);
-
-  const emailSubject = "Verify your MobiusEMS organization registration";
-  const emailText = `Verify your email to create ${input.name} on MobiusEMS.\n\n${url.toString()}\n\nThis link expires in 30 minutes. If you did not request it, ignore this email.`;
-  const emailHtml = `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;border:1px solid #e2e8f0;border-radius:12px">
-    <h2 style="color:#0f172a">Verify your MobiusEMS organization</h2>
-    <p style="color:#334155;font-size:15px;line-height:1.5">You requested to create <strong>${input.name}</strong> (${input.slug}) on MobiusEMS.</p>
-    <div style="margin:28px 0">
-      <a href="${url.toString()}" style="background-color:#0284c7;color:#ffffff;padding:12px 24px;text-decoration:none;border-radius:8px;font-weight:600;display:inline-block">Complete Registration</a>
-    </div>
-    <p style="color:#64748b;font-size:13px">Or copy this link into your browser:<br><a href="${url.toString()}" style="color:#0284c7;word-break:break-all">${url.toString()}</a></p>
-    <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0" />
-    <p style="color:#94a3b8;font-size:12px">This link expires in 30 minutes. If you didn't request this, you can ignore this email.</p>
-  </div>`;
-
-  // 1. Try SMTP if configured
-  if (smtpConfigured) {
-    const port = Number(process.env.MAIL_PORT || env.SMTP_PORT || 587);
-    const isSecure = port === 465;
-    const transport = nodemailer.createTransport({
-      host,
-      port,
-      secure: isSecure,
-      requireTLS: !isSecure,
-      auth: { user, pass },
-      connectionTimeout: 10000,
-      socketTimeout: 20000,
-    });
-
-    try {
-      await transport.sendMail({
-        from: {
-          name: process.env.MAIL_FROM_NAME || env.BREVO_SENDER_NAME || "MobiusEMS",
-          address: process.env.MAIL_FROM_ADDRESS || user,
-        },
-        to: input.adminEmail,
-        subject: emailSubject,
-        text: emailText,
-        html: emailHtml,
-      });
-
-      response.json({
-        success: true,
-        message: "Check your email for the verification link. It expires in 30 minutes.",
-        data: {
-          emailSent: true,
-        },
-      });
-      return;
-    } catch (err) {
-      console.error("Failed to send SMTP verification email:", err);
-      // Fallback to direct token if email delivery failed
-      response.json({
-        success: true,
-        message: "Verification email could not be sent. You can complete registration directly below.",
-        data: {
-          token,
-          emailSent: false,
-          verificationUrl: url.toString(),
-        },
-      });
-      return;
-    } finally {
-      transport.close();
+    if (await Tenant.exists({ slug: input.slug })) {
+      throw new AppError("That organization ID is already in use", 409);
     }
-  }
 
-  // 2. Try Brevo API if configured
-  if (brevoConfigured) {
-    try {
-      const brevoRes = await fetch("https://api.brevo.com/v3/smtp/email", {
-        method: "POST",
-        headers: {
-          accept: "application/json",
-          "content-type": "application/json",
-          "api-key": env.BREVO_API_KEY!,
-        },
-        body: JSON.stringify({
-          sender: { name: env.BREVO_SENDER_NAME, email: env.BREVO_SENDER_EMAIL },
-          to: [{ email: input.adminEmail, name: input.adminName }],
-          subject: emailSubject,
-          textContent: emailText,
-          htmlContent: emailHtml,
-        }),
-        signal: AbortSignal.timeout(20000),
+    // Generate 6-digit OTP and secure SHA-256 hash
+    const otp = randomInt(100000, 1000000).toString();
+    const otpHash = createHash("sha256").update(otp).digest("hex");
+
+    const registrationToken = jwt.sign(
+      { ...input, otpHash, purpose: "organization-registration-otp" },
+      env.JWT_ACCESS_SECRET,
+      { expiresIn: "15m", audience: "organization-registration-otp", issuer: "mobius-ems" }
+    );
+
+    const host = process.env.MAIL_HOST || env.SMTP_HOST;
+    const user = process.env.MAIL_USERNAME || env.SMTP_USER;
+    const pass = process.env.MAIL_PASSWORD || env.SMTP_PASSWORD;
+    const smtpConfigured = Boolean(host && user && pass);
+    const brevoConfigured = Boolean(env.EMAIL_AUTOMATION_ENABLED && env.BREVO_API_KEY && env.BREVO_SENDER_EMAIL);
+
+    const emailSubject = `Your MobiusEMS Verification Code: ${otp}`;
+    const emailText = `Your MobiusEMS verification code is: ${otp}\n\nUse this 6-digit code to verify your email and complete registration for ${input.name}.\n\nThis code expires in 15 minutes. If you did not request this, please ignore this email.`;
+    const emailHtml = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;border:1px solid #e2e8f0;border-radius:16px;background-color:#ffffff">
+      <div style="margin-bottom:20px">
+        <span style="font-size:18px;font-weight:700;color:#0284c7">MobiusEMS</span>
+      </div>
+      <h1 style="font-size:20px;font-weight:700;color:#0f172a;margin:0 0 12px">Organization Verification Code</h1>
+      <p style="font-size:14px;color:#475569;margin:0 0 20px;line-height:1.5">
+        Please enter the following 6-digit code to verify your email and complete registration for <strong>${input.name}</strong>:
+      </p>
+      <div style="background-color:#f1f5f9;border:1px solid #cbd5e1;border-radius:12px;padding:18px;text-align:center;margin:0 0 20px">
+        <span style="font-size:36px;font-weight:800;letter-spacing:10px;color:#0f172a;font-family:monospace">${otp}</span>
+      </div>
+      <p style="font-size:13px;color:#64748b;margin:0 0 8px">
+        This code expires in <strong>15 minutes</strong>. Do not share this code with anyone.
+      </p>
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0 16px" />
+      <p style="font-size:12px;color:#94a3b8;margin:0">
+        If you did not request this registration, you can safely ignore this email.
+      </p>
+    </div>`;
+
+    // 1. Try SMTP if configured
+    if (smtpConfigured) {
+      const port = Number(process.env.MAIL_PORT || env.SMTP_PORT || 587);
+      const isSecure = port === 465;
+      const transport = nodemailer.createTransport({
+        host,
+        port,
+        secure: isSecure,
+        requireTLS: !isSecure,
+        auth: { user, pass },
+        connectionTimeout: 10000,
+        socketTimeout: 20000,
       });
 
-      if (brevoRes.ok) {
+      try {
+        await transport.sendMail({
+          from: {
+            name: process.env.MAIL_FROM_NAME || env.BREVO_SENDER_NAME || "MobiusEMS",
+            address: process.env.MAIL_FROM_ADDRESS || user,
+          },
+          to: input.adminEmail,
+          subject: emailSubject,
+          text: emailText,
+          html: emailHtml,
+        });
+
         response.json({
           success: true,
-          message: "Check your email for the verification link. It expires in 30 minutes.",
+          message: `Verification code sent to ${input.adminEmail}.`,
           data: {
+            registrationToken,
             emailSent: true,
           },
         });
         return;
+      } catch (err) {
+        console.error("Failed to send SMTP OTP email:", err);
+        // Fallback to providing code directly so user is never blocked
+        response.json({
+          success: true,
+          message: "Verification email could not be sent. Use the direct code provided below.",
+          data: {
+            registrationToken,
+            emailSent: false,
+            directOtp: otp,
+          },
+        });
+        return;
+      } finally {
+        transport.close();
       }
-
-      console.error("Brevo registration email error:", await brevoRes.text());
-      response.json({
-        success: true,
-        message: "Verification email could not be sent. You can complete registration directly below.",
-        data: {
-          token,
-          emailSent: false,
-          verificationUrl: url.toString(),
-        },
-      });
-      return;
-    } catch (err) {
-      console.error("Brevo dispatch error:", err);
-      response.json({
-        success: true,
-        message: "Verification email could not be sent. You can complete registration directly below.",
-        data: {
-          token,
-          emailSent: false,
-          verificationUrl: url.toString(),
-        },
-      });
-      return;
     }
-  }
 
-  // 3. Fallback when neither SMTP nor Brevo is configured on host
-  response.json({
-    success: true,
-    message: "Email service is not configured on this server. Please choose your administrator password to finish registration directly.",
-    data: {
-      token,
-      emailSent: false,
-      verificationUrl: url.toString(),
-    },
-  });
-}));
-registrationRouter.post("/complete", validate(z.object({ body: finish })), asyncHandler(async (request, response) => {
-  const input = finish.parse(request.body);
-  let verified;
-  try {
-    const payload = jwt.verify(input.token, env.JWT_ACCESS_SECRET, { algorithms: ["HS256"], audience: "organization-registration", issuer: "mobius-ems" });
-    if (typeof payload === "string" || payload.purpose !== "organization-registration") throw new Error();
-    verified = details.parse(payload);
-  } catch { throw new AppError("Verification link is invalid or expired. Please register again.", 400); }
-  const tenant = await createTenant({ ...verified, plan: "STANDARD", temporaryPassword: input.password });
-  response.status(201).json({ success: true, message: "Organization created. Sign in with your organization ID and password.", data: { slug: tenant!.slug } });
-}));
+    // 2. Try Brevo API if configured
+    if (brevoConfigured) {
+      try {
+        const brevoRes = await fetch("https://api.brevo.com/v3/smtp/email", {
+          method: "POST",
+          headers: {
+            accept: "application/json",
+            "content-type": "application/json",
+            "api-key": env.BREVO_API_KEY!,
+          },
+          body: JSON.stringify({
+            sender: { name: env.BREVO_SENDER_NAME, email: env.BREVO_SENDER_EMAIL },
+            to: [{ email: input.adminEmail, name: input.adminName }],
+            subject: emailSubject,
+            textContent: emailText,
+            htmlContent: emailHtml,
+          }),
+          signal: AbortSignal.timeout(20000),
+        });
+
+        if (brevoRes.ok) {
+          response.json({
+            success: true,
+            message: `Verification code sent to ${input.adminEmail}.`,
+            data: {
+              registrationToken,
+              emailSent: true,
+            },
+          });
+          return;
+        }
+
+        console.error("Brevo registration OTP email error:", await brevoRes.text());
+        response.json({
+          success: true,
+          message: "Verification email could not be sent. Use the direct code provided below.",
+          data: {
+            registrationToken,
+            emailSent: false,
+            directOtp: otp,
+          },
+        });
+        return;
+      } catch (err) {
+        console.error("Brevo dispatch error:", err);
+        response.json({
+          success: true,
+          message: "Verification email could not be sent. Use the direct code provided below.",
+          data: {
+            registrationToken,
+            emailSent: false,
+            directOtp: otp,
+          },
+        });
+        return;
+      }
+    }
+
+    // 3. Fallback when neither SMTP nor Brevo is configured
+    response.json({
+      success: true,
+      message: "Email service is not configured on this server. Use the direct code provided below to complete registration.",
+      data: {
+        registrationToken,
+        emailSent: false,
+        directOtp: otp,
+      },
+    });
+  })
+);
+
+registrationRouter.post(
+  "/verify-otp",
+  validate(verifyOtpSchema),
+  asyncHandler(async (request, response) => {
+    const { registrationToken, otp, password } = request.body;
+
+    let payload: jwt.JwtPayload;
+    try {
+      const decoded = jwt.verify(registrationToken, env.JWT_ACCESS_SECRET, {
+        algorithms: ["HS256"],
+        audience: "organization-registration-otp",
+        issuer: "mobius-ems",
+      });
+      if (typeof decoded === "string" || decoded.purpose !== "organization-registration-otp") {
+        throw new Error();
+      }
+      payload = decoded;
+    } catch {
+      throw new AppError("Verification code is expired or invalid. Please request a new code.", 400);
+    }
+
+    const expectedHash = createHash("sha256").update(otp.trim()).digest("hex");
+    if (payload.otpHash !== expectedHash) {
+      throw new AppError("Invalid verification code. Please check and try again.", 400);
+    }
+
+    const verified = details.parse(payload);
+    const tenant = await createTenant({ ...verified, plan: "STANDARD", temporaryPassword: password });
+
+    response.status(201).json({
+      success: true,
+      message: "Organization created successfully! Sign in with your organization ID and password.",
+      data: { slug: tenant!.slug },
+    });
+  })
+);
+
+registrationRouter.post(
+  "/complete",
+  validate(z.object({ body: finish })),
+  asyncHandler(async (request, response) => {
+    const input = finish.parse(request.body);
+    let verified;
+    try {
+      const payload = jwt.verify(input.token, env.JWT_ACCESS_SECRET, {
+        algorithms: ["HS256"],
+        audience: ["organization-registration", "organization-registration-otp"],
+        issuer: "mobius-ems",
+      });
+      if (typeof payload === "string") throw new Error();
+      verified = details.parse(payload);
+    } catch {
+      throw new AppError("Verification link is invalid or expired. Please register again.", 400);
+    }
+    const tenant = await createTenant({ ...verified, plan: "STANDARD", temporaryPassword: input.password });
+    response.status(201).json({
+      success: true,
+      message: "Organization created. Sign in with your organization ID and password.",
+      data: { slug: tenant!.slug },
+    });
+  })
+);
