@@ -10,6 +10,7 @@ import { OPPORTUNITY_STATUSES, SalesOpportunity } from "../models/SalesOpportuni
 import { SalesRevenueTransaction } from "../models/SalesRevenueTransaction.js";
 import { SalesTarget } from "../models/SalesTarget.js";
 import { SalesTerritory } from "../models/SalesTerritory.js";
+import { SalesActivity } from "../models/SalesActivity.js";
 import { calculateTargetProgress } from "./salesMath.js";
 import { AppError } from "../utils/AppError.js";
 import { writeAudit } from "./auditService.js";
@@ -387,6 +388,16 @@ export const createSalesData = async (viewer: SessionUser, entity: SalesEntityNa
     entityId: item.id,
     newValue: input,
   });
+  if (["leads", "customers", "opportunities"].includes(entity)) {
+    await SalesActivity.create({
+      entityType: entity,
+      entityId: item._id,
+      type: "NOTE",
+      content: `${entity === "leads" ? "Lead" : entity === "customers" ? "Customer" : "Opportunity"} created`,
+      performedBy: new Types.ObjectId(viewer.id),
+      performedByName: viewer.email,
+    }).catch(() => {});
+  }
   return item;
 };
 
@@ -573,7 +584,82 @@ export const updateSalesData = async (viewer: SessionUser, entity: SalesEntityNa
     oldValue: previous,
     newValue: input,
   });
+  if (["leads", "customers", "opportunities"].includes(entity)) {
+    if (entity === "opportunities" && input.stage && input.stage !== previous.stage) {
+      await SalesActivity.create({
+        entityType: "opportunities",
+        entityId: item._id,
+        type: "STAGE_CHANGE",
+        content: `Stage updated from ${previous.stage ?? "None"} to ${input.stage}`,
+        metadata: { previousStage: previous.stage, nextStage: input.stage },
+        performedBy: new Types.ObjectId(viewer.id),
+        performedByName: viewer.email,
+      }).catch(() => {});
+    }
+    if (input.status && input.status !== previous.status) {
+      await SalesActivity.create({
+        entityType: entity,
+        entityId: item._id,
+        type: input.status === "CONVERTED" ? "CONVERSION" : "STATUS_CHANGE",
+        content: input.status === "CONVERTED"
+          ? `Lead converted to customer with confirmed sale`
+          : `Status changed from ${previous.status ?? "None"} to ${input.status}`,
+        metadata: { previousStatus: previous.status, nextStatus: input.status },
+        performedBy: new Types.ObjectId(viewer.id),
+        performedByName: viewer.email,
+      }).catch(() => {});
+    }
+    if (["leads", "customers"].includes(entity) && input.market && input.market !== previous.market) {
+      await SalesActivity.create({
+        entityType: entity,
+        entityId: item._id,
+        type: "LOCATION_PIN",
+        content: `Location updated to ${input.market}`,
+        metadata: { market: input.market, coordinates: input.coordinates },
+        performedBy: new Types.ObjectId(viewer.id),
+        performedByName: viewer.email,
+      }).catch(() => {});
+    }
+  }
   return item;
+};
+
+export const listActivities = async (viewer: SessionUser, entity: SalesEntityName, entityId: string) => {
+  const scope = await resolveSalesScope(viewer);
+  const model = modelFor(entity);
+  const exists = await model.exists({ _id: entityId, ...scopeFilter(scope, entity) });
+  if (!exists) throw new AppError("Sales record not found", 404);
+
+  return SalesActivity.find({ entityId })
+    .populate("performedBy", "firstName lastName email")
+    .sort({ createdAt: -1 })
+    .limit(100)
+    .lean();
+};
+
+export const createActivity = async (
+  viewer: SessionUser,
+  entity: SalesEntityName,
+  entityId: string,
+  raw: { type?: string; content: string; metadata?: Record<string, unknown> },
+) => {
+  const scope = await resolveSalesScope(viewer);
+  const model = modelFor(entity);
+  const exists = await model.exists({ _id: entityId, ...scopeFilter(scope, entity) });
+  if (!exists) throw new AppError("Sales record not found", 404);
+  if (!raw.content || !raw.content.trim()) throw new AppError("Activity content is required", 422);
+
+  return SalesActivity.create({
+    entityType: entity as "leads" | "customers" | "opportunities",
+    entityId: new Types.ObjectId(entityId),
+    type: raw.type && ["NOTE", "CALL_LOG", "STAGE_CHANGE", "STATUS_CHANGE", "LOCATION_PIN", "CONVERSION"].includes(raw.type)
+      ? (raw.type as "NOTE" | "CALL_LOG" | "STAGE_CHANGE" | "STATUS_CHANGE" | "LOCATION_PIN" | "CONVERSION")
+      : "NOTE",
+    content: raw.content.trim(),
+    metadata: raw.metadata,
+    performedBy: new Types.ObjectId(viewer.id),
+    performedByName: viewer.email,
+  });
 };
 
 export const listTargetVersions = async (viewer: SessionUser, targetId: string) => {

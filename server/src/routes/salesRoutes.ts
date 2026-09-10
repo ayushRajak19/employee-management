@@ -84,6 +84,8 @@ for (const route of dataRoutes) {
   salesRouter.get(`/${route.path}`, route.view, asEntity(route.entity), asyncHandler(controller.listData));
   salesRouter.post(`/${route.path}`, route.manage, validate(route.create), asEntity(route.entity), asyncHandler(controller.createData));
   salesRouter.patch(`/${route.path}/:id`, route.manage, validate(route.update), validate(salesIdSchema), asEntity(route.entity), asyncHandler(controller.updateData));
+  salesRouter.get(`/${route.path}/:id/activities`, route.view, validate(salesIdSchema), asEntity(route.entity), asyncHandler(controller.listActivities));
+  salesRouter.post(`/${route.path}/:id/activities`, route.manage, validate(salesIdSchema), asEntity(route.entity), asyncHandler(controller.createActivity));
 }
 
 salesRouter.get("/configuration", requirePermission("sales.configuration.manage"), asyncHandler(controller.getConfiguration));

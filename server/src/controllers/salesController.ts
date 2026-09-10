@@ -42,6 +42,8 @@ export const listData = async (request: Request, response: Response) => send(res
 export const listTerritoryData = async (request: Request, response: Response) => send(response, "Territory sales records retrieved", { items: await data.listTerritorySalesData(request.user!, entity(request), String(request.params.territoryId)) });
 export const createData = async (request: Request, response: Response) => send(response, "Sales record created", { item: await data.createSalesData(request.user!, entity(request), request.body) }, 201);
 export const updateData = async (request: Request, response: Response) => send(response, "Sales record updated", { item: await data.updateSalesData(request.user!, entity(request), String(request.params.id), request.body) });
+export const listActivities = async (request: Request, response: Response) => send(response, "Activities retrieved", { items: await data.listActivities(request.user!, entity(request), String(request.params.id)) });
+export const createActivity = async (request: Request, response: Response) => send(response, "Activity created", { item: await data.createActivity(request.user!, entity(request), String(request.params.id), request.body) }, 201);
 
 export const getConfiguration = async (_request: Request, response: Response) => send(response, "Sales configuration retrieved", { configuration: await configuration.getSalesConfiguration() });
 export const updateConfiguration = async (request: Request, response: Response) => send(response, "Sales configuration updated", { configuration: await configuration.updateSalesConfiguration(request.user!, request.body) });

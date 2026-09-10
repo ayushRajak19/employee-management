@@ -62,3 +62,4 @@ import "../models/EmployeeTargetCommitment.js";
 import "../models/CompensationRule.js";
 import "../models/TargetReminderLog.js";
 import "../models/SalesTerritory.js";
+import "../models/SalesActivity.js";

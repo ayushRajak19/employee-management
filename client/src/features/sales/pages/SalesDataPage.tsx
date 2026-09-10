@@ -2,7 +2,7 @@ import countryMaster from "world-countries";
 import { useEffect, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { PermissionName } from "@mobius-ems/shared";
-import { Database, Plus } from "lucide-react";
+import { Database, Plus, Kanban, LayoutList } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -10,6 +10,8 @@ import { useAuth } from "@/features/auth/AuthProvider";
 import { salesApi, type SalesRecord } from "../salesApi";
 import { getStatesForCountry, getStateCoordinates } from "../data/stateData";
 import { LocationPickerMap } from "../components/LocationPickerMap";
+import { SalesKanbanBoard } from "../components/SalesKanbanBoard";
+import { SalesActivityDrawer } from "../components/SalesActivityDrawer";
 
 type SalesDataPath = "leads" | "customers" | "pipeline" | "targets" | "revenue" | "channel-partners";
 type Column = { label: string; align?: "right"; render: (item: SalesRecord) => ReactNode };
@@ -131,6 +133,8 @@ const StatusControl = ({ item, path, nextStatuses, reasonRequired = false }: {
       setCandidate("");
       setReason("");
       await queryClient.invalidateQueries({ queryKey: ["sales"] });
+      await queryClient.invalidateQueries({ queryKey: ["target-performance"] });
+      await queryClient.invalidateQueries({ queryKey: ["sales", "analytics"] });
     },
   });
   if (!canUpdate || nextStatuses.length === 0) return <div><span className="font-semibold">{item.status}</span>{item.lostReason && <p className="mt-1 max-w-52 whitespace-normal text-xs text-slate-400">{item.lostReason}</p>}</div>;
@@ -161,15 +165,31 @@ const PipelineStageControl = ({ item }: { item: SalesRecord }) => {
       const stage = pipelineStages.find((candidate) => candidate.value === stageValue)!;
       return salesApi.updateRecord("pipeline", item._id, { stage: stage.value, probability: stage.probability });
     },
-    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["sales"] }); },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["sales"] });
+      await queryClient.invalidateQueries({ queryKey: ["target-performance"] });
+      await queryClient.invalidateQueries({ queryKey: ["sales", "analytics"] });
+    },
   });
   if (!canUpdate) return item.stage?.replaceAll("_", " ") ?? "—";
   return <div><select aria-label={`Update ${item.name ?? "opportunity"} stage`} disabled={update.isPending} className="h-9 rounded-lg border bg-white px-2 text-xs" value={current?.value ?? item.stage} onChange={(event) => update.mutate(event.target.value)}>{!current && item.stage && <option value={item.stage}>{item.stage}</option>}{pipelineStages.map((stage) => <option key={stage.value} value={stage.value}>{stage.label} · {stage.probability}%</option>)}</select>{update.error && <p className="mt-1 max-w-52 whitespace-normal text-xs text-red-600">{update.error.message}</p>}</div>;
 };
 
-const columnsFor = (path: SalesDataPath): Column[] => {
+const columnsFor = (path: SalesDataPath, onSelectRecord?: (item: SalesRecord) => void): Column[] => {
   if (path === "leads") return [
-    { label: "Lead", render: (item) => <div><p>{item.name ?? "—"}</p>{item.companyName && <p className="mt-1 text-xs font-normal text-slate-400">{item.companyName}</p>}</div> },
+    {
+      label: "Lead",
+      render: (item) => (
+        <button
+          type="button"
+          onClick={() => onSelectRecord?.(item)}
+          className="text-left group cursor-pointer"
+        >
+          <p className="font-semibold text-brand-700 group-hover:underline">{item.name ?? "—"}</p>
+          {item.companyName && <p className="mt-1 text-xs font-normal text-slate-400">{item.companyName}</p>}
+        </button>
+      ),
+    },
     { label: "Status / action", render: (item) => <StatusControl item={item} path="leads" nextStatuses={leadTransitions[(item.status ?? "NEW") as LeadStatus] ?? []} reasonRequired/> },
     { label: "Customer", render: (item) => item.customer ? labelOf(item.customer) : "—" },
     { label: "Contact", render: (item) => <div><p>{item.phone ?? "—"}</p>{item.email && <p className="mt-1 text-xs text-slate-400">{item.email}</p>}</div> },
@@ -180,7 +200,19 @@ const columnsFor = (path: SalesDataPath): Column[] => {
     { label: "Estimated value", align: "right", render: (item) => money(item.currency, item.estimatedValue) },
   ];
   if (path === "customers") return [
-    { label: "Customer", render: (item) => <div><p>{item.name ?? "—"}</p>{item.primaryContactName && <p className="mt-1 text-xs font-normal text-slate-400">Contact: {item.primaryContactName}</p>}</div> },
+    {
+      label: "Customer",
+      render: (item) => (
+        <button
+          type="button"
+          onClick={() => onSelectRecord?.(item)}
+          className="text-left group cursor-pointer"
+        >
+          <p className="font-semibold text-brand-700 group-hover:underline">{item.name ?? "—"}</p>
+          {item.primaryContactName && <p className="mt-1 text-xs font-normal text-slate-400">Contact: {item.primaryContactName}</p>}
+        </button>
+      ),
+    },
     { label: "Contact", render: (item) => <div><p>{item.phone ?? "—"}</p>{item.email && <p className="mt-1 text-xs text-slate-400">{item.email}</p>}</div> },
     { label: "Status / action", render: (item) => <StatusControl item={item} path="customers" nextStatuses={[item.status === "ACTIVE" ? "INACTIVE" : "ACTIVE"]}/> },
     { label: "Origin", render: (item) => item.sourceLead ? "Converted lead" : "Direct customer" },
@@ -190,7 +222,18 @@ const columnsFor = (path: SalesDataPath): Column[] => {
     { label: "Lifetime revenue", align: "right", render: (item) => money(item.currency, item.lifetimeRevenue) },
   ];
   if (path === "pipeline") return [
-    { label: "Opportunity", render: (item) => item.name ?? "—" },
+    {
+      label: "Opportunity",
+      render: (item) => (
+        <button
+          type="button"
+          onClick={() => onSelectRecord?.(item)}
+          className="text-left group cursor-pointer"
+        >
+          <p className="font-semibold text-brand-700 group-hover:underline">{item.name ?? "—"}</p>
+        </button>
+      ),
+    },
     { label: "Status / action", render: (item) => <StatusControl item={item} path="pipeline" nextStatuses={opportunityTransitions[(item.status ?? "OPEN") as OpportunityStatus] ?? []} reasonRequired/> },
     { label: "Customer", render: (item) => labelOf(item.customer) },
     { label: "Stage / action", render: (item) => <PipelineStageControl item={item}/> },
@@ -266,6 +309,8 @@ export const SalesDataPage = ({ path, title }: { path: SalesDataPath; title: str
   const [open, setOpen] = useState(false);
   const [notice, setNotice] = useState("");
   const [form, setForm] = useState(initialForm);
+  const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
+  const [selectedRecordForDrawer, setSelectedRecordForDrawer] = useState<SalesRecord | null>(null);
   const canManage = managePermissions[path].some((permission) => user?.permissions.includes(permission));
   const hasTeamScope = Boolean(user?.permissions.includes("sales.view.team") || user?.permissions.includes("sales.view.all"));
   const isHrView = user?.role === "HR_ADMIN";
@@ -274,7 +319,7 @@ export const SalesDataPage = ({ path, title }: { path: SalesDataPath; title: str
   const territories = useQuery({ queryKey: ["sales", "territories", "form"], queryFn: salesApi.territories, enabled: open && hasTeamScope });
   const customers = useQuery({ queryKey: ["sales", "customers", "form"], queryFn: () => salesApi.records("customers"), enabled: open && ["pipeline", "revenue"].includes(path) });
   const partners = useQuery({ queryKey: ["sales", "channel-partners", "form"], queryFn: () => salesApi.records("channel-partners"), enabled: open && path === "revenue" });
-  const columns = columnsFor(path);
+  const columns = columnsFor(path, (record) => setSelectedRecordForDrawer(record));
 
   useEffect(() => {
     if (!open) return;
@@ -283,6 +328,44 @@ export const SalesDataPage = ({ path, title }: { path: SalesDataPath; title: str
       employee: current.employee || employees.data?.items[0]?._id || "",
     }));
   }, [employees.data, open]);
+
+  const moveMutation = useMutation({
+    mutationFn: ({ id, target }: { id: string; target: string }) => {
+      if (path === "pipeline") {
+        if (target === "WON") {
+          return salesApi.updateRecord("pipeline", id, { status: "WON" });
+        }
+        if (target === "LOST") {
+          return salesApi.updateRecord("pipeline", id, { status: "LOST", lostReason: "Closed Lost" });
+        }
+        const stg = pipelineStages.find((s) => s.value === target);
+        return salesApi.updateRecord("pipeline", id, {
+          stage: target,
+          probability: stg?.probability ?? 50,
+          status: "OPEN",
+        });
+      }
+      if (path === "leads") {
+        if (target === "CONVERTED") {
+          const item = query.data?.items.find((it) => it._id === id);
+          return salesApi.updateRecord("leads", id, {
+            status: "CONVERTED",
+            saleAmount: item?.estimatedValue ?? 0,
+          });
+        }
+        if (target === "LOST") {
+          return salesApi.updateRecord("leads", id, { status: "LOST", lostReason: "Closed Lost" });
+        }
+        return salesApi.updateRecord("leads", id, { status: target });
+      }
+      return Promise.resolve(null);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["sales"] });
+      await queryClient.invalidateQueries({ queryKey: ["target-performance"] });
+      await queryClient.invalidateQueries({ queryKey: ["sales", "analytics"] });
+    },
+  });
 
   const create = useMutation({
     mutationFn: () => {
@@ -326,6 +409,8 @@ export const SalesDataPage = ({ path, title }: { path: SalesDataPath; title: str
       setForm(initialForm());
       setNotice(`${title === "Pipeline" ? "Opportunity" : title.replace(/s$/, "")} created successfully.`);
       await queryClient.invalidateQueries({ queryKey: ["sales"] });
+      await queryClient.invalidateQueries({ queryKey: ["target-performance"] });
+      await queryClient.invalidateQueries({ queryKey: ["sales", "analytics"] });
     },
   });
 
@@ -385,10 +470,68 @@ export const SalesDataPage = ({ path, title }: { path: SalesDataPath; title: str
   const statesForSelectedCountry = getStatesForCountry(form.country);
 
   return <main className="flex-1 px-5 py-8 sm:px-8"><div className="mx-auto max-w-[1440px]">
-    <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="text-sm font-medium text-brand-700">Sales Intelligence</p><h1 className="mt-1 text-3xl font-semibold">{title}</h1><p className="mt-2 max-w-3xl text-sm text-slate-500">{sectionMeta[path].purpose}</p></div>{canManage && <Button onClick={openCreate}><Plus size={16}/> Add {addLabel}</Button>}</div>
+    <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+      <div>
+        <p className="text-sm font-medium text-brand-700">Sales Intelligence</p>
+        <h1 className="mt-1 text-3xl font-semibold">{title}</h1>
+        <p className="mt-2 max-w-3xl text-sm text-slate-500">{sectionMeta[path].purpose}</p>
+      </div>
+      <div className="flex items-center gap-2.5">
+        {(path === "pipeline" || path === "leads") && (
+          <div className="flex rounded-xl border border-slate-200 bg-white p-1 shadow-xs">
+            <button
+              type="button"
+              onClick={() => setViewMode("table")}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition cursor-pointer ${
+                viewMode === "table"
+                  ? "bg-brand-600 text-white shadow-xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+              }`}
+            >
+              <LayoutList size={14} />
+              Table
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("kanban")}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition cursor-pointer ${
+                viewMode === "kanban"
+                  ? "bg-brand-600 text-white shadow-xs"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+              }`}
+            >
+              <Kanban size={14} />
+              Kanban Pipeline
+            </button>
+          </div>
+        )}
+        {canManage && <Button onClick={openCreate}><Plus size={16}/> Add {addLabel}</Button>}
+      </div>
+    </div>
     <div className={`mt-5 rounded-xl border p-4 text-sm ${isHrView ? "border-blue-100 bg-blue-50 text-blue-900" : "border-emerald-100 bg-emerald-50 text-emerald-900"}`}><p className="font-medium">{isHrView ? "HR view · Read only" : hasTeamScope ? "Team workflow" : "Your sales workflow"}</p><p className="mt-1 text-xs opacity-80">{isHrView ? sectionMeta[path].hr : sectionMeta[path].next}</p></div>
     {notice && <p role="status" className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{notice}</p>}
-    <section className="mt-5 overflow-hidden rounded-2xl border bg-white shadow-soft">{query.isLoading ? <div className="p-5"><Skeleton className="h-64"/></div> : query.isError ? <p className="p-5 text-sm text-red-700">{query.error.message}</p> : !query.data?.items.length ? <div className="grid min-h-64 place-items-center p-6 text-center"><div><Database className="mx-auto text-slate-300"/><p className="mt-3 font-medium">Nothing here yet</p><p className="mt-1 text-sm text-slate-400">{sectionMeta[path].empty}</p>{canManage && <Button className="mt-4" variant="secondary" onClick={openCreate}><Plus size={15}/> Add first {addLabel}</Button>}</div></div> : <div className="overflow-x-auto"><table className="min-w-full text-left text-sm"><thead className="border-b bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr>{columns.map((column) => <th key={column.label} className={`px-5 py-3 ${column.align === "right" ? "text-right" : ""}`}>{column.label}</th>)}</tr></thead><tbody className="divide-y">{query.data.items.map((item) => <tr key={item._id}>{columns.map((column) => <td key={column.label} className={`whitespace-nowrap px-5 py-4 align-top ${column.align === "right" ? "text-right font-medium" : "text-slate-600 first:font-medium first:text-ink"}`}>{column.render(item)}</td>)}</tr>)}</tbody></table></div>}</section>
+
+    {viewMode === "kanban" && (path === "pipeline" || path === "leads") ? (
+      <section className="mt-5">
+        {query.isLoading ? (
+          <div className="p-5"><Skeleton className="h-64"/></div>
+        ) : query.isError ? (
+          <p className="p-5 text-sm text-red-700">{query.error.message}</p>
+        ) : (
+          <SalesKanbanBoard
+            path={path}
+            items={query.data?.items ?? []}
+            canManage={canManage}
+            onMoveStage={(id, target) => moveMutation.mutate({ id, target })}
+            onSelectRecord={(rec) => setSelectedRecordForDrawer(rec)}
+          />
+        )}
+      </section>
+    ) : (
+      <section className="mt-5 overflow-hidden rounded-2xl border bg-white shadow-soft">
+        {query.isLoading ? <div className="p-5"><Skeleton className="h-64"/></div> : query.isError ? <p className="p-5 text-sm text-red-700">{query.error.message}</p> : !query.data?.items.length ? <div className="grid min-h-64 place-items-center p-6 text-center"><div><Database className="mx-auto text-slate-300"/><p className="mt-3 font-medium">Nothing here yet</p><p className="mt-1 text-sm text-slate-400">{sectionMeta[path].empty}</p>{canManage && <Button className="mt-4" variant="secondary" onClick={openCreate}><Plus size={15}/> Add first {addLabel}</Button>}</div></div> : <div className="overflow-x-auto"><table className="min-w-full text-left text-sm"><thead className="border-b bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr>{columns.map((column) => <th key={column.label} className={`px-5 py-3 ${column.align === "right" ? "text-right" : ""}`}>{column.label}</th>)}</tr></thead><tbody className="divide-y">{query.data.items.map((item) => <tr key={item._id}>{columns.map((column) => <td key={column.label} className={`whitespace-nowrap px-5 py-4 align-top ${column.align === "right" ? "text-right font-medium" : "text-slate-600 first:font-medium first:text-ink"}`}>{column.render(item)}</td>)}</tr>)}</tbody></table></div>}
+      </section>
+    )}
   </div>
   {open && <div className="fixed inset-0 z-[2000] grid place-items-center overflow-y-auto bg-ink/35 p-4 backdrop-blur-sm"><form className="my-6 w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl" onSubmit={(event) => { event.preventDefault(); create.mutate(); }}><h2 className="text-xl font-semibold">Add {addLabel}</h2><p className="mt-1 text-sm text-slate-500">{sectionMeta[path].purpose}</p>
     {hasTeamScope && !territories.isLoading && !territories.data?.items.length && path !== "targets" && <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">No territories are configured yet. You can still capture unassigned sales records; add territories later for reporting.</div>}
@@ -482,5 +625,21 @@ export const SalesDataPage = ({ path, title }: { path: SalesDataPath; title: str
     {create.error && <p className="mt-4 text-sm text-red-600">{create.error.message}</p>}
     <div className="mt-6 flex justify-end gap-2"><Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancel</Button><Button disabled={create.isPending}>{create.isPending ? "Saving..." : "Save"}</Button></div>
   </form></div>}
+
+  {selectedRecordForDrawer && ["leads", "customers", "pipeline"].includes(path) && (
+    <SalesActivityDrawer
+      record={selectedRecordForDrawer}
+      path={path as "leads" | "customers" | "pipeline"}
+      onClose={() => setSelectedRecordForDrawer(null)}
+      onUpdateStage={(stage) => {
+        moveMutation.mutate({ id: selectedRecordForDrawer._id, target: stage });
+        setSelectedRecordForDrawer((prev) => (prev ? { ...prev, stage } : null));
+      }}
+      onUpdateStatus={(status) => {
+        moveMutation.mutate({ id: selectedRecordForDrawer._id, target: status });
+        setSelectedRecordForDrawer((prev) => (prev ? { ...prev, status } : null));
+      }}
+    />
+  )}
   </main>;
 };

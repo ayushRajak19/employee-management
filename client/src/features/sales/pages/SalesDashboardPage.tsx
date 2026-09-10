@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ArrowRight, Map, Route, Users } from "lucide-react";
+import { AlertTriangle, ArrowRight, Map, Route, Users, Target } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/features/auth/AuthProvider";
@@ -11,7 +11,7 @@ import { CountrySales } from "../components/CountrySales";
 const salesFlow = [
   { label: "1. Lead", text: "Capture a potential buyer", path: "/sales/leads" },
   { label: "2. Customer", text: "Created when the lead converts", path: "/sales/customers" },
-  { label: "3. Pipeline", text: "Track the customer's active deal", path: "/sales/pipeline" },
+  { label: "3. Pipeline", text: "Track active deals in visual Kanban", path: "/sales/pipeline" },
   { label: "4. Revenue", text: "Created when the deal is won", path: "/sales/revenue" },
 ];
 
@@ -29,7 +29,7 @@ export const SalesDashboardPage = () => {
   return <main className="flex-1 px-5 py-8 sm:px-8"><div className="mx-auto max-w-[1440px]">
     <p className="text-sm font-medium text-brand-700">Sales Intelligence</p>
     <h1 className="mt-1 text-3xl font-semibold">{all ? "Company sales" : team ? "Team sales" : "My sales"}</h1>
-    <p className="mt-2 text-sm text-slate-500">One connected view from prospect and customer ownership to pipeline and realized revenue.</p>
+    <p className="mt-2 max-w-3xl text-sm text-slate-500">One connected view from prospect and customer ownership to pipeline and realized revenue.</p>
 
     <section className={`mt-5 rounded-2xl border p-5 ${isHrView ? "border-blue-100 bg-blue-50" : "border-emerald-100 bg-emerald-50"}`}>
       <h2 className="font-semibold">{isHrView ? "HR responsibility" : isManagementView ? "Company sales flow" : "Your daily sales flow"}</h2>
@@ -42,6 +42,53 @@ export const SalesDashboardPage = () => {
       <div className="mt-5 grid gap-5 lg:grid-cols-[1.5fr_1fr]">
         <section className="rounded-2xl border bg-white p-5 shadow-soft"><h2 className="font-semibold">Revenue trend</h2><p className="mt-1 text-xs text-slate-400">Last six calendar months</p><div className="mt-4"><SalesTrendChart items={query.data.trend ?? []}/></div></section>
         <section className="space-y-3">
+          <div className="rounded-2xl border bg-white p-5 shadow-soft">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Target size={17} className="text-brand-600" />
+                <h2 className="font-semibold">Target & Quota Pacing</h2>
+              </div>
+              <Link to="/sales/targets" className="text-xs font-semibold text-brand-600 hover:underline">
+                View targets →
+              </Link>
+            </div>
+            <div className="mt-3 flex items-baseline justify-between">
+              <p className="text-3xl font-semibold text-slate-900">
+                {query.data.targetAchievement}%
+              </p>
+              <span
+                className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                  query.data.targetAchievement >= 100
+                    ? "bg-emerald-100 text-emerald-800"
+                    : query.data.targetAchievement >= 70
+                    ? "bg-blue-100 text-blue-800"
+                    : "bg-amber-100 text-amber-800"
+                }`}
+              >
+                {query.data.targetAchievement >= 100
+                  ? "Target Reached 🎉"
+                  : query.data.targetAchievement >= 70
+                  ? "On Track"
+                  : "Behind Pace"}
+              </span>
+            </div>
+            <p className="mt-1 text-xs text-slate-500">
+              {new Intl.NumberFormat("en-IN", { style: "currency", currency: query.data.currency, maximumFractionDigits: 0 }).format(query.data.actualRevenue)} achieved of {new Intl.NumberFormat("en-IN", { style: "currency", currency: query.data.currency, maximumFractionDigits: 0 }).format(query.data.targetRevenue)} target
+            </p>
+            <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-100">
+              <div
+                className={`h-full rounded-full transition-all ${
+                  query.data.targetAchievement >= 100
+                    ? "bg-emerald-500"
+                    : query.data.targetAchievement >= 70
+                    ? "bg-blue-500"
+                    : "bg-amber-500"
+                }`}
+                style={{ width: `${Math.min(100, query.data.targetAchievement)}%` }}
+              />
+            </div>
+          </div>
+
           <div className="rounded-2xl border bg-white p-5 shadow-soft"><div className="flex items-center gap-2"><Users size={17} className="text-brand-600"/><h2 className="font-semibold">Capacity</h2></div><p className="mt-4 text-3xl font-semibold">{query.data.capacityUtilization}%</p><p className="mt-1 text-sm text-slate-500">{query.data.activeHeadcount} active / {query.data.requiredHeadcount} required</p>{query.data.headcountGap > 0 && <p className="mt-3 flex items-center gap-2 text-sm text-amber-700"><AlertTriangle size={15}/>{query.data.headcountGap} employee capacity gap</p>}</div>
           <div className="rounded-2xl border bg-white p-5 shadow-soft"><h2 className="font-semibold">White-space opportunity</h2><p className="mt-3 text-3xl font-semibold">{query.data.opportunityScore}<span className="text-base text-slate-400"> / 100</span></p><p className="mt-1 text-sm text-slate-500">{query.data.opportunityBand.replaceAll("_", " ")} opportunity</p><p className="mt-3 text-xs text-slate-400">Estimated opportunity is deterministic, not guaranteed revenue.</p></div>
         </section>

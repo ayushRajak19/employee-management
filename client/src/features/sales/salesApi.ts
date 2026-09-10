@@ -155,6 +155,23 @@ export interface SalesLocationPin {
   companyName?: string;
 }
 
+export interface SalesActivityItem {
+  _id: string;
+  entityType: "leads" | "customers" | "opportunities";
+  entityId: string;
+  type: "NOTE" | "CALL_LOG" | "STAGE_CHANGE" | "STATUS_CHANGE" | "LOCATION_PIN" | "CONVERSION";
+  content: string;
+  metadata?: Record<string, unknown>;
+  performedByName?: string;
+  performedBy?: {
+    _id: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+  };
+  createdAt: string;
+}
+
 export const salesApi = {
   targetPerformance: () => api.get<{ items: TargetPerformanceDto[] }>("/api/v1/sales/target-performance/me"),
   teamTargetPerformance: () => api.get<{ items: TargetPerformanceDto[] }>("/api/v1/sales/target-performance/team"),
@@ -179,6 +196,9 @@ export const salesApi = {
   records: (path: string) => api.get<{ items: SalesRecord[] }>(`/api/v1/sales/${path}`),
   createRecord: (path: string, body: Record<string, unknown>) => api.post<{ item: SalesRecord }>(`/api/v1/sales/${path}`, body),
   updateRecord: (path: string, id: string, body: Record<string, unknown>) => api.patch<{ item: SalesRecord }>(`/api/v1/sales/${path}/${id}`, body),
+  activities: (path: string, id: string) => api.get<{ items: SalesActivityItem[] }>(`/api/v1/sales/${path}/${id}/activities`),
+  createActivity: (path: string, id: string, body: { type?: string; content: string; metadata?: Record<string, unknown> }) =>
+    api.post<{ item: SalesActivityItem }>(`/api/v1/sales/${path}/${id}/activities`, body),
   createTerritory: (body: Record<string, unknown>) => api.post<{ item: SalesTerritory }>("/api/v1/sales/territories", body),
   assignTerritory: (body: Record<string, unknown>) => api.post<{ item: unknown }>("/api/v1/sales/territories/assignments", body),
   employeeMap: () => api.get<{ scope: "SELF" | "TEAM" | "ALL"; geography: GeoNodeDto[]; employees: EmployeeMapItem[] }>("/api/v1/employee-map"),
