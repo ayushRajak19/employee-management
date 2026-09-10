@@ -59,4 +59,6 @@ import "../models/SalesOpportunity.js";
 import "../models/SalesRevenueTransaction.js";
 import "../models/SalesTarget.js";
 import "../models/EmployeeTargetCommitment.js";
+import "../models/CompensationRule.js";
+import "../models/TargetReminderLog.js";
 import "../models/SalesTerritory.js";

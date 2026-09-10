@@ -4,6 +4,7 @@ import { connectDatabase, disconnectDatabase } from "./config/database.js";
 import { env } from "./config/env.js";
 import { seedOrganization, seedTenantGeography, seedTenantRoles } from "./jobs/seedSuperAdmin.js";
 import { initializeEmailAutomation, runEmailAutomationCycle } from "./services/emailAutomationService.js";
+import { runTargetReminderCycle } from "./services/targetReminderService.js";
 import { Tenant } from "./models/Tenant.js";
 import { runWithTenant } from "./tenancy/tenantContext.js";
 
@@ -19,6 +20,7 @@ const start = async (): Promise<void> => {
   server.listen(env.PORT, () => console.log(`MobiusEMS listening on port ${env.PORT}`));
   void initializeEmailAutomation().catch((error: unknown) => console.error("Brevo email automation initialization failed", error));
   const automationTimer = setInterval(() => void runEmailAutomationCycle(), 60_000); automationTimer.unref();
+  const reminderTimer = setInterval(() => void runTargetReminderCycle(), 300_000); reminderTimer.unref();
 
   let shuttingDown = false;
   const shutdown = (signal: string) => {
@@ -26,6 +28,7 @@ const start = async (): Promise<void> => {
     shuttingDown = true;
     console.log(`${signal} received; shutting down`);
     clearInterval(automationTimer);
+    clearInterval(reminderTimer);
     server.close(() => { void disconnectDatabase().finally(() => process.exit(0)); });
     setTimeout(() => process.exit(1), 10_000).unref();
   };
@@ -37,5 +40,3 @@ void start().catch((error: unknown) => {
   console.error("MobiusEMS failed to start", error);
   void disconnectDatabase().finally(() => process.exit(1));
 });
-
-

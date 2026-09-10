@@ -6,6 +6,10 @@ import { employeeMap as getEmployeeMap } from "../services/employeeMapService.js
 import * as geography from "../services/geoService.js";
 import * as territories from "../services/salesTerritoryService.js";
 import * as targetPerformance from "../services/targetPerformanceService.js";
+import * as reminderService from "../services/targetReminderService.js";
+import { SalesTarget, type SalesTargetDocument } from "../models/SalesTarget.js";
+import type { Types } from "mongoose";
+import { AppError } from "../utils/AppError.js";
 
 const send = (response: Response, message: string, value: unknown, status = 200) => {
   response.status(status).json({ success: true, message, data: value });
@@ -45,3 +49,15 @@ export const employeeMap = async (request: Request, response: Response) => send(
 export const myTargetPerformance = async (request: Request, response: Response) => send(response, "Target performance retrieved", { items: await targetPerformance.targetPerformance(request.user!) });
 export const teamTargetPerformance = async (request: Request, response: Response) => send(response, "Team target performance retrieved", { items: await targetPerformance.targetPerformance(request.user!, true) });
 export const commitTarget = async (request: Request, response: Response) => send(response, "Commitment submitted", { item: await targetPerformance.commitToTarget(request.user!, String(request.params.targetId), request.body) }, 201);
+export const targetVersions = async (request: Request, response: Response) => send(response, "Target versions retrieved", { items: await data.listTargetVersions(request.user!, String(request.params.targetId)) });
+export const targetReminders = async (request: Request, response: Response) => send(response, "Target reminder history retrieved", await reminderService.getTargetReminderStatus(String(request.params.targetId)));
+export const triggerTargetReminder = async (request: Request, response: Response) => {
+  const target = await SalesTarget.findById(request.params.targetId);
+  if (!target) throw new AppError("Target not found", 404);
+  const result = await reminderService.processReminderForTarget(target as unknown as SalesTargetDocument & { _id: Types.ObjectId });
+  send(response, result.reason, result);
+};
+export const runReminderCycle = async (_request: Request, response: Response) => {
+  await reminderService.runTargetReminderCycle();
+  send(response, "Target reminder cycle executed", { success: true });
+};

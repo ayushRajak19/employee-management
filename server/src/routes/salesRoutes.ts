@@ -41,6 +41,10 @@ salesRouter.get("/me/analytics", salesAnalytics, asyncHandler(controller.selfAna
 salesRouter.get("/target-performance/me", requireAnyPermission("sales.analytics.self", "sales.analytics.team", "sales.analytics.all"), asyncHandler(controller.myTargetPerformance));
 salesRouter.get("/target-performance/team", requireAnyPermission("sales.analytics.team", "sales.analytics.all"), asyncHandler(controller.teamTargetPerformance));
 salesRouter.post("/target-performance/:targetId/commitment", requirePermission("sales.target.view"), asyncHandler(controller.commitTarget));
+salesRouter.get("/targets/:targetId/versions", requirePermission("sales.target.view"), asyncHandler(controller.targetVersions));
+salesRouter.get("/targets/:targetId/reminders", requirePermission("sales.target.view"), asyncHandler(controller.targetReminders));
+salesRouter.post("/targets/:targetId/remind", requirePermission("sales.target.manage"), asyncHandler(controller.triggerTargetReminder));
+salesRouter.post("/targets/reminders/cycle", requirePermission("sales.configuration.manage"), asyncHandler(controller.runReminderCycle));
 salesRouter.get("/countries", salesMap, asyncHandler(controller.countrySales));
 salesRouter.get("/team/analytics", requireAnyPermission("sales.analytics.team", "sales.analytics.all"), asyncHandler(controller.teamAnalytics));
 salesRouter.get("/analytics/overview", salesAnalytics, asyncHandler(controller.overviewAnalytics));

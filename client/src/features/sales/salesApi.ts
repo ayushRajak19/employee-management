@@ -36,6 +36,7 @@ export interface SalesRecord {
   ownerEmployee?: string | { _id: string; firstName: string; lastName: string };
   employee?: string | { _id: string; firstName: string; lastName: string };
   territory?: string | { _id: string; name: string; code: string };
+  periodType?: string;
   periodStart?: string;
   periodEnd?: string;
   transactionDate?: string;
@@ -43,6 +44,9 @@ export interface SalesRecord {
   actualCloseDate?: string;
   effectiveFrom?: string;
   effectiveTo?: string;
+  version?: number;
+  targetGroupId?: string;
+  changeReason?: string;
   createdAt?: string;
   justification?: string;
 }
@@ -67,8 +71,74 @@ export interface EmployeeMapItem extends SalesEmployeeDto {
   salesTerritory?: { _id: string; name: string; code: string };
 }
 
+export interface TargetPerformanceDto {
+  target: SalesRecord & {
+    version?: number;
+    targetGroupId?: string;
+    effectiveFrom?: string;
+    effectiveTo?: string;
+    compensationRule?: {
+      commissionRate: number;
+      bonusThresholdPercentage?: number;
+      bonusRate?: number;
+      basePayAllocation?: number;
+      currency?: string;
+      ruleName?: string;
+    };
+  };
+  performance: {
+    officialTarget: number;
+    actualAchievement: number;
+    employeeCommitment: number | null;
+    achievementPercentage: number;
+    remainingOfficialTarget: number;
+    remainingCommitment: number | null;
+    daysRemaining: number;
+    requiredDailyRunRate: number;
+    requiredWeeklyRunRate: number;
+    projectedAchievementPercentage: number;
+    status: string;
+    targetAmount: number;
+    achievedAmount: number;
+    remainingAmount: number;
+    remainingPercentage: number;
+    payout?: {
+      commission: number;
+      bonus: number;
+      basePay: number;
+      totalPayout: number;
+    };
+  };
+  commitment?: {
+    committedRevenue?: number;
+    version?: number;
+    status?: string;
+  };
+  reminderStatus?: {
+    totalRemindersSent: number;
+    lastReminderSentAt: string | null;
+    lastReminderType: string | null;
+    lastReminderMilestone: number | null;
+    history?: {
+      _id: string;
+      reminderType: string;
+      milestonePercentage?: number;
+      achievementPercentage: number;
+      remainingPercentage: number;
+      title: string;
+      body: string;
+      sentAt: string;
+      channel: string;
+    }[];
+  };
+}
+
 export const salesApi = {
-  targetPerformance: () => api.get<{ items: { target: SalesRecord; performance: { officialTarget:number; actualAchievement:number; employeeCommitment:number|null; achievementPercentage:number; remainingOfficialTarget:number; remainingCommitment:number|null; daysRemaining:number; requiredDailyRunRate:number; requiredWeeklyRunRate:number; projectedAchievementPercentage:number; status:string } }[] }>("/api/v1/sales/target-performance/me"),
+  targetPerformance: () => api.get<{ items: TargetPerformanceDto[] }>("/api/v1/sales/target-performance/me"),
+  teamTargetPerformance: () => api.get<{ items: TargetPerformanceDto[] }>("/api/v1/sales/target-performance/team"),
+  targetVersions: (targetId: string) => api.get<{ items: (SalesRecord & { version: number; effectiveFrom: string; effectiveTo?: string })[] }>(`/api/v1/sales/targets/${targetId}/versions`),
+  targetReminders: (targetId: string) => api.get<{ totalRemindersSent: number; lastReminderSentAt: string | null; history: unknown[] }>(`/api/v1/sales/targets/${targetId}/reminders`),
+  triggerReminder: (targetId: string) => api.post<{ shouldSend: boolean; reason: string }>(`/api/v1/sales/targets/${targetId}/remind`, {}),
   commitment: (targetId: string, body: { committedRevenue: number }) => api.post(`/api/v1/sales/target-performance/${targetId}/commitment`, body),
   countries: () => api.get<{ items: { country: string; leads: number; customers: number; partners: number; converted: number; pipeline: Record<string, number>; revenue: Record<string, number> }[] }>("/api/v1/sales/countries"),
   selfAnalytics: () => api.get<SalesAnalytics>("/api/v1/sales/me/analytics"),
@@ -88,3 +158,4 @@ export const salesApi = {
   assignTerritory: (body: Record<string, unknown>) => api.post<{ item: unknown }>("/api/v1/sales/territories/assignments", body),
   employeeMap: () => api.get<{ scope: "SELF" | "TEAM" | "ALL"; geography: GeoNodeDto[]; employees: EmployeeMapItem[] }>("/api/v1/employee-map"),
 };
+

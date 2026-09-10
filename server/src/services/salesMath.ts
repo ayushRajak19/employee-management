@@ -6,18 +6,108 @@ export const calculateCapacity = (leadCount: number, activeHeadcount: number, ca
 };
 export const percentage = (numerator: number, denominator: number): number => denominator > 0 ? Number((numerator / denominator * 100).toFixed(2)) : 0;
 
+export interface TargetProgressMetrics {
+  targetAmount: number;
+  achievedAmount: number;
+  achievementPercentage: number;
+  remainingAmount: number;
+  remainingPercentage: number;
+}
+
+export const calculateTargetProgress = (target: number, actual: number): TargetProgressMetrics => {
+  const t = Math.max(0, target);
+  const a = Math.max(0, actual);
+  const achievementPercentage = t > 0 ? Number(((a / t) * 100).toFixed(2)) : (a > 0 ? 100 : 0);
+  const remainingAmount = Math.max(0, t - a);
+  const remainingPercentage = t > 0 ? Number(((remainingAmount / t) * 100).toFixed(2)) : 0;
+  return {
+    targetAmount: t,
+    achievedAmount: a,
+    achievementPercentage,
+    remainingAmount,
+    remainingPercentage,
+  };
+};
+
+export interface CompensationRuleConfig {
+  commissionRate?: number;
+  bonusThresholdPercentage?: number;
+  bonusRate?: number;
+  basePayAllocation?: number;
+}
+
+export interface CompensationPayoutResult {
+  commission: number;
+  bonus: number;
+  basePay: number;
+  totalPayout: number;
+}
+
+export const calculateCompensationPayout = (
+  rule: CompensationRuleConfig | undefined,
+  achieved: number,
+  target: number,
+): CompensationPayoutResult => {
+  if (!rule) {
+    return { commission: 0, bonus: 0, basePay: 0, totalPayout: 0 };
+  }
+  const commissionRate = Math.max(0, rule.commissionRate ?? 0);
+  const commission = Number((achieved * (commissionRate / 100)).toFixed(2));
+  let bonus = 0;
+  if (rule.bonusRate && rule.bonusThresholdPercentage && target > 0) {
+    const thresholdAmount = (target * rule.bonusThresholdPercentage) / 100;
+    if (achieved > thresholdAmount) {
+      const eligibleAmount = achieved - thresholdAmount;
+      bonus = Number((eligibleAmount * (rule.bonusRate / 100)).toFixed(2));
+    }
+  }
+  const basePay = Number((rule.basePayAllocation ?? 0).toFixed(2));
+  const totalPayout = Number((commission + bonus + basePay).toFixed(2));
+  return { commission, bonus, basePay, totalPayout };
+};
+
 export type TargetRiskStatus = "NOT_STARTED" | "ON_TRACK" | "AT_RISK" | "CRITICAL" | "ACHIEVED" | "EXCEEDED" | "CLOSED";
-export interface TargetPerformanceInput { officialTarget: number; actual: number; commitment?: number; periodStart: Date; periodEnd: Date; now?: Date; overachievementThreshold?: number }
+export interface TargetPerformanceInput {
+  officialTarget: number;
+  actual: number;
+  commitment?: number;
+  periodStart: Date;
+  periodEnd: Date;
+  now?: Date;
+  overachievementThreshold?: number;
+  compensationRule?: CompensationRuleConfig;
+}
 export const calculateTargetPerformance = (input: TargetPerformanceInput) => {
-  const now = input.now ?? new Date(); const target = Math.max(0, input.officialTarget); const actual = Math.max(0, input.actual);
+  const now = input.now ?? new Date();
+  const target = Math.max(0, input.officialTarget);
+  const actual = Math.max(0, input.actual);
+  const progress = calculateTargetProgress(target, actual);
   const totalDays = Math.max(1, Math.ceil((input.periodEnd.getTime() - input.periodStart.getTime()) / 86400000) + 1);
   const elapsedDays = Math.max(0, Math.min(totalDays, Math.ceil((Math.min(now.getTime(), input.periodEnd.getTime()) - input.periodStart.getTime()) / 86400000) + 1));
   const daysRemaining = Math.max(0, Math.ceil((input.periodEnd.getTime() - now.getTime()) / 86400000));
-  const achievementPercentage = percentage(actual, target);
+  const achievementPercentage = progress.achievementPercentage;
   const projectedPeriodRevenue = elapsedDays > 0 ? Number((actual / elapsedDays * totalDays).toFixed(2)) : 0;
   const projectedAchievementPercentage = percentage(projectedPeriodRevenue, target);
   const status: TargetRiskStatus = now < input.periodStart ? "NOT_STARTED" : now > input.periodEnd ? (achievementPercentage > (input.overachievementThreshold ?? 100) ? "EXCEEDED" : achievementPercentage >= 100 ? "ACHIEVED" : "CLOSED") : achievementPercentage > (input.overachievementThreshold ?? 100) ? "EXCEEDED" : achievementPercentage >= 100 ? "ACHIEVED" : projectedAchievementPercentage >= 100 ? "ON_TRACK" : projectedAchievementPercentage >= 75 ? "AT_RISK" : "CRITICAL";
-  return { officialTarget: target, actualAchievement: actual, employeeCommitment: input.commitment ?? null, achievementPercentage, remainingOfficialTarget: Math.max(target - actual, 0), remainingCommitment: input.commitment == null ? null : Math.max(input.commitment - actual, 0), daysRemaining, requiredDailyRunRate: daysRemaining > 0 ? Number((Math.max(target - actual, 0) / daysRemaining).toFixed(2)) : 0, requiredWeeklyRunRate: daysRemaining > 0 ? Number((Math.max(target - actual, 0) / Math.max(1, Math.ceil(daysRemaining / 7))).toFixed(2)) : 0, currentDailyRunRate: elapsedDays > 0 ? Number((actual / elapsedDays).toFixed(2)) : 0, projectedPeriodRevenue, projectedAchievementPercentage, paceGap: Number((actual - target * elapsedDays / totalDays).toFixed(2)), status };
+  const payout = calculateCompensationPayout(input.compensationRule, actual, target);
+
+  return {
+    ...progress,
+    officialTarget: target,
+    actualAchievement: actual,
+    employeeCommitment: input.commitment ?? null,
+    remainingOfficialTarget: progress.remainingAmount,
+    remainingCommitment: input.commitment == null ? null : Math.max(input.commitment - actual, 0),
+    daysRemaining,
+    requiredDailyRunRate: daysRemaining > 0 ? Number((progress.remainingAmount / daysRemaining).toFixed(2)) : 0,
+    requiredWeeklyRunRate: daysRemaining > 0 ? Number((progress.remainingAmount / Math.max(1, Math.ceil(daysRemaining / 7))).toFixed(2)) : 0,
+    currentDailyRunRate: elapsedDays > 0 ? Number((actual / elapsedDays).toFixed(2)) : 0,
+    projectedPeriodRevenue,
+    projectedAchievementPercentage,
+    paceGap: Number((actual - target * elapsedDays / totalDays).toFixed(2)),
+    status,
+    payout,
+  };
 };
 export const weightedPipelineValue = (items: readonly { estimatedValue: number; probability: number }[]): number => Number(items.reduce((sum, item) => sum + Math.max(0, item.estimatedValue) * Math.min(100, Math.max(0, item.probability)) / 100, 0).toFixed(2));
 

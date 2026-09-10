@@ -24,7 +24,7 @@ export type SalesEntityName = "leads" | "customers" | "opportunities" | "targets
 type SalesInput = Record<string, unknown> & { ownerEmployee?: string; employee?: string; territory?: string; geoNode?: string; market?: string };
 type LeadStatus = typeof LEAD_STATUSES[number];
 type OpportunityStatus = typeof OPPORTUNITY_STATUSES[number];
-type TargetStatus = "DRAFT" | "ACTIVE" | "CLOSED";
+type TargetStatus = "DRAFT" | "ACTIVE" | "SUPERSEDED" | "CLOSED";
 
 const leadTransitions: Record<LeadStatus, readonly LeadStatus[]> = {
   NEW: ["CONTACTED", "QUALIFIED", "CONVERTED", "LOST"],
@@ -40,7 +40,12 @@ const opportunityTransitions: Record<OpportunityStatus, readonly OpportunityStat
   LOST: [],
 };
 export const canTransitionOpportunityStatus = (from: OpportunityStatus, to: OpportunityStatus) => from === to || opportunityTransitions[from].includes(to);
-const targetTransitions: Record<TargetStatus, readonly TargetStatus[]> = { DRAFT: ["ACTIVE"], ACTIVE: ["CLOSED"], CLOSED: [] };
+const targetTransitions: Record<TargetStatus, readonly TargetStatus[]> = {
+  DRAFT: ["ACTIVE", "SUPERSEDED"],
+  ACTIVE: ["CLOSED", "SUPERSEDED"],
+  SUPERSEDED: [],
+  CLOSED: [],
+};
 
 export const salesPopulationPaths: Record<SalesEntityName, string> = {
   leads: "ownerEmployee territory geoNode customer",
@@ -73,10 +78,13 @@ const territoryVisibility = (scope: ResolvedSalesScope, ownerField?: string): Re
 
 const scopeFilter = (scope: ResolvedSalesScope, entity: SalesEntityName): Record<string, unknown> => {
   if (entity === "targets") {
-    return { $or: [
-      { employee: { $in: scope.allowedEmployeeIds } },
-      { territory: { $in: scope.allowedTerritoryIds } },
-    ] };
+    return {
+      isLatest: { $ne: false },
+      $or: [
+        { employee: { $in: scope.allowedEmployeeIds } },
+        { territory: { $in: scope.allowedTerritoryIds } },
+      ],
+    };
   }
   if (entity === "channelPartners") return {
     ...territoryVisibility(scope, "ownerEmployee"),
@@ -245,8 +253,22 @@ export const createSalesData = async (viewer: SessionUser, entity: SalesEntityNa
   await applyCustomerContext(scope, entity, input);
   await applyTerritoryGeography(input);
   if (!["targets", "channelPartners"].includes(entity) && !input[employeeKey]) throw new AppError("Employee is required", 422);
+  if (entity === "targets") {
+    input.version = 1;
+    input.isLatest = true;
+    input.status = input.status || "ACTIVE";
+    input.createdBy = viewer.id;
+    if (["SUPER_ADMIN", "HR_ADMIN"].includes(viewer.role)) {
+      input.approvedBy = viewer.id;
+      input.approvedAt = new Date();
+    }
+  }
   await validateReferences(scope, input);
   const item = await modelFor(entity).create(input);
+  if (entity === "targets" && !item.get("targetGroupId")) {
+    item.set("targetGroupId", item.id);
+    await item.save();
+  }
   if (entity === "revenue") {
     await adjustCustomerRevenue(optionalId(item.get("customer")), Number(item.get("amount") ?? 0), item.get("transactionDate") as Date | undefined);
   }
@@ -343,8 +365,65 @@ export const updateSalesData = async (viewer: SessionUser, entity: SalesEntityNa
       } },
       { upsert: true, new: true, runValidators: true },
     );
-    input.customer = convertedCustomer._id;
-    input.convertedAt = new Date();
+    if (convertedCustomer) {
+      input.customer = convertedCustomer._id;
+      input.convertedAt = new Date();
+    }
+  }
+  if (entity === "targets" && (item.get("status") === "SUPERSEDED" || item.get("isLatest") === false)) {
+    throw new AppError("Historical target versions are immutable and cannot be modified", 409, "TARGET_VERSION_IMMUTABLE");
+  }
+  const meaningfulTargetFields = [
+    "revenueTarget", "leadTarget", "conversionTarget", "customerAcquisitionTarget",
+    "periodStart", "periodEnd", "periodType", "currency", "compensationRule",
+    "effectiveFrom", "effectiveTo", "justification", "employee", "territory"
+  ];
+  const isMeaningfulTargetChange = entity === "targets" && meaningfulTargetFields.some(
+    (field) => raw[field] !== undefined && JSON.stringify(raw[field]) !== JSON.stringify(previous[field])
+  );
+  if (isMeaningfulTargetChange) {
+    const newVersion = (Number(item.get("version")) || 1) + 1;
+    const targetGroupId = String(item.get("targetGroupId") || item.id);
+    const newEffectiveFrom = input.effectiveFrom ? new Date(input.effectiveFrom as string) : new Date();
+
+    item.set({
+      isLatest: false,
+      status: "SUPERSEDED",
+      effectiveTo: newEffectiveFrom,
+      targetGroupId,
+    });
+    await item.save();
+
+    const previousDoc = item.toObject();
+    delete previousDoc._id;
+    delete previousDoc.createdAt;
+    delete previousDoc.updatedAt;
+
+    const newTarget = await SalesTarget.create({
+      ...previousDoc,
+      ...input,
+      targetGroupId,
+      version: newVersion,
+      effectiveFrom: newEffectiveFrom,
+      effectiveTo: input.effectiveTo ? new Date(input.effectiveTo as string) : previousDoc.periodEnd,
+      isLatest: true,
+      status: input.status && input.status !== "SUPERSEDED" ? input.status : "ACTIVE",
+      createdBy: viewer.id,
+      approvedBy: ["SUPER_ADMIN", "HR_ADMIN"].includes(viewer.role) ? viewer.id : input.approvedBy,
+      approvedAt: ["SUPER_ADMIN", "HR_ADMIN"].includes(viewer.role) ? new Date() : undefined,
+      changeReason: (input.changeReason as string) || (input.justification as string) || "Target revision",
+    });
+
+    await writeAudit({
+      user: viewer.id,
+      action: "SALES_TARGET_VERSION_CREATED",
+      entityType: "SalesTarget",
+      entityId: newTarget.id,
+      oldValue: { version: item.get("version"), id: item.id },
+      newValue: { version: newVersion, targetGroupId, revenueTarget: newTarget.revenueTarget },
+    });
+
+    return newTarget;
   }
   item.set(input);
   await item.save();
@@ -387,4 +466,24 @@ export const updateSalesData = async (viewer: SessionUser, entity: SalesEntityNa
     newValue: input,
   });
   return item;
+};
+
+export const listTargetVersions = async (viewer: SessionUser, targetId: string) => {
+  const scope = await resolveSalesScope(viewer);
+  const target = await SalesTarget.findById(targetId).lean();
+  if (!target) throw new AppError("Target not found", 404);
+  const targetGroupId = target.targetGroupId || target._id.toString();
+  return SalesTarget.find({
+    targetGroupId,
+    $or: [
+      { employee: { $in: scope.allowedEmployeeIds } },
+      { territory: { $in: scope.allowedTerritoryIds } },
+    ],
+  })
+    .populate("employee", "firstName lastName employeeId")
+    .populate("territory", "name code")
+    .populate("createdBy", "firstName lastName email")
+    .populate("approvedBy", "firstName lastName email")
+    .sort({ version: -1 })
+    .lean();
 };

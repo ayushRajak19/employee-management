@@ -93,14 +93,36 @@ export const opportunityBody = z.object({
   actualCloseDate: z.coerce.date().optional(), status: z.enum(["OPEN", "WON", "LOST"]).default("OPEN"),
   lostReason: z.string().trim().max(500).optional(),
 });
+const targetCompensationSchema = z.object({
+  commissionRate: z.coerce.number().min(0).max(100).default(0),
+  bonusThresholdPercentage: z.coerce.number().min(0).max(500).optional(),
+  bonusRate: z.coerce.number().min(0).max(100).optional(),
+  basePayAllocation: nonNegative.optional(),
+  currency: currency.optional(),
+  ruleName: z.string().trim().max(120).optional(),
+});
+
 const targetBase = z.object({
-  territory: objectId.optional(), employee: objectId.optional(), periodType: z.enum(["MONTHLY", "QUARTERLY", "YEARLY"]),
-  periodStart: z.coerce.date(), periodEnd: z.coerce.date(), revenueTarget: nonNegative, currency,
-  leadTarget: nonNegative.optional(), conversionTarget: z.coerce.number().min(0).max(100).optional(),
-  customerAcquisitionTarget: nonNegative.optional(), justification: z.string().trim().min(10, "Explain the business basis for this target").max(2000).default("Management-assigned target; business basis recorded in the approved sales plan."), status: z.enum(["DRAFT", "ACTIVE", "CLOSED"]).default("ACTIVE"),
+  territory: objectId.optional(),
+  employee: objectId.optional(),
+  periodType: z.enum(["MONTHLY", "QUARTERLY", "YEARLY"]),
+  periodStart: z.coerce.date(),
+  periodEnd: z.coerce.date(),
+  revenueTarget: nonNegative,
+  currency,
+  leadTarget: nonNegative.optional(),
+  conversionTarget: z.coerce.number().min(0).max(100).optional(),
+  customerAcquisitionTarget: nonNegative.optional(),
+  justification: z.string().trim().min(10, "Explain the business basis for this target").max(2000).default("Management-assigned target; business basis recorded in the approved sales plan."),
+  status: z.enum(["DRAFT", "ACTIVE", "SUPERSEDED", "CLOSED"]).default("ACTIVE"),
+  effectiveFrom: z.coerce.date().optional(),
+  effectiveTo: z.coerce.date().optional(),
+  changeReason: z.string().trim().max(1000).optional(),
+  compensationRule: targetCompensationSchema.optional(),
 });
 export const targetBody = targetBase.refine((body) => body.employee || body.territory, { message: "Target requires an employee or territory" })
-  .refine((body) => body.periodEnd >= body.periodStart, { message: "Period end must be after start", path: ["periodEnd"] });
+  .refine((body) => body.periodEnd >= body.periodStart, { message: "Period end must be after start", path: ["periodEnd"] })
+  .refine(validEffectiveRange, { message: "Effective end must be after start", path: ["effectiveTo"] });
 export const revenueBody = z.object({
   customer: objectId.optional(), employee: objectId.optional(), territory: objectId.optional(), geoNode: objectId.optional(),
   amount: nonNegative, currency, transactionDate: z.coerce.date(), source: z.string().trim().min(1).max(80),
@@ -125,7 +147,12 @@ const atLeastOneField = <T extends Record<string, unknown>>(body: T) => Object.k
 export const updateLeadSchema = z.object({ params: z.object({ id: objectId }), body: leadBody.partial().extend({ saleAmount: nonNegative.optional() }).refine(atLeastOneField, "At least one field is required") });
 export const updateCustomerSchema = z.object({ params: z.object({ id: objectId }), body: customerBody.partial().refine(atLeastOneField, "At least one field is required") });
 export const updateOpportunitySchema = z.object({ params: z.object({ id: objectId }), body: opportunityBody.partial().refine(atLeastOneField, "At least one field is required") });
-export const updateTargetSchema = z.object({ params: z.object({ id: objectId }), body: targetBase.partial().refine((body) => !body.periodStart || !body.periodEnd || body.periodEnd >= body.periodStart, { message: "Period end must be after start", path: ["periodEnd"] }) });
+export const updateTargetSchema = z.object({
+  params: z.object({ id: objectId }),
+  body: targetBase.partial()
+    .refine((body) => !body.periodStart || !body.periodEnd || body.periodEnd >= body.periodStart, { message: "Period end must be after start", path: ["periodEnd"] })
+    .refine(validEffectiveRange, { message: "Effective end must be after start", path: ["effectiveTo"] }),
+});
 export const updateRevenueSchema = z.object({ params: z.object({ id: objectId }), body: revenueBody.partial().refine(atLeastOneField, "At least one field is required") });
 export const updateChannelPartnerSchema = z.object({ params: z.object({ id: objectId }), body: channelPartnerBase.partial().refine(validEffectiveRange, { message: "Effective end must be after start", path: ["effectiveTo"] }).refine(atLeastOneField, "At least one field is required") });
 
@@ -137,4 +164,8 @@ export const configurationSchema = z.object({ body: z.object({
     demand: nonNegative, coverageGap: nonNegative, customerWhiteSpace: nonNegative,
     pipelinePotential: nonNegative, growth: nonNegative, conversionPotential: nonNegative,
   }).refine((weights) => Object.values(weights).some((weight) => weight > 0), "At least one opportunity weight must be positive"),
+  targetReminderFrequencyDays: z.coerce.number().int().min(1).max(90).optional(),
+  milestones: z.array(z.coerce.number().min(1).max(100)).max(10).optional(),
+  nearDeadlineDays: z.coerce.number().int().min(1).max(30).optional(),
+  automaticRemindersEnabled: z.boolean().optional(),
 }) });
