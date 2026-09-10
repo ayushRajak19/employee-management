@@ -8,8 +8,8 @@ export const SalesMetricCards = ({ data }: { data: SalesAnalytics }) => {
   const metrics = [
     ["Revenue", money(data.actualRevenue, data.currency), BadgeIndianRupee],
     ["Target achievement", `${number.format(data.targetAchievement)}%`, Target],
-    ["Pipeline", money(data.pipelineValue, data.currency), BriefcaseBusiness],
-    ["Weighted pipeline", money(data.weightedPipeline, data.currency), TrendingUp],
+    ["Sales target", money(data.targetRevenue, data.currency), TrendingUp],
+    ["Remaining quota", money(Math.max(0, data.targetRevenue - data.actualRevenue), data.currency), BriefcaseBusiness],
     ["Leads", number.format(data.leadCount), Users],
     ["Conversion", `${number.format(data.conversionRate)}%`, Activity],
     ["Customers", number.format(data.customerCount), UserRoundCheck],

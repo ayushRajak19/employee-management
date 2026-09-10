@@ -9,10 +9,10 @@ import { salesApi } from "../salesApi";
 import { CountrySales } from "../components/CountrySales";
 
 const salesFlow = [
-  { label: "1. Lead", text: "Capture a potential buyer", path: "/sales/leads" },
-  { label: "2. Customer", text: "Created when the lead converts", path: "/sales/customers" },
-  { label: "3. Pipeline", text: "Track active deals in visual Kanban", path: "/sales/pipeline" },
-  { label: "4. Revenue", text: "Created when the deal is won", path: "/sales/revenue" },
+  { label: "1. Lead", text: "Capture and convert prospects into sales", path: "/sales/leads" },
+  { label: "2. Customer", text: "Confirmed active buyer accounts", path: "/sales/customers" },
+  { label: "3. Target & Quota", text: "Track monthly targets and commission", path: "/sales/targets" },
+  { label: "4. Revenue", text: "Realized sales from converted deals", path: "/sales/revenue" },
 ];
 
 export const SalesDashboardPage = () => {
@@ -29,11 +29,11 @@ export const SalesDashboardPage = () => {
   return <main className="flex-1 px-5 py-8 sm:px-8"><div className="mx-auto max-w-[1440px]">
     <p className="text-sm font-medium text-brand-700">Sales Intelligence</p>
     <h1 className="mt-1 text-3xl font-semibold">{all ? "Company sales" : team ? "Team sales" : "My sales"}</h1>
-    <p className="mt-2 max-w-3xl text-sm text-slate-500">One connected view from prospect and customer ownership to pipeline and realized revenue.</p>
+    <p className="mt-2 max-w-3xl text-sm text-slate-500">One connected view from prospect and customer ownership to realized revenue and targets.</p>
 
     <section className={`mt-5 rounded-2xl border p-5 ${isHrView ? "border-blue-100 bg-blue-50" : "border-emerald-100 bg-emerald-50"}`}>
       <h2 className="font-semibold">{isHrView ? "HR responsibility" : isManagementView ? "Company sales flow" : "Your daily sales flow"}</h2>
-      <p className="mt-1 text-xs text-slate-600">{isHrView ? "Use coverage, workload, capacity and outcome trends for workforce planning. Sales records remain read-only for HR." : isManagementView ? "Review the complete Lead → Customer → Pipeline → Revenue flow. Use Geography and Territories only for reporting and ownership." : "Start with a lead. Geography and territory are optional reporting setup; do not create the same buyer again in Customers or Pipeline."}</p>
+      <p className="mt-1 text-xs text-slate-600">{isHrView ? "Use coverage, workload, capacity and outcome trends for workforce planning. Sales records remain read-only for HR." : isManagementView ? "Review the complete Lead → Customer → Revenue flow. Use Geography and Territories only for reporting and ownership." : "Start with a lead. Geography and territory are optional reporting setup; converting a lead automatically records revenue and updates targets."}</p>
       {!isHrView && <div className="mt-4 grid gap-2 md:grid-cols-4">{salesFlow.map((step, index) => <Link key={step.path} to={step.path} className="relative rounded-xl border border-emerald-100 bg-white p-3 hover:border-brand-300"><p className="text-sm font-semibold text-brand-700">{step.label}</p><p className="mt-1 text-xs text-slate-500">{step.text}</p>{index < salesFlow.length - 1 && <ArrowRight className="absolute -right-3 top-7 z-10 hidden rounded-full bg-white text-brand-500 md:block" size={20}/>}</Link>)}</div>}
     </section>
 
