@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { Eye, EyeOff } from "lucide-react";
 import { api } from "@/api/client";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -8,7 +9,9 @@ export const RegisterPage = () => {
   // Check if loaded with legacy token in hash
   const [legacyToken] = useState(() => new URLSearchParams(window.location.hash.slice(1)).get("token"));
   const [step, setStep] = useState<"form" | "otp" | "legacy" | "complete">(() => (legacyToken ? "legacy" : "form"));
-  const [form, setForm] = useState({ name: "", slug: "", adminName: "", adminEmail: "", password: "", otp: "" });
+  const [form, setForm] = useState({ name: "", slug: "", adminName: "", adminEmail: "", password: "", confirmPassword: "", otp: "" });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [registrationToken, setRegistrationToken] = useState("");
   const [directOtp, setDirectOtp] = useState<string | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
@@ -64,8 +67,14 @@ export const RegisterPage = () => {
 
   const handleVerifyOtp = async (event: React.FormEvent) => {
     event.preventDefault();
-    setPending(true);
     setError("");
+
+    if (form.password !== form.confirmPassword) {
+      setError("Passwords do not match. Please make sure both password fields are identical.");
+      return;
+    }
+
+    setPending(true);
     try {
       const result = await api.post<{ slug: string }>("/api/v1/registration/verify-otp", {
         registrationToken,
@@ -87,8 +96,14 @@ export const RegisterPage = () => {
 
   const handleLegacyComplete = async (event: React.FormEvent) => {
     event.preventDefault();
-    setPending(true);
     setError("");
+
+    if (form.password !== form.confirmPassword) {
+      setError("Passwords do not match. Please make sure both password fields are identical.");
+      return;
+    }
+
+    setPending(true);
     try {
       const result = await api.post<{ slug: string }>("/api/v1/registration/complete", {
         token: legacyToken,
@@ -178,20 +193,64 @@ export const RegisterPage = () => {
 
             <label className="block text-sm font-medium">
               Set your login password
-              <Input
-                className="mt-2"
-                required
-                type="password"
-                minLength={12}
-                maxLength={128}
-                autoComplete="new-password"
-                placeholder="••••••••••••"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-              />
+              <div className="relative mt-2">
+                <Input
+                  className="pr-10"
+                  required
+                  type={showPassword ? "text" : "password"}
+                  minLength={12}
+                  maxLength={128}
+                  autoComplete="new-password"
+                  placeholder="••••••••••••"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                />
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
               <span className="mt-1 block text-xs text-slate-500">
-                At least 12 characters (uppercase, lowercase, number & symbol). You will use this password to sign into your account.
+                At least 12 characters (uppercase, lowercase, number & symbol).
               </span>
+            </label>
+
+            <label className="block text-sm font-medium">
+              Confirm password
+              <div className="relative mt-2">
+                <Input
+                  className="pr-10"
+                  required
+                  type={showConfirmPassword ? "text" : "password"}
+                  minLength={12}
+                  maxLength={128}
+                  autoComplete="new-password"
+                  placeholder="••••••••••••"
+                  value={form.confirmPassword}
+                  onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
+                />
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              {form.confirmPassword && (
+                <span
+                  className={`mt-1 block text-xs font-medium ${
+                    form.password === form.confirmPassword ? "text-emerald-600" : "text-red-500"
+                  }`}
+                >
+                  {form.password === form.confirmPassword ? "✓ Passwords match" : "✗ Passwords do not match"}
+                </span>
+              )}
             </label>
 
             {error && (
@@ -232,20 +291,64 @@ export const RegisterPage = () => {
           <form className="mt-6 space-y-4" onSubmit={handleLegacyComplete}>
             <label className="block text-sm font-medium">
               Set your login password
-              <Input
-                className="mt-2"
-                required
-                type="password"
-                minLength={12}
-                maxLength={128}
-                autoComplete="new-password"
-                placeholder="••••••••••••"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-              />
+              <div className="relative mt-2">
+                <Input
+                  className="pr-10"
+                  required
+                  type={showPassword ? "text" : "password"}
+                  minLength={12}
+                  maxLength={128}
+                  autoComplete="new-password"
+                  placeholder="••••••••••••"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                />
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
               <span className="mt-1 block text-xs text-slate-500">
-                At least 12 characters (uppercase, lowercase, number & symbol). You will use this password to sign into your account.
+                At least 12 characters (uppercase, lowercase, number & symbol).
               </span>
+            </label>
+
+            <label className="block text-sm font-medium">
+              Confirm password
+              <div className="relative mt-2">
+                <Input
+                  className="pr-10"
+                  required
+                  type={showConfirmPassword ? "text" : "password"}
+                  minLength={12}
+                  maxLength={128}
+                  autoComplete="new-password"
+                  placeholder="••••••••••••"
+                  value={form.confirmPassword}
+                  onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
+                />
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              {form.confirmPassword && (
+                <span
+                  className={`mt-1 block text-xs font-medium ${
+                    form.password === form.confirmPassword ? "text-emerald-600" : "text-red-500"
+                  }`}
+                >
+                  {form.password === form.confirmPassword ? "✓ Passwords match" : "✗ Passwords do not match"}
+                </span>
+              )}
             </label>
 
             {error && (
