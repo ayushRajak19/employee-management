@@ -78,8 +78,10 @@ registrationRouter.post("/request", validate(z.object({ body: details })), async
 
       response.json({
         success: true,
-        emailSent: true,
         message: "Check your email for the verification link. It expires in 30 minutes.",
+        data: {
+          emailSent: true,
+        },
       });
       return;
     } catch (err) {
@@ -87,10 +89,12 @@ registrationRouter.post("/request", validate(z.object({ body: details })), async
       // Fallback to direct token if email delivery failed
       response.json({
         success: true,
-        emailSent: false,
-        token,
-        verificationUrl: url.toString(),
         message: "Verification email could not be sent. You can complete registration directly below.",
+        data: {
+          token,
+          emailSent: false,
+          verificationUrl: url.toString(),
+        },
       });
       return;
     } finally {
@@ -121,8 +125,10 @@ registrationRouter.post("/request", validate(z.object({ body: details })), async
       if (brevoRes.ok) {
         response.json({
           success: true,
-          emailSent: true,
           message: "Check your email for the verification link. It expires in 30 minutes.",
+          data: {
+            emailSent: true,
+          },
         });
         return;
       }
@@ -130,20 +136,24 @@ registrationRouter.post("/request", validate(z.object({ body: details })), async
       console.error("Brevo registration email error:", await brevoRes.text());
       response.json({
         success: true,
-        emailSent: false,
-        token,
-        verificationUrl: url.toString(),
         message: "Verification email could not be sent. You can complete registration directly below.",
+        data: {
+          token,
+          emailSent: false,
+          verificationUrl: url.toString(),
+        },
       });
       return;
     } catch (err) {
       console.error("Brevo dispatch error:", err);
       response.json({
         success: true,
-        emailSent: false,
-        token,
-        verificationUrl: url.toString(),
         message: "Verification email could not be sent. You can complete registration directly below.",
+        data: {
+          token,
+          emailSent: false,
+          verificationUrl: url.toString(),
+        },
       });
       return;
     }
@@ -152,10 +162,12 @@ registrationRouter.post("/request", validate(z.object({ body: details })), async
   // 3. Fallback when neither SMTP nor Brevo is configured on host
   response.json({
     success: true,
-    emailSent: false,
-    token,
-    verificationUrl: url.toString(),
     message: "Email service is not configured on this server. Please choose your administrator password to finish registration directly.",
+    data: {
+      token,
+      emailSent: false,
+      verificationUrl: url.toString(),
+    },
   });
 }));
 registrationRouter.post("/complete", validate(z.object({ body: finish })), asyncHandler(async (request, response) => {

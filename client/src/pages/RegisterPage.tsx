@@ -79,10 +79,9 @@ export const RegisterPage = () => {
                   window.history.replaceState(null, "", "/register");
                 } else {
                   const result = await api.post<{
-                    success: boolean;
                     emailSent?: boolean;
                     token?: string;
-                    message?: string;
+                    verificationUrl?: string;
                   }>("/api/v1/registration/request", {
                     name: form.name,
                     slug: form.slug,
@@ -90,17 +89,12 @@ export const RegisterPage = () => {
                     adminEmail: form.adminEmail,
                   });
 
-                  if (result.token) {
+                  if (result?.token) {
                     setToken(result.token);
                     window.location.hash = new URLSearchParams({ token: result.token }).toString();
-                    if (result.message) {
-                      setMessage(result.message);
-                    }
+                    setMessage("Email could not be sent to your inbox. You can create your administrator password below to finish registration directly.");
                   } else {
-                    setMessage(
-                      result.message ||
-                        "Check your inbox and spam folder for the verification link. It expires in 30 minutes."
-                    );
+                    setMessage("Check your inbox and spam folder for the verification link. It expires in 30 minutes.");
                   }
                 }
               } catch (err) {
