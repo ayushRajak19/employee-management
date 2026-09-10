@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>MobiusEMS - Enterprise Product Feature Guide</title>
+<style>
+  @page {
+    size: A4 portrait;
+    margin: 12mm 15mm 12mm 15mm;
+  }
+  * {
+    box-sizing: border-box;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+    font-size: 8.8pt;
+    line-height: 1.42;
+    color: #334155;
+    margin: 0;
+    padding: 0;
+    background-color: #ffffff;
+  }
+  .page {
+    page-break-after: always;
+    height: 272mm;
+    position: relative;
+    padding-top: 12mm;
+    padding-bottom: 12mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .page:last-child {
+    page-break-after: avoid;
+  }
+  .page-header {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 9mm;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 7pt;
+    font-weight: 600;
+    color: #64748b;
+    letter-spacing: 0.8px;
+    border-bottom: 1px solid #e2e8f0;
+    text-transform: uppercase;
+  }
+  .page-footer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 8mm;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 7.2pt;
+    color: #64748b;
+    border-top: 1px solid #e2e8f0;
+  }
+  .content {
+    flex: 1;
+  }
+  h1 {
+    font-size: 14pt;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 8px 0;
+    letter-spacing: -0.3px;
+  }
+  h2 {
+    font-size: 10.5pt;
+    font-weight: 700;
+    color: #1e3a8a;
+    margin: 10px 0 4px 0;
+    letter-spacing: -0.2px;
+  }
+  h3 {
+    font-size: 9pt;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 6px 0 2px 0;
+  }
+  p {
+    margin: 0 0 6px 0;
+  }
+  .badge {
+    display: inline-block;
+    background-color: #eff6ff;
+    color: #2563eb;
+    border: 1px solid #bfdbfe;
+    font-size: 7pt;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 4px;
+    margin-bottom: 6px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .callout {
+    background-color: #f8fafc;
+    border-left: 3.5px solid #2563eb;
+    padding: 8px 12px;
+    border-radius: 0 4px 4px 0;
+    margin: 8px 0;
+    font-size: 8.4pt;
+  }
+  .callout strong {
+    color: #0f172a;
+  }
+  .callout-dark {
+    background-color: #0f172a;
+    color: #f8fafc;
+    border-left: 3.5px solid #3b82f6;
+    padding: 8px 12px;
+    border-radius: 0 4px 4px 0;
+    margin: 8px 0;
+  }
+  .callout-dark strong {
+    color: #ffffff;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0;
+    font-size: 8pt;
+  }
+  th {
+    background-color: #0f172a;
+    color: #ffffff;
+    font-weight: 600;
+    text-align: left;
+    padding: 5px 8px;
+    border: 1px solid #0f172a;
+  }
+  td {
+    padding: 4.5px 8px;
+    border-bottom: 1px solid #e2e8f0;
+    color: #334155;
+  }
+  tr:nth-child(even) td {
+    background-color: #f8fafc;
+  }
+  .grid-2 {
+    display: flex;
+    gap: 12px;
+  }
+  .grid-2 > div {
+    flex: 1;
+  }
+  ul {
+    margin: 3px 0 6px 16px;
+    padding: 0;
+  }
+  li {
+    margin-bottom: 3px;
+  }
+  li strong {
+    color: #0f172a;
+  }
+  .feature-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+    background-color: #ffffff;
+  }
+  .feature-card h3 {
+    color: #1e3a8a;
+    margin-top: 0;
+    margin-bottom: 3px;
+  }
+</style>
+</head>
+<body>
+
+<!-- PAGE 1: TITLE & EXECUTIVE SUMMARY -->
+<div class="page">
+  <div class="page-header">
+    <span>MobiusEMS Enterprise Solution Guide</span>
+    <span>Platform Capabilities Overview</span>
+  </div>
+  <div class="content">
+    <div class="badge">Enterprise Product Specification</div>
+    <h1 style="font-size: 20pt; margin-bottom: 4px; color: #0f172a;">MobiusEMS: Unified Workforce & Commercial Operations Platform</h1>
+    <div style="font-size: 10.5pt; color: #64748b; font-style: italic; margin-bottom: 14px;">
+      Connecting daily project delivery, geofenced attendance, capability intelligence, objective performance, and territory sales into one role-aware workspace.
+    </div>
+
+    <div class="callout" style="border-left-color: #0f172a; background-color: #f1f5f9; margin-bottom: 14px;">
+      <strong>Product Version:</strong> v2.0-PROD &nbsp;|&nbsp; <strong>Deployment:</strong> https://employee.whalexy.com &nbsp;|&nbsp; <strong>Company:</strong> Mobius Bloom Venture Pvt Ltd<br>
+      <strong>Target Audience:</strong> Prospective Enterprise Clients, CXOs, HR Directors, Operations Leads, Commercial Sales Leadership
+    </div>
+
+    <h2>1. Executive Summary: Breaking the "5-Tool Trap"</h2>
+    <p>
+      In most growing companies, everyday operations are fractured across single-purpose tools that do not talk to each other:
+    </p>
+    <ul>
+      <li><strong>Hardware Attendance Clocks:</strong> Expensive to maintain, prone to hardware failures, and useless for field sales or distributed branch offices.</li>
+      <li><strong>Disconnected Project Boards:</strong> Good for logging tasks, but completely isolated from employee records, payroll, and appraisals.</li>
+      <li><strong>Spreadsheet-Driven Appraisals:</strong> Conducted once a year long after the work was done, suffering from recency bias, subjective favoritism, and missing work proof.</li>
+      <li><strong>Standalone CRM Tools:</strong> Expensive commercial software that knows nothing about employee capacity, leave, or actual project workload.</li>
+      <li><strong>Scattered Personnel Documents:</strong> Resumes buried in email threads, policies in shared folders, and no audit trail.</li>
+    </ul>
+    <p>
+      <strong>MobiusEMS replaces this tool sprawl.</strong> It provides a single, role-aware operational environment where an engineer's completed task automatically feeds their weekly contribution score, a field rep's closed deal updates their territory quota and revenue ledger, and a manager's performance review is backed by tamper-proof historical evidence.
+    </p>
+
+    <h2>2. Our Core Engineering Principles</h2>
+    <div class="feature-card">
+      <h3>Principle 1: Deterministic Math Over Black-Box AI</h3>
+      <p style="margin-bottom: 0;">
+        All performance evaluations, KPI scorecards, attendance rules, sales capacity metrics, and contribution percentiles are computed with pure mathematical formulas. AI functions strictly as an advisory drafting assistant. <strong>The platform enforces an explicit architectural policy: AI is strictly barred from making or modifying promotion, compensation, disciplinary, or termination decisions.</strong>
+      </p>
+    </div>
+
+    <div class="feature-card">
+      <h3>Principle 2: Respectful Accountability Over Invasive Spyware</h3>
+      <p style="margin-bottom: 0;">
+        MobiusEMS rejects employee surveillance software. There are no background keyloggers, secret screen captures, or 24/7 GPS stalking. Accountability is measured through physical presence at check-in/out via browser geofencing (300m radius) and verifiable deliverables on project tasks.
+      </p>
+    </div>
+
+    <div class="feature-card">
+      <h3>Principle 3: Built-In Data Sovereignty & Local Zero-Retention Voice</h3>
+      <p style="margin-bottom: 0;">
+        Speech-to-task recognition runs locally on your host server via <code>faster-whisper</code>. Spoken voice commands are converted into draft tasks on your machine, and <strong>the ephemeral audio file is shredded immediately in code</strong>. Voice recordings never leave your servers, are never stored on disk, and incur zero per-minute external API fees.
+      </p>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span>Mobius Bloom Venture Pvt Ltd</span>
+    <span>CONFIDENTIAL & PROPRIETARY — PREPARED FOR CLIENT REVIEW</span>
+    <span>Page 1</span>
+  </div>
+</div>
+
+<!-- PAGE 2: PLATFORM OVERVIEW TABLE & WORKFORCE/ATTENDANCE -->
+<div class="page">
+  <div class="page-header">
+    <span>MobiusEMS Enterprise Solution Guide</span>
+    <span>Core Operational Modules</span>
+  </div>
+  <div class="content">
+    <h2>3. Platform Capabilities at a Glance</h2>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 25%;">Module</th>
+          <th style="width: 50%;">Core Capability Delivered</th>
+          <th style="width: 25%;">Primary Users</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Workforce & Org Setup</strong></td>
+          <td>Departments, teams, designations, Employee 360 profiles, career history, and resumable onboarding.</td>
+          <td>HR, Managers, Employees</td>
+        </tr>
+        <tr>
+          <td><strong>Smart Attendance</strong></td>
+          <td>Mobile browser geofence (300m radius), 11:30 AM cutoff, 4h half-day, and leave management.</td>
+          <td>All Employees, HR Ops</td>
+        </tr>
+        <tr>
+          <td><strong>Project & Task Delivery</strong></td>
+          <td>Kanban state machine, blocker escalation, cycle time, rework metrics, and audit history.</td>
+          <td>Project Teams, Managers</td>
+        </tr>
+        <tr>
+          <td><strong>Local Voice-to-Task</strong></td>
+          <td>Zero-retention speech capture (11 Indian languages + English), Hinglish NLP, and editable draft cards.</td>
+          <td>Field Staff, Engineers</td>
+        </tr>
+        <tr>
+          <td><strong>Skills & Capability Matrix</strong></td>
+          <td>Verified vs self-reported skills, departmental heatmaps, role benchmarks, and timed assessments.</td>
+          <td>HR, Practice Leads</td>
+        </tr>
+        <tr>
+          <td><strong>Objective Performance</strong></td>
+          <td>Cascading goals, measurable KPIs, 360 reviews, deterministic math scoring, and frozen snapshots.</td>
+          <td>Leadership, Managers</td>
+        </tr>
+        <tr>
+          <td><strong>Contribution Intelligence</strong></td>
+          <td>Weekly deliverable updates, velocity metrics, contribution percentiles, and evidence coverage checks.</td>
+          <td>Team Leads, People Ops</td>
+        </tr>
+        <tr>
+          <td><strong>Commercial Sales & GIS</strong></td>
+          <td>7-tier GIS hierarchy (Global to Pincode), territory quotas, lead SLA tracking, pipelines, and revenue ledger.</td>
+          <td>Sales Reps, Sales Heads</td>
+        </tr>
+        <tr>
+          <td><strong>Talent Acquisition</strong></td>
+          <td>Job description library, candidate hiring pipelines, and automated PDF resume screening with skill matching.</td>
+          <td>Recruiters, Hiring Leads</td>
+        </tr>
+        <tr>
+          <td><strong>People Growth & 1-on-1s</strong></td>
+          <td>Structured 1-on-1 meeting workspace, internal training catalog, peer recognitions, and private to-dos.</td>
+          <td>Managers, Employees</td>
+        </tr>
+        <tr>
+          <td><strong>Governance & Security</strong></td>
+          <td>Fail-closed multi-tenancy, HttpOnly rotating sessions, authenticated private files, and audit logs.</td>
+          <td>IT, Security, Compliance</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>4. Module Deep-Dive: People & Daily Execution</h2>
+    
+    <div class="feature-card">
+      <h3>4.1 Unified Workforce & Organizational Structure</h3>
+      <ul>
+        <li><strong>Dynamic Org Hierarchy:</strong> Model Departments, Teams, and Designations with custom reporting lines and approval paths. Modify structures dynamically without database migrations.</li>
+        <li><strong>Employee 360 Longitudinal Profiles:</strong> Single pane of glass connecting personal details, active tasks, verified skills, appraisal history, leave balances, 1-on-1 logs, and career milestones.</li>
+        <li><strong>Frictionless Onboarding:</strong> Provision via secure invitation links, temporary credentials, mandatory password rotation upon first login, and a resumable onboarding wizard.</li>
+        <li><strong>Role-Based Access Control:</strong> 5 system roles (<code>SUPER_ADMIN</code>, <code>HR_ADMIN</code>, <code>DEPARTMENT_HEAD</code>, <code>MANAGER</code>, <code>EMPLOYEE</code>) enforcing strict separation of duties.</li>
+      </ul>
+    </div>
+
+    <div class="feature-card">
+      <h3>4.2 Smart Geofenced Attendance & Leave Management</h3>
+      <ul>
+        <li><strong>Zero-Hardware Mobile Browser Check-In:</strong> Validates location from employee mobile/laptop browsers using native HTML5 geolocation without mandatory native app downloads.</li>
+        <li><strong>Haversine Geofencing (300m Radius):</strong> Enforces check-in within a 300-meter radius of configured office coordinates. GPS accuracy fuzzier than 200m is rejected to block location spoofing.</li>
+        <li><strong>Predictable Business Rules:</strong> Check-ins after 11:30 AM IST automatically mark as <code>LATE</code>. Total elapsed shift under 4 hours (240 mins) upon checkout demotes the day to <code>HALF_DAY</code>.</li>
+        <li><strong>Clean 5-State Taxonomy:</strong> Classifies daily records into <code>PRESENT</code>, <code>LATE</code>, <code>HALF_DAY</code>, <code>ON_LEAVE</code>, or <code>ABSENT</code>. Includes regularization requests for field transit.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span>Mobius Bloom Venture Pvt Ltd</span>
+    <span>CONFIDENTIAL & PROPRIETARY — PREPARED FOR CLIENT REVIEW</span>
+    <span>Page 2</span>
+  </div>
+</div>
+
+<!-- PAGE 3: TASK, VOICE, SKILLS, PERFORMANCE -->
+<div class="page">
+  <div class="page-header">
+    <span>MobiusEMS Enterprise Solution Guide</span>
+    <span>Delivery, Voice & Performance</span>
+  </div>
+  <div class="content">
+    <h2>4. Module Deep-Dive (Continued)</h2>
+
+    <div class="feature-card">
+      <h3>4.3 Project Delivery & Visual Task Execution</h3>
+      <ul>
+        <li><strong>Portfolio Management:</strong> Manage project codes, budgets, target completion dates, team rosters, and client references.</li>
+        <li><strong>Kanban State Machine:</strong> Tasks progress through validated states: <code>Todo</code> &rarr; <code>In Progress</code> &rarr; <code>In Review</code> &rarr; <code>Done</code>. Enforces validations to prevent skipping stages.</li>
+        <li><strong>Explicit Blocker Escalation:</strong> Team members flag blockers directly on tasks (e.g. waiting for client assets). Blockers alert managers immediately to clear bottlenecks.</li>
+        <li><strong>Rework & Cycle Time Metrics:</strong> Monitors planned vs actual hours and rework loops. Frequent rework cycles surface requirements ambiguity or training needs.</li>
+      </ul>
+    </div>
+
+    <div class="feature-card">
+      <h3>4.4 Local Zero-Retention Multilingual Voice-to-Task Capture</h3>
+      <ul>
+        <li><strong>Local Speech Transcription:</strong> Powered by <code>faster-whisper</code> running on host infrastructure. Zero per-minute API costs.</li>
+        <li><strong>Guaranteed Audio Shredding:</strong> Ingested to ephemeral temp file, transcribed, and shredded immediately in a strict code <code>finally</code> block. Audio is never stored on disk or cloud.</li>
+        <li><strong>11 Indian Regional Languages + English:</strong> English, Hindi, Bengali, Tamil, Telugu, Marathi, Gujarati, Kannada, Malayalam, Punjabi, and Urdu.</li>
+        <li><strong>Smart Multilingual NLP Parser:</strong> Differentiates future tasks from completed work logs, converts spoken number words ("two hours", "दो घंटे") into numeric hours, and splits compound instructions ("Ayush ko frontend do aur Priya ko backend do").</li>
+        <li><strong>Human Confirmation:</strong> Generates an editable preview card for user verification before database commit.</li>
+      </ul>
+    </div>
+
+    <div class="feature-card">
+      <h3>4.5 Capability, Skills Matrix & Timed Assessments</h3>
+      <ul>
+        <li><strong>Verified vs Self-Reported Skills:</strong> Clear distinction between self-ratings (1-5) and peer/manager verified skills with proof.</li>
+        <li><strong>Departmental Skill Heatmaps:</strong> Visual matrix highlighting competency depth across teams and single-point dependency risks.</li>
+        <li><strong>Role Benchmarks & Gap Analysis:</strong> Compares employee skill profiles against designation requirements to guide training.</li>
+        <li><strong>Timed Assessments:</strong> Multiple-choice evaluations with randomized pools, time limits, and automated scoring.</li>
+      </ul>
+    </div>
+
+    <div class="feature-card">
+      <h3>4.6 Objective Performance Management & Snapshots</h3>
+      <ul>
+        <li><strong>Cascading Goals & Measurable KPIs:</strong> Quantifiable targets and weightings cascaded from company priorities down to individuals.</li>
+        <li><strong>Structured 360 Reviews:</strong> Multi-competency evaluation templates covering execution, communication, and leadership rubrics.</li>
+        <li><strong>Deterministic Math Formula:</strong> <code>Final Score = (Goals x Wg) + (KPIs x Wk) + (Review Competencies x Wr)</code>. Non-negotiable grade bands: Exceeding (&ge;90%), Meeting (75-89.9%), Needs Improvement (60-74.9%), Unsatisfactory (&lt;60%).</li>
+        <li><strong>Immutable Frozen Snapshots:</strong> All inputs, ratings, and weights are locked into immutable cryptographic records preventing post-review alterations.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span>Mobius Bloom Venture Pvt Ltd</span>
+    <span>CONFIDENTIAL & PROPRIETARY — PREPARED FOR CLIENT REVIEW</span>
+    <span>Page 3</span>
+  </div>
+</div>
+
+<!-- PAGE 4: COMMERCIAL SALES, RECRUITMENT, GOVERNANCE -->
+<div class="page">
+  <div class="page-header">
+    <span>MobiusEMS Enterprise Solution Guide</span>
+    <span>Commercial Operations & Security</span>
+  </div>
+  <div class="content">
+    <h2>4. Module Deep-Dive: Commercial Operations & Security</h2>
+
+    <div class="feature-card">
+      <h3>4.7 Commercial Sales Intelligence & Geographic Management (GIS)</h3>
+      <p style="margin-bottom: 4px;">Connect sales execution directly to workforce capacity and geographic territories:</p>
+      <ul>
+        <li><strong>7-Tier Geographic Hierarchy (GIS):</strong> Complete spatial hierarchy: <code>Global</code> &rarr; <code>Country</code> &rarr; <code>State</code> &rarr; <code>District</code> &rarr; <code>City</code> &rarr; <code>Area</code> &rarr; <code>Pincode</code>.</li>
+        <li><strong>Interactive GIS Maps:</strong> Visual heatmaps showing customer density, active leads, sales rep deployment, and revenue distribution.</li>
+        <li><strong>Territory Quotas & Headcount Capacity:</strong> Assign reps to territories with defined lead capacity thresholds to prevent lead neglect.</li>
+        <li><strong>Lead Management & SLA Tracking:</strong> Enforce response SLAs and automatically compute <strong>Estimated Lost Revenue</strong> for neglected leads.</li>
+        <li><strong>Opportunity Pipeline & Deal Stages:</strong> Visual pipeline (Prospecting to Closed-Won) with probability-weighted expected revenue.</li>
+        <li><strong>Automated Revenue Ledger:</strong> Closed-won opportunities automatically book realized revenue transactions onto the ledger.</li>
+        <li><strong>3-Tier Commercial Access Scoping:</strong> Reps see <code>SELF</code> records, managers see <code>TEAM</code> territories, and executives see <code>ALL</code> data.</li>
+      </ul>
+    </div>
+
+    <div class="feature-card">
+      <h3>4.8 Talent Acquisition & Automated Resume Screening</h3>
+      <ul>
+        <li><strong>Job Description (JD) Library:</strong> Standardized requisition templates tied to required organizational skill profiles.</li>
+        <li><strong>Candidate Pipeline:</strong> Visual stages from Sourced and Screened to Technical Interview, Offer, and Hired.</li>
+        <li><strong>Automated Resume Screening:</strong> Upload PDF/DOCX resumes. Extracts candidate skills, education, and experience years, matching them against job requirements with transparent match evidence for human recruiters.</li>
+      </ul>
+    </div>
+
+    <div class="feature-card">
+      <h3>4.9 Enterprise Governance, Security & Compliance</h3>
+      <ul>
+        <li><strong>Fail-Closed Multi-Tenancy:</strong> Logical tenant isolation enforced at database driver level via <code>AsyncLocalStorage</code> and Mongoose proxies. Zero cross-tenant data leakage (IDOR immunity).</li>
+        <li><strong>HttpOnly Rotating Sessions:</strong> 15-minute JWT access tokens paired with rotating refresh tokens. Replay detection revokes the token family.</li>
+        <li><strong>Private Authenticated Document Storage:</strong> Randomized keys in Cloudinary. Download links are signed, time-limited, and generated only after server-side permission checks. Files are never stored in public directories.</li>
+        <li><strong>Tamper-Evident Audit Trail:</strong> Every critical mutation (role changes, salary updates, voice commands, AI requests) records actor ID, timestamp, IP address, and JSON diffs.</li>
+      </ul>
+    </div>
+
+    <div class="feature-card">
+      <h3>4.10 Pragmatic & Ethical AI Assistance</h3>
+      <ul>
+        <li><strong>Company Knowledge Assistant:</strong> Answers employee policy questions grounded in uploaded company handbooks. Unhandled queries escalate to HR.</li>
+        <li><strong>Advisory Review Drafting:</strong> Prepares human-reviewable draft review summaries based on logged work history.</li>
+        <li><strong>Multi-Provider Ready:</strong> Pre-configured for Groq (<code>llama-3.3-70b-versatile</code>), with support for OpenAI, Anthropic, Gemini, or local models.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span>Mobius Bloom Venture Pvt Ltd</span>
+    <span>CONFIDENTIAL & PROPRIETARY — PREPARED FOR CLIENT REVIEW</span>
+    <span>Page 4</span>
+  </div>
+</div>
+
+<!-- PAGE 5: COMPARISON & ROLLOUT -->
+<div class="page">
+  <div class="page-header">
+    <span>MobiusEMS Enterprise Solution Guide</span>
+    <span>Comparison & Implementation</span>
+  </div>
+  <div class="content">
+    <h2>5. Feature Comparison: MobiusEMS vs. Disconnected SaaS Tools</h2>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 22%;">Operational Domain</th>
+          <th style="width: 38%;">Fragmented SaaS Stack (Typical Setup)</th>
+          <th style="width: 40%;">MobiusEMS Unified Platform</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Attendance Tracking</strong></td>
+          <td>Biometric fingerprint machines; expensive hardware, fails for field staff, manual reconciliation.</td>
+          <td>Mobile browser Haversine geofencing (300m radius); zero hardware, anti-spoofing protection, automatic late/half-day logic.</td>
+        </tr>
+        <tr>
+          <td><strong>Task Management</strong></td>
+          <td>Standalone boards (Trello/Asana); disconnected from employee profiles and appraisals.</td>
+          <td>Integrated Kanban; directly feeds weekly deliverables, blocker logs, rework metrics, and review evidence.</td>
+        </tr>
+        <tr>
+          <td><strong>Performance Reviews</strong></td>
+          <td>Annual spreadsheets; subjective, recency-biased, lacking historical evidence.</td>
+          <td>Continuous evidence logging, measurable KPIs, 360 reviews, deterministic math scoring, and frozen snapshots.</td>
+        </tr>
+        <tr>
+          <td><strong>Voice Task Capture</strong></td>
+          <td>Manual web forms or expensive per-minute third-party cloud speech APIs.</td>
+          <td>Local <code>faster-whisper</code> on host; 11 Indian languages, zero per-minute fees, instant audio shredding.</td>
+        </tr>
+        <tr>
+          <td><strong>Commercial Sales</strong></td>
+          <td>Expensive standalone CRM; disconnected from employee capacity, leaves, and realized revenue.</td>
+          <td>Native 7-tier GIS hierarchy, territory quotas, lead SLA tracking, deal pipelines, and automated revenue ledger.</td>
+        </tr>
+        <tr>
+          <td><strong>Recruitment & Screening</strong></td>
+          <td>Manual resume scanning in shared inboxes or expensive external ATS subscriptions.</td>
+          <td>Integrated JD library, candidate pipelines, and automated PDF resume screening with advisory skill matching.</td>
+        </tr>
+        <tr>
+          <td><strong>AI Capabilities</strong></td>
+          <td>Black-box models or intrusive surveillance attempting to rate or rank staff automatically.</td>
+          <td>Transparent advisory AI; strict ethical lock against automated personnel decisions.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>6. Implementation & 4-Week Rollout Plan</h2>
+    <div class="grid-2">
+      <div class="feature-card">
+        <h3 style="color: #0f172a;">Week 1: Org Setup & Governance</h3>
+        <p style="font-size: 8pt; margin-bottom: 0;">
+          Provision isolated tenant workspace, configure departments, teams, designations, office coordinates, and assign administrative roles.
+        </p>
+      </div>
+      <div class="feature-card">
+        <h3 style="color: #0f172a;">Week 2: Workforce & Daily Rhythm</h3>
+        <p style="font-size: 8pt; margin-bottom: 0;">
+          Bulk invite employees with resumable onboarding, activate geofenced attendance, and configure initial project Kanban boards.
+        </p>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="feature-card">
+        <h3 style="color: #0f172a;">Week 3: Sales & Skills Matrix</h3>
+        <p style="font-size: 8pt; margin-bottom: 0;">
+          Define geographic territories, assign sales reps, import customer accounts, and populate standardized skills catalog.
+        </p>
+      </div>
+      <div class="feature-card">
+        <h3 style="color: #0f172a;">Week 4: Performance Cadence</h3>
+        <p style="font-size: 8pt; margin-bottom: 0;">
+          Configure KPI templates and cascading goals, launch weekly update cadence, and activate manager review workspaces.
+        </p>
+      </div>
+    </div>
+
+    <h2>7. Ready to Get Started?</h2>
+    <div class="callout" style="border-left-color: #2563eb; background-color: #eff6ff;">
+      <strong>Schedule a Tailored Demonstration:</strong> We will configure a live sandbox reflecting your department hierarchy, office geofences, and sales territories.<br>
+      <strong>Contact:</strong> contact@whalexy.com &nbsp;|&nbsp; <strong>Visit:</strong> https://employee.whalexy.com &nbsp;|&nbsp; <strong>Mobius Bloom Venture Pvt Ltd</strong>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span>Mobius Bloom Venture Pvt Ltd</span>
+    <span>CONFIDENTIAL & PROPRIETARY — PREPARED FOR CLIENT REVIEW</span>
+    <span>Page 5</span>
+  </div>
+</div>
+
+</body>
+</html>

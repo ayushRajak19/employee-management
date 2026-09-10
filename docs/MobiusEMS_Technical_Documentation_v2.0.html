@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>MobiusEMS - Production System, Architecture & Operations Reference v2.0</title>
+<style>
+  @page {
+    size: A4 portrait;
+    margin: 12mm 15mm 12mm 15mm;
+  }
+  * {
+    box-sizing: border-box;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+    font-size: 8.8pt;
+    line-height: 1.42;
+    color: #1e293b;
+    margin: 0;
+    padding: 0;
+    background-color: #ffffff;
+  }
+  
+  .page {
+    page-break-after: always;
+    height: 272mm;
+    position: relative;
+    padding-top: 14mm;
+    padding-bottom: 12mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .page:last-child {
+    page-break-after: avoid;
+  }
+  
+  .page-header {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 10mm;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    font-size: 7pt;
+    font-weight: 600;
+    color: #64748b;
+    letter-spacing: 0.8px;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  
+  .page-footer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 8mm;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 7.2pt;
+    color: #64748b;
+    border-top: 1px solid #e2e8f0;
+  }
+  
+  .content {
+    flex: 1;
+  }
+  
+  h1 {
+    font-size: 18pt;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 10px 0;
+    letter-spacing: -0.3px;
+  }
+  h2 {
+    font-size: 12pt;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 12px 0 6px 0;
+    letter-spacing: -0.2px;
+  }
+  h3 {
+    font-size: 9.8pt;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 8px 0 4px 0;
+  }
+  p {
+    margin: 0 0 6px 0;
+  }
+  ul {
+    margin: 0 0 8px 0;
+    padding-left: 18px;
+  }
+  li {
+    margin-bottom: 3.5px;
+  }
+  
+  .badge {
+    background-color: #00bcd4;
+    color: #ffffff;
+    font-size: 7.5pt;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 3px 8px;
+    display: inline-block;
+    margin-bottom: 12px;
+  }
+  .title-main {
+    font-size: 32pt;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0 0 4px 0;
+    letter-spacing: -0.5px;
+  }
+  .title-sub {
+    font-size: 15pt;
+    font-weight: 400;
+    color: #475569;
+    margin: 0 0 16px 0;
+  }
+  .rule-thick {
+    height: 2px;
+    background-color: #0f172a;
+    margin-bottom: 16px;
+  }
+  
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 10px;
+    font-size: 7.8pt;
+  }
+  th {
+    background-color: #000000;
+    color: #ffffff;
+    font-weight: 700;
+    text-align: left;
+    padding: 5px 8px;
+    border: 1px solid #000000;
+  }
+  td {
+    padding: 4.5px 8px;
+    border: 1px solid #cbd5e1;
+    vertical-align: top;
+  }
+  tr:nth-child(even) td {
+    background-color: #f8fafc;
+  }
+  
+  .callout {
+    border-left: 4px solid #00bcd4;
+    background-color: #f0fdfa;
+    padding: 8px 12px;
+    margin: 8px 0 10px 0;
+    border-radius: 0 4px 4px 0;
+  }
+  .callout-title {
+    font-weight: 700;
+    color: #0f172a;
+    font-size: 8.5pt;
+    margin-bottom: 3px;
+  }
+  .callout-amber {
+    border-left-color: #f59e0b;
+    background-color: #fffbeb;
+  }
+  .callout-rose {
+    border-left-color: #f43f5e;
+    background-color: #fff1f2;
+  }
+  .callout-emerald {
+    border-left-color: #10b981;
+    background-color: #ecfdf5;
+  }
+  
+  .status-badge {
+    font-size: 7pt;
+    font-weight: 700;
+    padding: 1.5px 5px;
+    border-radius: 3px;
+    display: inline-block;
+  }
+  .status-confirmed { background-color: #dcfce7; color: #15803d; }
+  .status-validate { background-color: #fef3c7; color: #b45309; }
+  .status-intent { background-color: #e0e7ff; color: #4338ca; }
+  .status-reconciled { background-color: #ccfbf1; color: #0f766e; }
+
+  .diagram-box {
+    background-color: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 10px;
+    margin: 10px 0;
+    text-align: center;
+  }
+  .diagram-title {
+    font-size: 7.5pt;
+    font-weight: 600;
+    color: #64748b;
+    margin-top: 5px;
+  }
+  
+  .code-tree {
+    font-family: 'Consolas', monospace;
+    font-size: 7.3pt;
+    line-height: 1.35;
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 8px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+  }
+</style>
+</head>
+<body>
+
+<!-- PAGE 1: TITLE & COVER -->
+<div class="page">
+  <div class="page-header">MOBIUS BLOOM / MOBIUSEMS / ENGINEERING</div>
+  <div class="content">
+    <div style="margin-top: 15mm;">
+      <div class="badge">ENTERPRISE ENGINEERING DOCUMENTATION</div>
+      <div class="title-main">MobiusEMS</div>
+      <div class="title-sub">Production System, Architecture & Operations Reference</div>
+      <div class="rule-thick"></div>
+      
+      <table style="margin-top: 20px; font-size: 8.5pt;">
+        <thead>
+          <tr>
+            <th style="width: 28%;">Field</th>
+            <th>Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Organization</strong></td><td>Mobius Bloom Venture Pvt Ltd</td></tr>
+          <tr><td><strong>Product</strong></td><td>MobiusEMS / Employee Management & Commercial Operations Platform</td></tr>
+          <tr><td><strong>Repository</strong></td><td>github.com/ayushRajak19/employee-management</td></tr>
+          <tr><td><strong>Primary Runtime</strong></td><td>Node.js 20+ LTS + React 19.1 + MongoDB Atlas 7+</td></tr>
+          <tr><td><strong>Document Status</strong></td><td>Engineering Baseline — Manager & ARB Review (v2.0 Reconciled)</td></tr>
+          <tr><td><strong>Repository Snapshot</strong></td><td>Public main branch verified (September 2026 Production Baseline)</td></tr>
+          <tr><td><strong>Classification</strong></td><td>Internal / Confidential</td></tr>
+        </tbody>
+      </table>
+      
+      <div class="callout" style="margin-top: 25px; border-left-color: #00bcd4; background-color: #e0f7fa; padding: 14px;">
+        <div class="callout-title" style="font-size: 9.5pt; color: #006064;">Documentation basis & Source Verification</div>
+        <p style="font-size: 8.2pt; line-height: 1.5; margin: 0; color: #004d40;">
+          This document is derived from a rigorous, line-by-line source-code verification of the active repository structure, package manifests, 19 REST API route modules, server bootstrap, 62 registered Mongoose collections, 54 business services, 41 frontend pages, and 15 automated test suites (59 passing tests). It represents an authoritative engineering system specification and operations manual, reconciling all previous draft discrepancies.
+        </p>
+      </div>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span>INTERNAL TECHNICAL DOCUMENTATION</span>
+    <span>v2.0 | 10 Sep 2026</span>
+    <span>Page 1</span>
+  </div>
+</div>
+
+<!-- PAGE 2: DOCUMENT CONTROL & TOC -->
+<div class="page">
+  <div class="page-header">MOBIUS BLOOM / MOBIUSEMS / ENGINEERING</div>
+  <div class="content">
+    <h1>Document Control</h1>
+    <table>
+      <thead><tr><th style="width: 25%;">Item</th><th>Detail</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Document Owner</strong></td><td>Principal Systems Architect & Staff AI Engineer</td></tr>
+        <tr><td><strong>Intended Audience</strong></td><td>Executive Management, Engineering Leadership, Product, DevOps/SRE, SecOps, QA, and Maintainers</td></tr>
+        <tr><td><strong>Review Cadence</strong></td><td>Mandatory update for material architecture changes, database schema mutations, and pre-production releases</td></tr>
+        <tr><td><strong>Source of Truth</strong></td><td>Application source code, Zod schemas, Mongoose models, and production environment configuration</td></tr>
+        <tr><td><strong>Change Policy</strong></td><td>Architecture Review Board (ARB) sign-off required for changes impacting multi-tenancy, authentication, or AI safety boundaries</td></tr>
+      </tbody>
+    </table>
+
+    <h2>How to Read This Document</h2>
+    <p>This specification categorizes system features based on concrete, source-verified implementation evidence versus operational intent:</p>
+    <table>
+      <thead><tr><th style="width: 25%;">Status</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td><span class="status-badge status-confirmed">CONFIRMED</span></td><td>Directly evidenced by active repository source code, passing automated tests, or live configuration.</td></tr>
+        <tr><td><span class="status-badge status-reconciled">RECONCILED</span></td><td>Previously omitted or misdocumented subsystem now fully restored and verified from codebase truth.</td></tr>
+        <tr><td><span class="status-badge status-validate">IMPLEMENTED - VALIDATE</span></td><td>Code/service is present in source, but end-to-end multi-region latency or cloud stress testing remains required.</td></tr>
+        <tr><td><span class="status-badge status-intent">DOCUMENTED INTENT</span></td><td>Architectural roadmap or planned operational feature clearly demarcated from current release baseline.</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Table of Contents</h2>
+    <table style="font-size: 7.5pt;">
+      <tbody>
+        <tr><td><strong>1. Executive Summary</strong> .................................... Page 3</td><td><strong>13. Commercial Sales & GIS Mapping</strong> ................ Page 16</td></tr>
+        <tr><td><strong>2. Scope, Objectives & Guardrails</strong> ................. Page 5</td><td><strong>14. Governance & Documents</strong> ......................... Page 17</td></tr>
+        <tr><td><strong>3. Product Capability Map</strong> ............................ Page 5</td><td><strong>15. Deployment Architecture</strong> ........................ Page 17</td></tr>
+        <tr><td><strong>4. System Architecture & Lifecycle</strong> ................ Page 7</td><td><strong>16. Testing & Quality Gates</strong> .......................... Page 18</td></tr>
+        <tr><td><strong>5. Frontend Architecture (React 19)</strong> ............... Page 8</td><td><strong>17. Observability & Readiness</strong> ........................ Page 18</td></tr>
+        <tr><td><strong>6. Backend Architecture & APIs</strong> ..................... Page 9</td><td><strong>18. Reliability & Recovery</strong> ........................... Page 19</td></tr>
+        <tr><td><strong>7. Data Architecture (62 Collections)</strong> ............. Page 10</td><td><strong>19. Performance & Scalability</strong> ....................... Page 19</td></tr>
+        <tr><td><strong>8. Multi-Tenancy & Data Isolation</strong> ................. Page 11</td><td><strong>20. CI/CD Pipeline</strong> ................................... Page 19</td></tr>
+        <tr><td><strong>9. Authentication, RBAC & Security</strong> ................ Page 12</td><td><strong>21. Configuration & Secrets</strong> .......................... Page 20</td></tr>
+        <tr><td><strong>10. Core Business Workflows</strong> ........................ Page 12</td><td><strong>22. Engineering Risk Register</strong> ........................ Page 20</td></tr>
+        <tr><td><strong>11. AI & Local Voice Architecture</strong> ................. Page 13</td><td><strong>23. Operations Runbook</strong> ............................... Page 21</td></tr>
+        <tr><td><strong>12. Attendance, HR & Automation</strong> .................... Page 15</td><td><strong>24. ADRs & Sign-Off Checklist</strong> ........................ Page 21</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="page-footer">
+    <span>INTERNAL TECHNICAL DOCUMENTATION</span>
+    <span>v2.0 | 10 Sep 2026</span>
+    <span>Page 2</span>
+  </div>
+</div>
+
+<!-- PAGE 3: EXECUTIVE SUMMARY -->
+<div class="page">
+  <div class="page-header">MOBIUS BLOOM / MOBIUSEMS / ENGINEERING</div>
+  <div class="content">
+    <h1>1. Executive Summary</h1>
+    <h3>1.1 Product Definition</h3>
+    <p>
+      MobiusEMS is the flagship workforce-intelligence, human capital management, and commercial operations platform developed by Mobius Bloom Venture Pvt Ltd. Engineered as an autonomous Node.js service mapped to <code>employee.whalexy.com</code>, it is strictly decoupled from the legacy PHP/Laravel application at <code>whalexy.com</code>. Its architectural boundary extends beyond traditional HR records into verified capability intelligence, Kanban work delivery, explainable performance evaluation, geofenced mobile attendance, recruiting automation, commercial sales GIS mapping, and zero-retention advisory AI.
+    </p>
+
+    <h3>1.2 What the Platform Currently Covers</h3>
+    <ul>
+      <li><strong>Identity & Access:</strong> Cookie-based JWT sessions, rotating refresh tokens with token family replay protection, forced credential rotation, resumable onboarding, and granular database-backed RBAC.</li>
+      <li><strong>Workforce Structure:</strong> Organization trees, departments, teams, designations, reporting managers, and Employee 360 longitudinal profiles.</li>
+      <li><strong>Capability Intelligence:</strong> Standardized skill directories, employee claims, immutable verification audit trails, timed assessments, and departmental capability heatmaps.</li>
+      <li><strong>Execution & Work Delivery:</strong> Projects, Kanban board with validated state transitions, blocker root-cause logging, append-only activity history, and local voice-to-task commands.</li>
+      <li><strong>Deterministic Outcomes:</strong> Goals, KPIs, 360 reviews, and frozen performance snapshots with explainable mathematical weighting.</li>
+      <li><strong>Commercial Sales & GIS:</strong> Hierarchical geographic trees (Global-to-Area), territory allocations, lead lifecycles, opportunity pipelines, and automated revenue booking.</li>
+      <li><strong>Operational Workflows:</strong> Haversine geofenced mobile attendance, weekly contribution scoring, Brevo email automation, and private employee to-do checklists.</li>
+      <li><strong>Advisory AI:</strong> Multi-provider LLM gateway with strict policy guardrails prohibiting autonomous employment decisions.</li>
+    </ul>
+
+    <div class="callout callout-amber">
+      <div class="callout-title">Executive Architectural Assessment & Drift Reconciliation</div>
+      <p>
+        The repository exhibits an extensive, modular enterprise architecture. Legacy draft documents omitted the entire Commercial Sales & GIS subsystem (12 models, 2 route modules, 7 pages) and underreported models (30 vs 62) and test coverage (10 vs 15 suites, 59 tests). This v2.0 document reflects the fully reconciled, active production reality.
+      </p>
+    </div>
+
+    <h3>1.3 Engineering Snapshot</h3>
+    <table>
+      <thead><tr><th style="width: 20%;">Layer</th><th style="width: 38%;">Primary Technology / Pattern</th><th>Assessment</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Frontend</strong></td><td>React 19.1, TypeScript 5.8, Vite 7, React Router 7, TanStack Query 5, Tailwind CSS, Recharts, Leaflet GIS</td><td>Modern, high-performance SPA stack with modular feature organization.</td></tr>
+        <tr><td><strong>Backend</strong></td><td>Node.js 20+ LTS, Express 4.21, TypeScript, layered controllers/services/validators</td><td>Clean service-layer architecture with Zod schema boundary validation.</td></tr>
+        <tr><td><strong>Persistence</strong></td><td>MongoDB Atlas 7+ with Mongoose 8</td><td>Document model with tenant-scoped collections and compound uniqueness indexes.</td></tr>
+        <tr><td><strong>Multi-Tenancy</strong></td><td>AsyncLocalStorage context + Mongoose proxy wrapper</td><td>Fail-closed tenant isolation; IDOR-immune query and mutation scoping.</td></tr>
+        <tr><td><strong>Identity</strong></td><td>Dual-token HttpOnly cookies, bcrypt, refresh session rotation</td><td>Enterprise security standard preventing XSS token theft and replay attacks.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="page-footer">
+    <span>INTERNAL TECHNICAL DOCUMENTATION</span>
+    <span>v2.0 | 10 Sep 2026</span>
+    <span>Page 3</span>
+  </div>
+</div>
+
+<!-- PAGE 4: ENGINEERING SNAPSHOT CONT. -->
+<div class="page">
+  <div class="page-header">MOBIUS BLOOM / MOBIUSEMS / ENGINEERING</div>
+  <div class="content">
+    <h3>1.3 Engineering Snapshot (Continued)</h3>
+    <table>
+      <thead><tr><th style="width: 20%;">Layer</th><th style="width: 38%;">Primary Technology / Pattern</th><th>Assessment</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Private Storage</strong></td><td>Cloudinary Authenticated Assets</td><td>Private object delivery using randomized storage keys and backend-authorized signed download URLs. Zero public bucket exposure.</td></tr>
+        <tr><td><strong>AI Inference</strong></td><td>Multi-provider adapter: Groq (default), OpenAI, Anthropic, Gemini, Together, OpenRouter</td><td>Unified completion interface with configurable timeouts (45s), low temperature (0.2), and company knowledge grounding.</td></tr>
+        <tr><td><strong>Voice STT</strong></td><td>Local server-side <code>faster-whisper</code> (int8)</td><td>Zero-retention local processing; raw audio immediately shredded from ephemeral storage. Supports 11 Indian languages + English.</td></tr>
+        <tr><td><strong>Email System</strong></td><td>Brevo API + Webhooks + Nodemailer fallback</td><td>Transactional email automation with workflow triggers, step schedules, and a 250 email/day protective throttle.</td></tr>
+        <tr><td><strong>Deployment</strong></td><td>Hostinger Node.js Web App (Node 20+)</td><td>Single-host production topology serving compiled client SPA and versioned REST API. Requires resource monitoring for local STT.</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Core Architectural Tenets</h2>
+    <div style="display: flex; gap: 10px; margin-top: 10px;">
+      <div style="flex: 1; border: 1px solid #cbd5e1; border-radius: 4px; padding: 10px; background-color: #f8fafc;">
+        <div style="font-weight: 700; color: #0f172a; margin-bottom: 5px;">1. Deterministic Scoring</div>
+        <p style="font-size: 7.6pt; margin: 0; color: #334155;">
+          All KPI math, performance ratings, contribution percentiles, attendance determinations, and sales capacity gaps are computed via deterministic TypeScript formulas. LLMs are never permitted to generate quantitative outcomes.
+        </p>
+      </div>
+      <div style="flex: 1; border: 1px solid #cbd5e1; border-radius: 4px; padding: 10px; background-color: #f8fafc;">
+        <div style="font-weight: 700; color: #0f172a; margin-bottom: 5px;">2. Advisory AI Boundary</div>
+        <p style="font-size: 7.6pt; margin: 0; color: #334155;">
+          AI operates strictly as an assistive drafting tool. System policy and application code strictly prohibit AI from executing binding employment actions (promotions, salary revisions, disciplinary actions, or terminations).
+        </p>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 10px; margin-top: 10px;">
+      <div style="flex: 1; border: 1px solid #cbd5e1; border-radius: 4px; padding: 10px; background-color: #f8fafc;">
+        <div style="font-weight: 700; color: #0f172a; margin-bottom: 5px;">3. Fail-Closed Tenancy</div>
+        <p style="font-size: 7.6pt; margin: 0; color: #334155;">
+          Data access requires active tenant context established from verified JWT sessions. Invocations without tenant context fail closed at the Mongoose proxy level, preventing cross-tenant data exposure.
+        </p>
+      </div>
+      <div style="flex: 1; border: 1px solid #cbd5e1; border-radius: 4px; padding: 10px; background-color: #f8fafc;">
+        <div style="font-weight: 700; color: #0f172a; margin-bottom: 5px;">4. Zero-Retention Voice Privacy</div>
+        <p style="font-size: 7.6pt; margin: 0; color: #334155;">
+          Audio commands are transcribed on-host via faster-whisper and destroyed immediately in a <code>finally</code> block. No audio is ever persisted to object storage or database records.
+        </p>
+      </div>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span>INTERNAL TECHNICAL DOCUMENTATION</span>
+    <span>v2.0 | 10 Sep 2026</span>
+    <span>Page 4</span>
+  </div>
+</div>
+
+<!-- PAGE 5: SCOPE, OBJECTIVES & CAPABILITY MAP -->
+<div class="page">
+  <div class="page-header">MOBIUS BLOOM / MOBIUSEMS / ENGINEERING</div>
+  <div class="content">
+    <h1>2. Scope, Objectives and Boundaries</h1>
+    <h3>2.1 Business Objective</h3>
+    <p>
+      MobiusEMS centralizes organizational operations, workforce capability, delivery tracking, and commercial pipeline management into a single auditable platform. It replaces disparate point solutions while maintaining explainable evidence layers that empower managers without delegating sensitive decisions to opaque AI models.
+    </p>
+
+    <h3>2.2 Architectural Boundaries</h3>
+    <ul>
+      <li><strong>Independent Runtime:</strong> Complete decoupling from legacy PHP/Laravel at <code>whalexy.com</code>.</li>
+      <li><strong>REST API Gateway:</strong> Express owns <code>/api/v1/*</code> and serves the compiled React 19 SPA.</li>
+      <li><strong>Encapsulated Business Rules:</strong> Business logic lives in services; routes compose validation and auth guards.</li>
+      <li><strong>Bounded History:</strong> Growing historical data (audit logs, task activities, snapshots) resides in dedicated collections.</li>
+    </ul>
+
+    <h3>2.3 Non-Goals / Explicit Guardrails</h3>
+    <table>
+      <thead><tr><th style="width: 30%;">Area</th><th>Current Boundary & Invariant</th></tr></thead>
+      <tbody>
+        <tr><td><strong>AI Decision Authority</strong></td><td>No autonomous high-impact employment decisions (salary, termination, discipline).</td></tr>
+        <tr><td><strong>Public File Exposure</strong></td><td>Employee contracts and private records must never reside in predictable public URLs.</td></tr>
+        <tr><td><strong>Shared Laravel Runtime</strong></td><td>Zero filesystem or database coupling with legacy Laravel code.</td></tr>
+        <tr><td><strong>Uncontrolled Tenant Access</strong></td><td>All business queries must be tenant-scoped and RBAC authorized.</td></tr>
+        <tr><td><strong>Silent Voice Actions</strong></td><td>All voice-derived actions generate editable previews requiring explicit confirmation.</td></tr>
+      </tbody>
+    </table>
+
+    <h1>3. Product Capability Map</h1>
+    <table>
+      <thead><tr><th style="width: 20%;">Domain</th><th style="width: 35%;">Representative Models</th><th style="width: 33%;">Purpose</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Identity & Access</strong></td><td>User, Role, Permission, RefreshSession</td><td>Authentication, session lifecycle, RBAC, forced password change.</td><td><span class="status-badge status-confirmed">CONFIRMED</span></td></tr>
+        <tr><td><strong>Organization</strong></td><td>Employee, Department, Team, Designation, EmployeeTimeline</td><td>Org chart hierarchy, career timeline, and Employee 360 profile.</td><td><span class="status-badge status-confirmed">CONFIRMED</span></td></tr>
+        <tr><td><strong>Skills & Capability</strong></td><td>Skill, EmployeeSkill, SkillVerification, Assessment, AssessmentResult, RoleSkillAssessment</td><td>Verified skills inventory, peer audits, technical quizzes, role gaps.</td><td><span class="status-badge status-confirmed">CONFIRMED</span></td></tr>
+        <tr><td><strong>Work Delivery</strong></td><td>Project, Task, TaskActivity, VoiceCommand, WeeklyUpdate</td><td>Kanban state machine, blocker logging, voice-to-task commands.</td><td><span class="status-badge status-confirmed">CONFIRMED</span></td></tr>
+        <tr><td><strong>Performance</strong></td><td>Goal, KPI, EmployeeKPI, PerformanceReview, PerformanceSnapshot, PerformanceTemplate</td><td>Deterministic performance evaluation, weighted snapshots.</td><td><span class="status-badge status-confirmed">CONFIRMED</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="page-footer">
+    <span>INTERNAL TECHNICAL DOCUMENTATION</span>
+    <span>v2.0 | 10 Sep 2026</span>
+    <span>Page 5</span>
+  </div>
+</div>
+
+<!-- PAGE 6: CAPABILITY MAP CONT. -->
+<div class="page">
+  <div class="page-header">MOBIUS BLOOM / MOBIUSEMS / ENGINEERING</div>
+  <div class="content">
+    <h3>3. Product Capability Map (Continued)</h3>
+    <table>
+      <thead><tr><th style="width: 20%;">Domain</th><th style="width: 35%;">Representative Models</th><th style="width: 33%;">Purpose</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Contribution</strong></td><td>ContributionReview, ContributionSnapshot</td><td>Weekly deliverable reviews and deterministic contribution scoring.</td><td><span class="status-badge status-confirmed">CONFIRMED</span></td></tr>
+        <tr><td><strong>Attendance</strong></td><td>Attendance, AttendanceOffice</td><td>Haversine geofenced mobile check-in, office geofence config.</td><td><span class="status-badge status-confirmed">CONFIRMED</span></td></tr>
+        <tr><td><strong>Development</strong></td><td>Training, EmployeeTraining, Recognition, OneToOne</td><td>Learning courses, peer appreciation, 1-on-1 meeting records.</td><td><span class="status-badge status-confirmed">CONFIRMED</span></td></tr>
+        <tr><td><strong>People Ops</strong></td><td>Applicant, ResumeScreening, JobDescription, LeaveRequest</td><td>Recruiting pipelines, resume parsing, leave approvals.</td><td><span class="status-badge status-confirmed">CONFIRMED</span></td></tr>
+        <tr><td><strong>Sales Intelligence & GIS</strong></td><td>GeoNode, SalesTerritory, EmployeeTerritoryAssignment, SalesLead, SalesCustomer, SalesOpportunity, SalesTarget, SalesRevenueTransaction, ChannelPartner, SalesConfiguration, GeoSalesMetricSnapshot, EmployeeTargetCommitment</td><td>Hierarchical GIS tree, commercial territories, lead lifecycles, deal pipeline, automated revenue booking, capacity gap math.</td><td><span class="status-badge status-reconciled">RECONCILED</span></td></tr>
+        <tr><td><strong>Governance</strong></td><td>Document, Notification, AuditLog</td><td>Authenticated private files, in-app notifications, immutable audit log.</td><td><span class="status-badge status-confirmed">CONFIRMED</span></td></tr>
+        <tr><td><strong>Email Automation</strong></td><td>EmailWorkflow, EmailEnrollment, EmailDelivery</td><td>Multi-step drip campaigns, Brevo webhooks, 250/day throttle.</td><td><span class="status-badge status-confirmed">CONFIRMED</span></td></tr>
+        <tr><td><strong>AI Workspace</strong></td><td>AiEmployeeSummary, AiContentCache</td><td>Advisory review summaries, grounded policy Q&A, cached humor.</td><td><span class="status-badge status-confirmed">CONFIRMED</span></td></tr>
+        <tr><td><strong>Personal Productivity</strong></td><td>DailyTodo</td><td>Private personal checklists (decoupled from performance evaluation).</td><td><span class="status-badge status-confirmed">CONFIRMED</span></td></tr>
+        <tr><td><strong>Tenant Platform</strong></td><td>Tenant, SystemMigration</td><td>Multi-tenant provisioning, customer suspension, migration preflight.</td><td><span class="status-badge status-confirmed">CONFIRMED</span></td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-emerald">
+      <div class="callout-title">Privacy Invariant: Personal To-Dos Decoupled from Performance</div>
+      <p>
+        The <code>DailyTodo</code> collection implements a private personal productivity layer for employees. Code invariants and database queries strictly isolate daily personal to-dos from performance reviews, contribution snapshots, and manager dashboards. Personal task items are never used as performance evidence.
+      </p>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span>INTERNAL TECHNICAL DOCUMENTATION</span>
+    <span>v2.0 | 10 Sep 2026</span>
+    <span>Page 6</span>
+  </div>
+</div>
+
+<!-- PAGE 7: SYSTEM ARCHITECTURE -->
+<div class="page">
+  <div class="page-header">MOBIUS BLOOM / MOBIUSEMS / ENGINEERING</div>
+  <div class="content">
+    <h1>4. System Architecture</h1>
+    <p>
+      MobiusEMS follows a modular monorepo workspace architecture with separated client, server, and shared contract packages. In production, Express serves both the static React SPA and the versioned REST API, simplifying Hostinger deployment while maintaining strict architectural boundaries.
+    </p>
+
+    <div class="diagram-box">
+      <div style="font-size: 8pt; font-weight: 700; color: #0f172a; margin-bottom: 8px;">MobiusEMS - High-Level Production Multi-Tier Architecture</div>
+      <div style="display: flex; justify-content: space-between; gap: 8px; text-align: left;">
+        <div style="flex: 1; background: #e0f2fe; border: 1px solid #7dd3fc; border-radius: 4px; padding: 8px;">
+          <div style="font-weight: 700; color: #0369a1; font-size: 7.5pt;">1. Presentation Tier</div>
+          <div style="font-size: 7pt; color: #0c4a6e;">• React 19 + Vite 7<br/>• TanStack Query Cache<br/>• Leaflet GIS Maps<br/>• Browser MediaRecorder</div>
+        </div>
+        <div style="flex: 1; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px;">
+          <div style="font-weight: 700; color: #334155; font-size: 7.5pt;">2. Gateway Tier</div>
+          <div style="font-size: 7pt; color: #1e293b;">• Express 4 /api/v1<br/>• Helmet, CORS, Limits<br/>• Origin Verification<br/>• Tenancy Context</div>
+        </div>
+        <div style="flex: 1; background: #fef3c7; border: 1px solid #fde047; border-radius: 4px; padding: 8px;">
+          <div style="font-weight: 700; color: #854d0e; font-size: 7.5pt;">3. Service Tier</div>
+          <div style="font-size: 7pt; color: #713f12;">• Deterministic Math<br/>• Kanban State Machine<br/>• Faster-Whisper STT<br/>• Multi-Provider LLM</div>
+        </div>
+        <div style="flex: 1; background: #ecfdf5; border: 1px solid #6ee7b7; border-radius: 4px; padding: 8px;">
+          <div style="font-weight: 700; color: #065f46; font-size: 7.5pt;">4. Persistence Tier</div>
+          <div style="font-size: 7pt; color: #064e3b;">• MongoDB Atlas 7+<br/>• Cloudinary Private<br/>• Brevo Email Gateway<br/>• Tenant Indexes</div>
+        </div>
+      </div>
+      <div class="diagram-title">Figure 1. End-to-end multi-tier architecture derived from repository implementation.</div>
+    </div>
+
+    <h3>4.1 Repository Topology</h3>
+    <div class="code-tree">
+mobius-ems/
+├── client/                     React 19 / Vite 7 frontend (features, pages, routes, GIS maps)
+├── server/                     Express 4 / Node 20+ backend (models, services, routes, tenancy)
+├── shared/                     Shared TypeScript contracts (roles, permissions, DTOs, interfaces)
+├── docs/                       Architecture blueprints, multi-tenancy runbook, schema definitions
+├── .env.example                Safe configuration template (zero exposed secrets)
+└── package.json                NPM workspaces root with dev, build, typecheck, test, and ops commands
+    </div>
+
+    <h3>4.2 Request Lifecycle</h3>
+    <table>
+      <thead><tr><th style="width: 12%;">Step</th><th style="width: 25%;">Gateway Stage</th><th>Responsibility</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Step 1</strong></td><td>Client Ingress</td><td>Browser issues request with HttpOnly credentials/cookies to <code>employee.whalexy.com</code>.</td></tr>
+        <tr><td><strong>Step 2</strong></td><td>Security Guard</td><td>Helmet attaches headers (CSP, HSTS); CORS restricts origin; body limits enforced (1MB max).</td></tr>
+        <tr><td><strong>Step 3</strong></td><td>CSRF Origin Guard</td><td>Mutating requests (POST, PUT, PATCH, DELETE) verified against configured <code>CLIENT_URL</code>.</td></tr>
+        <tr><td><strong>Step 4</strong></td><td>Rate Limiting</td><td><code>/api</code> endpoints throttled at 200 requests/minute per client IP.</td></tr>
+        <tr><td><strong>Step 5</strong></td><td>Session & Tenancy</td><td>JWT verified; <code>tenantId</code> injected into Node.js <code>AsyncLocalStorage</code> execution context.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="page-footer">
+    <span>INTERNAL TECHNICAL DOCUMENTATION</span>
+    <span>v2.0 | 10 Sep 2026</span>
+    <span>Page 7</span>
+  </div>
+</div>
+
+<!-- PAGE 8: FRONTEND ARCHITECTURE -->
+<div class="page">
+  <div class="page-header">MOBIUS BLOOM / MOBIUSEMS / ENGINEERING</div>
+  <div class="content">
+    <h3>4.2 Request Lifecycle (Continued)</h3>
+    <table>
+      <thead><tr><th style="width: 12%;">Step</th><th style="width: 25%;">Gateway Stage</th><th>Responsibility</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Step 6</strong></td><td>Authorization Guard</td><td>Route permission middleware verifies actor rights; 3-tier sales scoping resolves visibility.</td></tr>
+        <tr><td><strong>Step 7</strong></td><td>Boundary Validation</td><td>Zod schemas validate request params, query, and payload before delegating to controllers.</td></tr>
+        <tr><td><strong>Step 8</strong></td><td>Domain Service</td><td>Deterministic business logic, scoring math, or external service adapter executes.</td></tr>
+        <tr><td><strong>Step 9</strong></td><td>Persistence Proxy</td><td>Mongoose queries automatically scoped to <code>tenantId</code> via fail-closed model wrapper.</td></tr>
+        <tr><td><strong>Step 10</strong></td><td>Audit & Response</td><td>State-changing events write to <code>AuditLog</code>; standardized JSON returned to client.</td></tr>
+      </tbody>
+    </table>
+
+    <h1>5. Frontend Architecture</h1>
+    <h3>5.1 Stack</h3>
+    <table>
+      <thead><tr><th style="width: 25%;">Concern</th><th>Technology</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Runtime & Framework</strong></td><td>React 19.1 + React DOM</td></tr>
+        <tr><td><strong>Language & Compiler</strong></td><td>TypeScript 5.8 + Vite 7</td></tr>
+        <tr><td><strong>Routing & Navigation</strong></td><td>react-router-dom 7 (Declarative protected route hierarchies)</td></tr>
+        <tr><td><strong>Server State Cache</strong></td><td>TanStack React Query 5 (Optimistic updates & background cache)</td></tr>
+        <tr><td><strong>Forms & Validation</strong></td><td>React Hook Form + Zod resolver integration</td></tr>
+        <tr><td><strong>Data Visualization</strong></td><td>Recharts 3.0 (Deterministic charts) + Leaflet / React Leaflet (Spatial GIS)</td></tr>
+        <tr><td><strong>UI Utilities</strong></td><td>Tailwind CSS, class-variance-authority, clsx, tailwind-merge, Lucide React</td></tr>
+      </tbody>
+    </table>
+
+    <h3>5.2 Feature Organization & Page Surface (41 Pages)</h3>
+    <p>
+      The client is strictly feature-oriented across 16 domain packages. The page surface comprises 41 route components including Public/Auth (7 pages), Workforce Administration (7 pages), Capability & Work (5 pages), Outcomes & Growth (4 pages), People Ops (5 pages), Commercial Sales & GIS (7 pages), and Governance/AI (6 pages).
+    </p>
+
+    <div class="callout callout-emerald">
+      <div class="callout-title">Registration Architecture Drift Resolved</div>
+      <p>
+        Legacy documentation stated there was intentionally no registration route. In the production codebase, <code>RegisterPage.tsx</code> and <code>registrationRoutes.ts</code> are fully implemented, providing isolated tenant provisioning and administrative onboarding.
+      </p>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span>INTERNAL TECHNICAL DOCUMENTATION</span>
+    <span>v2.0 | 10 Sep 2026</span>
+    <span>Page 8</span>
+  </div>
+</div>
+
+<!-- PAGE 9: BACKEND ARCHITECTURE & ROUTE MODULES -->
+<div class="page">
+  <div class="page-header">MOBIUS BLOOM / MOBIUSEMS / ENGINEERING</div>
+  <div class="content">
+    <h1>6. Backend Architecture</h1>
+    <h3>6.1 Runtime and Framework</h3>
+    <p>
+      The backend runs on Node.js 20+ LTS with Express 4.21 and TypeScript. The runtime leverages Mongoose 8 for persistence, bcrypt for password hashing, jsonwebtoken for session management, Multer for multipart uploads, Cloudinary for private authenticated file storage, Nodemailer and Brevo for email automation, Zod for schema validation, and PDF/DOCX parsers (<code>pdf-parse</code>, <code>mammoth</code>) for resume processing.
+    </p>
+
+    <h3>6.2 Architectural Layering</h3>
+    <table>
+      <thead><tr><th style="width: 20%;">Layer</th><th>Responsibilities</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Routes</strong></td><td>Declare URL paths, mount security middleware, and bind controllers.</td></tr>
+        <tr><td><strong>Middleware</strong></td><td>Authenticate sessions, enforce permissions, inject tenant context, verify origin, rate limit.</td></tr>
+        <tr><td><strong>Validators</strong></td><td>Zod boundary validation schemas rejecting malformed payloads before execution.</td></tr>
+        <tr><td><strong>Controllers</strong></td><td>Unpack HTTP requests, extract parameters, delegate to services, format JSON response.</td></tr>
+        <tr><td><strong>Services</strong></td><td>Encapsulate business logic, deterministic math, external APIs, and storage operations.</td></tr>
+        <tr><td><strong>Models</strong></td><td>62 Mongoose schemas with fail-closed tenant scoping wrapper and compound indexes.</td></tr>
+        <tr><td><strong>Jobs</strong></td><td>Database backups, tenant migrations, integrity verification, and data seeding scripts.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>6.3 The 19 Root API Modules</h3>
+    <table>
+      <thead><tr><th style="width: 30%;">Route Group</th><th>Responsibility</th></tr></thead>
+      <tbody>
+        <tr><td><code>/api/v1/auth</code></td><td>Session lifecycle: login, refresh, logout, password change, session verification.</td></tr>
+        <tr><td><code>/api/v1/registration</code></td><td>Public tenant onboarding and employee registration endpoints.</td></tr>
+        <tr><td><code>/api/v1/dashboard</code></td><td>Aggregated role-scoped dashboard metrics and operational widgets.</td></tr>
+        <tr><td><code>/api/v1/employees</code></td><td>Employee profile lifecycle, Employee 360 view, career timeline history.</td></tr>
+        <tr><td><code>/api/v1/organization</code></td><td>Departments, teams, designations, and reporting hierarchy.</td></tr>
+        <tr><td><code>/api/v1/skills</code></td><td>Skills directory, employee self-claims, verification decisions, assessments.</td></tr>
+        <tr><td><code>/api/v1/work</code></td><td>Projects, task Kanban board, validated state transitions, voice commands.</td></tr>
+        <tr><td><code>/api/v1/outcomes</code></td><td>Goals, KPIs, employee actuals, 360 reviews, performance scoring snapshots.</td></tr>
+        <tr><td><code>/api/v1/development</code></td><td>Training courses, employee enrollments, 1-on-1 meetings, recognitions.</td></tr>
+        <tr><td><code>/api/v1/governance</code></td><td>Private document management, in-app notifications, immutable audit log explorer.</td></tr>
+        <tr><td><code>/api/v1/people-ops</code></td><td>Job requisitions, applicant pipelines, resume screening, leave requests.</td></tr>
+        <tr><td><code>/api/v1/attendance</code></td><td>Geofenced mobile check-in/out, office coordinates, attendance register.</td></tr>
+        <tr><td><code>/api/v1/contribution</code></td><td>Weekly update submissions, contribution scoring snapshots.</td></tr>
+        <tr><td><code>/api/v1/ai</code></td><td>Advisory review drafting, policy Q&A with company knowledge, Mood Break.</td></tr>
+        <tr><td><code>/api/v1/todos</code></td><td>Private daily employee checklists (strictly isolated from performance scoring).</td></tr>
+        <tr><td><code>/api/v1/email-automation</code></td><td>Drip campaign workflows, Brevo integration, delivery webhooks.</td></tr>
+        <tr><td><code>/api/v1/platform/tenants</code></td><td>Global platform administration, tenant provisioning, and suspension.</td></tr>
+        <tr><td><code>/api/v1/sales</code></td><td>Commercial CRM: leads, customers, deals, targets, revenue, territories, GIS.</td></tr>
+        <tr><td><code>/api/v1/employee-map</code></td><td>Geospatial employee location and organizational distribution mapping.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="page-footer">
+    <span>INTERNAL TECHNICAL DOCUMENTATION</span>
+    <span>v2.0 | 10 Sep 2026</span>
+    <span>Page 9</span>
+  </div>
+</div>
+
+<!-- PAGE 10: DATA ARCHITECTURE (62 COLLECTIONS) -->
+<div class="page">
+  <div class="page-header">MOBIUS BLOOM / MOBIUSEMS / ENGINEERING</div>
+  <div class="content">
+    <h1>7. Data Architecture and Persistence</h1>
+    <h3>7.1 Database Strategy</h3>
+    <p>
+      MongoDB Atlas is the primary persistence layer. All business collections strictly enforce immutable <code>tenantId</code> scoping, soft-deletion timestamps (<code>isActive</code>, <code>archivedAt</code>, <code>deletedAt</code>), and explicit Zod field allowlists. Uniqueness and lookup indexes lead with <code>tenantId</code> to guarantee tenant-level uniqueness and rapid query execution. Historical records (audit logs, task activities, performance snapshots) are stored in dedicated collections to prevent unbounded document growth.
+    </p>
+
+    <h3>7.2 Complete 62 Collection Domain Map</h3>
+    <table>
+      <thead><tr><th style="width: 25%;">Domain Family</th><th>Key Mongoose Collections</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Identity & Session (4)</strong></td><td>User, Role, Permission, RefreshSession</td></tr>
+        <tr><td><strong>Tenancy & Platform (2)</strong></td><td>Tenant, SystemMigration</td></tr>
+        <tr><td><strong>Organization (5)</strong></td><td>Employee, Department, Team, Designation, EmployeeTimeline</td></tr>
+        <tr><td><strong>Skills & Capability (6)</strong></td><td>Skill, EmployeeSkill, SkillVerification, Assessment, AssessmentResult, RoleSkillAssessment</td></tr>
+        <tr><td><strong>Work Execution (5)</strong></td><td>Project, Task, TaskActivity, VoiceCommand, WeeklyUpdate</td></tr>
+        <tr><td><strong>Performance & Outcomes (6)</strong></td><td>Goal, KPI, EmployeeKPI, PerformanceReview, PerformanceSnapshot, PerformanceTemplate</td></tr>
+        <tr><td><strong>Contribution (2)</strong></td><td>ContributionReview, ContributionSnapshot</td></tr>
+        <tr><td><strong>Attendance & Geofencing (2)</strong></td><td>Attendance, AttendanceOffice</td></tr>
+        <tr><td><strong>Growth & Talent (4)</strong></td><td>Training, EmployeeTraining, Recognition, OneToOne</td></tr>
+        <tr><td><strong>People Ops & Recruiting (4)</strong></td><td>Applicant, ResumeScreening, JobDescription, LeaveRequest</td></tr>
+        <tr><td><strong>Sales Intelligence & GIS (12)</strong></td><td>GeoNode, SalesTerritory, EmployeeTerritoryAssignment, SalesLead, SalesCustomer, SalesOpportunity, SalesTarget, SalesRevenueTransaction, ChannelPartner, SalesConfiguration, GeoSalesMetricSnapshot, EmployeeTargetCommitment</td></tr>
+        <tr><td><strong>Governance & Audit (3)</strong></td><td>Document, Notification, AuditLog</td></tr>
+        <tr><td><strong>Email Automation (3)</strong></td><td>EmailWorkflow, EmailEnrollment, EmailDelivery</td></tr>
+        <tr><td><strong>AI & Personal (4)</strong></td><td>AiContentCache, AiEmployeeSummary, DailyTodo, VendorContact</td></tr>
+      </tbody>
+    </table>
+
+    <h3>7.3 Core Indexing Invariants</h3>
+    <ul>
+      <li><strong>Compound Unique Keys:</strong> <code>{ tenantId: 1, email: 1 }</code>, <code>{ tenantId: 1, employeeId: 1 }</code>, <code>{ tenantId: 1, code: 1 }</code>, <code>{ tenantId: 1, taskId: 1 }</code>.</li>
+      <li><strong>Operational Lookups:</strong> <code>{ tenantId: 1, status: 1, deadline: 1 }</code>, <code>{ tenantId: 1, territory: 1, stage: 1 }</code>.</li>
+      <li><strong>Single-Field TTL Cleanups:</strong> <code>RefreshSession</code> (<code>expiresAt</code>) and <code>AiContentCache</code> (<code>expiresAt</code>) enforce automatic document expiration via MongoDB TTL indexes.</li>
+    </ul>
+  </div>
+  <div class="page-footer">
+    <span>INTERNAL TECHNICAL DOCUMENTATION</span>
+    <span>v2.0 | 10 Sep 2026</span>
+    <span>Page 10</span>
+  </div>
+</div>
+
+<!-- PAGE 11: MULTI-TENANCY & ISOLATION -->
+<div class="page">
+  <div class="page-header">MOBIUS BLOOM / MOBIUSEMS / ENGINEERING</div>
+  <div class="content">
+    <h1>8. Multi-Tenancy and Isolation</h1>
+    <p>
+      MobiusEMS implements a logical multi-tenancy model backed by a central, fail-closed Mongoose model wrapper and Node.js <code>AsyncLocalStorage</code> execution context derived from verified JWT access tokens.
+    </p>
+
+    <div class="diagram-box">
+      <div style="font-size: 8pt; font-weight: 700; color: #0f172a; margin-bottom: 8px;">Tenant Isolation & Request Execution Path</div>
+      <div style="display: flex; justify-content: space-between; gap: 8px; text-align: left;">
+        <div style="flex: 1; background: #e0f2fe; border: 1px solid #7dd3fc; border-radius: 4px; padding: 8px;">
+          <div style="font-weight: 700; color: #0369a1; font-size: 7.5pt;">1. Verified Session</div>
+          <div style="font-size: 7pt; color: #0c4a6e;">• HttpOnly cookie decoded<br/>• Tenant identity resolved<br/>• Suspended check applied</div>
+        </div>
+        <div style="flex: 1; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px;">
+          <div style="font-weight: 700; color: #334155; font-size: 7.5pt;">2. Async Context</div>
+          <div style="font-size: 7pt; color: #1e293b;">• AsyncLocalStorage bound<br/>• Invariant: No client tenantId<br/>• Scoped across async calls</div>
+        </div>
+        <div style="flex: 1; background: #fef3c7; border: 1px solid #fde047; border-radius: 4px; padding: 8px;">
+          <div style="font-weight: 700; color: #854d0e; font-size: 7.5pt;">3. Fail-Closed Proxy</div>
+          <div style="font-size: 7pt; color: #713f12;">• Auto-injects tenantId<br/>• Prepend $match stage<br/>• Rejects raw cross-IDOR</div>
+        </div>
+        <div style="flex: 1; background: #ecfdf5; border: 1px solid #6ee7b7; border-radius: 4px; padding: 8px;">
+          <div style="font-weight: 700; color: #065f46; font-size: 7.5pt;">4. Compound Audit</div>
+          <div style="font-size: 7pt; color: #064e3b;">• Compound unique indexes<br/>• Tenant-scoped writes<br/>• Immutable audit entries</div>
+        </div>
+      </div>
+      <div class="diagram-title">Figure 2. Fail-closed multi-tenancy model enforced across all query and mutation paths.</div>
+    </div>
+
+    <h3>8.1 Required Tenancy Invariants</h3>
+    <ul>
+      <li><strong>Strict Context Binding:</strong> Every tenant-owned business record must carry an immutable <code>tenantId</code>.</li>
+      <li><strong>Client Independence:</strong> Database queries never rely on the client supplying <code>tenantId</code>; it is exclusively extracted from verified session credentials.</li>
+      <li><strong>IDOR Immunity:</strong> Lookups by raw MongoDB <code>_id</code> cannot leak cross-tenant records because all Mongoose queries automatically enforce <code>{ _id, tenantId }</code>.</li>
+      <li><strong>Aggregation Scoping:</strong> Aggregation pipelines automatically receive a <code>$match: { tenantId }</code> as Stage 0.</li>
+      <li><strong>Platform Segregation:</strong> Platform tenant administration endpoints (<code>/api/v1/platform/*</code>) are strictly restricted to the Super Admin role and allowlisted emails in <code>PLATFORM_ADMIN_EMAILS</code>.</li>
+    </ul>
+
+    <div class="callout callout-rose">
+      <div class="callout-title">Enterprise Release Gate: Multi-Tenant Negative Testing</div>
+      <p>
+        Multi-tenant isolation is protected by automated tests in <code>tenantModel.test.ts</code> that actively attempt cross-tenant reads, writes, batch inserts, and aggregations without context, verifying that every operation fails closed.
+      </p>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span>INTERNAL TECHNICAL DOCUMENTATION</span>
+    <span>v2.0 | 10 Sep 2026</span>
+    <span>Page 11</span>
+  </div>
+</div>
+
+<!-- PAGE 12: AUTHENTICATION, RBAC & CORE WORKFLOWS -->
+<div class="page">
+  <div class="page-header">MOBIUS BLOOM / MOBIUSEMS / ENGINEERING</div>
+  <div class="content">
+    <h1>9. Authentication, Authorization and Security</h1>
+    <h3>9.1 Authentication Model</h3>
+    <p>
+      MobiusEMS utilizes a dual-token cookie pattern. The access token (15-minute lifespan) and refresh token (7-day lifespan) are stored in <code>HttpOnly</code>, <code>Secure</code>, <code>SameSite=Strict</code> cookies. Passwords are salted and hashed using bcrypt. Refresh tokens rotate upon renewal, and reuse of a previously invalidated refresh token triggers immediate revocation of the entire session family.
+    </p>
+
+    <h3>9.2 Application Security Controls Observed</h3>
+    <table>
+      <thead><tr><th style="width: 25%;">Control</th><th>Implementation & Evidence</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Security Headers</strong></td><td>Helmet enabled; production CSP configured; X-Content-Type-Options: nosniff; HSTS active.</td></tr>
+        <tr><td><strong>CORS Enforcement</strong></td><td>Strictly restricted to configured <code>env.CLIENT_URL</code> with <code>credentials: true</code>.</td></tr>
+        <tr><td><strong>Origin Verification</strong></td><td>Mutating requests (POST/PUT/PATCH/DELETE) must match <code>CLIENT_URL</code> to block CSRF.</td></tr>
+        <tr><td><strong>Rate Limiting</strong></td><td>Application-level limiter throttles <code>/api</code> to 200 requests/minute per client IP.</td></tr>
+        <tr><td><strong>Body Size Ceiling</strong></td><td>JSON and URL-encoded request bodies restricted to 1 MB maximum.</td></tr>
+        <tr><td><strong>Session Protection</strong></td><td>HttpOnly cookies; refresh rotation; session family revocation upon replay detection.</td></tr>
+        <tr><td><strong>Private Storage</strong></td><td>Cloudinary authenticated resources with randomized keys; download URLs signed after backend auth.</td></tr>
+        <tr><td><strong>Audit Trail</strong></td><td>Append-only <code>AuditLog</code> recording actor, action, IP, user agent, and before/after diffs.</td></tr>
+      </tbody>
+    </table>
+
+    <h1>10. Core Business Workflows</h1>
+    <h3>10.1 Employee Lifecycle</h3>
+    <p>
+      Accounts are provisioned via administrative invite or tenant onboarding. First-time authentication forces password rotation and resumable profile onboarding. Employee records link to organization structures and career timelines; soft-delete flags preserve employment history.
+    </p>
+
+    <h3>10.2 Skills and Verification</h3>
+    <p>
+      Skills are centrally categorized. Employees submit proficiency claims, self-ratings, and proof documents. Verification decisions generate immutable <code>SkillVerification</code> records preserving reviewer justifications. Timed quizzes provide independent capability signals.
+    </p>
+  </div>
+  <div class="page-footer">
+    <span>INTERNAL TECHNICAL DOCUMENTATION</span>
+    <span>v2.0 | 10 Sep 2026</span>
+    <span>Page 12</span>
+  </div>
+</div>
+
+<!-- PAGE 13: WORK DELIVERY, PERFORMANCE & AI ARCHITECTURE -->
+<div class="page">
+  <div class="page-header">MOBIUS BLOOM / MOBIUSEMS / ENGINEERING</div>
+  <div class="content">
+    <h3>10.3 Work and Task Delivery</h3>
+    <ul>
+      <li><strong>Portfolios & Tasks:</strong> Projects organize task backlogs; tasks track assignees, reviewers, priorities, complexities, estimates, and deadlines.</li>
+      <li><strong>Validated Kanban:</strong> State transitions (<code>TODO</code> &rarr; <code>IN_PROGRESS</code> &rarr; <code>IN_REVIEW</code> &rarr; <code>COMPLETED</code>) are validated by transition logic covered by tests.</li>
+      <li><strong>Blocker Tracking:</strong> Tasks in a blocked state capture root cause categories and resolution notes.</li>
+      <li><strong>Activity Auditing:</strong> Append-only <code>TaskActivity</code> records capture all status shifts, reassignments, and hour logs.</li>
+    </ul>
+
+    <h3>10.4 Performance and Outcomes</h3>
+    <p>
+      Goals and KPIs provide structured performance evidence. 360 reviews capture multi-competency ratings. At cycle completion, an immutable <code>PerformanceSnapshot</code> freezes component scores, configured weights, and final tier determinations (EXCEEDING, MEETING, NEEDS_IMPROVEMENT, UNSATISFACTORY).
+    </p>
+
+    <h1>11. AI and Voice Architecture</h1>
+    <div class="diagram-box">
+      <div style="font-size: 8pt; font-weight: 700; color: #0f172a; margin-bottom: 8px;">Advisory AI Assistance Flow</div>
+      <div style="display: flex; justify-content: space-between; gap: 8px; text-align: left;">
+        <div style="flex: 1; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px;">
+          <div style="font-weight: 700; color: #0f172a; font-size: 7.5pt;">1. Request Input</div>
+          <div style="font-size: 7pt; color: #475569;">• Employee/admin question<br/>• Workflow context<br/>• Role & tenant scope</div>
+        </div>
+        <div style="flex: 1; background: #e0f2fe; border: 1px solid #7dd3fc; border-radius: 4px; padding: 8px;">
+          <div style="font-weight: 700; color: #0369a1; font-size: 7.5pt;">2. Policy Grounding</div>
+          <div style="font-size: 7pt; color: #0c4a6e;">• Company knowledge notes<br/>• Advisory-only prompt<br/>• Anti-bias boundary</div>
+        </div>
+        <div style="flex: 1; background: #fef3c7; border: 1px solid #fde047; border-radius: 4px; padding: 8px;">
+          <div style="font-weight: 700; color: #854d0e; font-size: 7.5pt;">3. Unified LLM Call</div>
+          <div style="font-size: 7pt; color: #713f12;">• Groq default (Llama 3.3)<br/>• OpenAI / Claude / Gemini<br/>• Temp 0.2, Timeout 45s</div>
+        </div>
+        <div style="flex: 1; background: #ecfdf5; border: 1px solid #6ee7b7; border-radius: 4px; padding: 8px;">
+          <div style="font-weight: 700; color: #065f46; font-size: 7.5pt;">4. Result Output</div>
+          <div style="font-size: 7pt; color: #064e3b;">• Non-binding summary<br/>• Audit log record<br/>• Cached humor content</div>
+        </div>
+      </div>
+      <div class="diagram-title">Figure 3. Multi-provider advisory LLM architecture with explicit decision guardrails.</div>
+    </div>
+
+    <h3>11.1 LLM Provider Abstraction</h3>
+    <p>
+      The LLM service (<code>llmService.ts</code>) normalizes disparate vendor APIs behind a common completion contract:
+      <code>complete({ system, user, temperature?, maxTokens? })</code>.
+      Groq is the default provider, running <code>llama-3.3-70b-versatile</code> for sub-second responses. Alternative providers include OpenAI (<code>gpt-4.1-mini</code>), Anthropic (<code>claude-sonnet-4-20250514</code>), Gemini (<code>gemini-2.5-flash</code>), Together, OpenRouter, and generic OpenAI-compatible gateways.
+    </p>
+  </div>
+  <div class="page-footer">
+    <span>INTERNAL TECHNICAL DOCUMENTATION</span>
+    <span>v2.0 | 10 Sep 2026</span>
+    <span>Page 13</span>
+  </div>
+</div>
+
+<!-- PAGE 14: LLM TABLE, VOICE & ATTENDANCE -->
+<div class="page">
+  <div class="page-header">MOBIUS BLOOM / MOBIUSEMS / ENGINEERING</div>
+  <div class="content">
+    <h3>11.1 LLM Provider Abstraction (Continued)</h3>
+    <table>
+      <thead><tr><th style="width: 20%;">Provider</th><th>Default Model & Configuration Details</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Groq (Default)</strong></td><td><code>llama-3.3-70b-versatile</code> via OpenAI-compatible endpoint. Ultra-low latency inference.</td></tr>
+        <tr><td><strong>OpenAI</strong></td><td><code>gpt-4.1-mini</code> via native chat completions endpoint.</td></tr>
+        <tr><td><strong>OpenRouter</strong></td><td><code>openai/gpt-4.1-mini</code> or custom model routing.</td></tr>
+        <tr><td><strong>Together</strong></td><td><code>meta-llama/Llama-3.3-70B-Instruct-Turbo</code> open-weights hosting.</td></tr>
+        <tr><td><strong>Anthropic</strong></td><td><code>claude-sonnet-4-20250514</code> via native <code>/messages</code> API with version header.</td></tr>
+        <tr><td><strong>Gemini</strong></td><td><code>gemini-2.5-flash</code> via native Google <code>generateContent</code> API.</td></tr>
+        <tr><td><strong>Generic</strong></td><td>Configurable custom base URL and model name for enterprise private LLM gateways.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-rose">
+      <div class="callout-title">Ethical AI Guardrail: Advisory-Only Employment Boundary</div>
+      <p>
+        System policy and code explicitly mandate that AI outputs are advisory drafts. AI is strictly prohibited from executing autonomous decisions regarding compensation, promotions, disciplinary measures, or terminations.
+      </p>
+    </div>
+
+    <h3>11.3 Knowledge Grounding & Vector RAG Assessment</h3>
+    <p>
+      AI prompts are grounded with approved organizational policies via <code>env.AI_COMPANY_KNOWLEDGE</code>. Unanswered policy queries are automatically directed to human HR. Package manifests confirm no vector database (pgvector, Pinecone) or embedding library is deployed; describing vector RAG as implemented is inaccurate.
+    </p>
+
+    <h3>11.4 Local Zero-Retention Voice-to-Task Pipeline</h3>
+    <p>
+      Voice task capture runs entirely on application server infrastructure using local <code>faster-whisper</code> (small multilingual model, int8 quantization):
+    </p>
+    <ul>
+      <li><strong>11 Supported Languages:</strong> English + 10 major Indian languages (Hindi, Bengali, Tamil, Telugu, Marathi, Gujarati, Kannada, Malayalam, Punjabi, Urdu).</li>
+      <li><strong>Zero Retention:</strong> Audio written to ephemeral <code>mkdtemp</code> is shredded via <code>fs.rm</code> in a <code>finally</code> block immediately after transcription.</li>
+      <li><strong>Heuristic NLP Parser:</strong> 400+ LOC engine in <code>voiceTaskService.ts</code> disambiguates prospective task creation from retrospective completion, extracts multilingual number words, and splits multi-employee assignments.</li>
+      <li><strong>Interactive Confirmation:</strong> Generates an editable <code>VoiceDraft</code> preview before database commit.</li>
+    </ul>
+  </div>
+  <div class="page-footer">
+    <span>INTERNAL TECHNICAL DOCUMENTATION</span>
+    <span>v2.0 | 10 Sep 2026</span>
+    <span>Page 14</span>
+  </div>
+</div>
+
+<!-- PAGE 15: ATTENDANCE, PEOPLE OPS & EMAIL AUTOMATION -->
+<div class="page">
+  <div class="page-header">MOBIUS BLOOM / MOBIUSEMS / ENGINEERING</div>
+  <div class="content">
+    <h1>12. Attendance, People Operations and Automation</h1>
+    <h3>12.1 Attendance Engine & Geofencing Rules</h3>
+    <p>
+      The attendance system (<code>attendanceService.ts</code>) enforces precise mathematical rules:
+    </p>
+    <ul>
+      <li><strong>Haversine Spherical Distance:</strong> Validates user coordinates against configured office location (Default: Shivnath Business Centre, Raipur; Lat: 21.251413, Lon: 81.709438). Permitted geofence radius: &le; 300 meters.</li>
+      <li><strong>GPS Anti-Spoofing Gate:</strong> Mobile coordinates with device accuracy &gt; 200 meters are rejected with HTTP 422.</li>
+      <li><strong>IST Timezone & Shift Cutoffs:</strong> Evaluated in <code>Asia/Kolkata</code>. Check-in after 11:30 AM IST automatically classifies daily status as <code>LATE</code>; otherwise <code>PRESENT</code>.</li>
+      <li><strong>Checkout Duration Check:</strong> Check-out calculates worked minutes. Durations &lt; 240 minutes (4 hours) demote status to <code>HALF_DAY</code>.</li>
+      <li><strong>Organization Register:</strong> Super Admin view classifies daily workforce into <code>PRESENT</code>, <code>LATE</code>, <code>HALF_DAY</code>, <code>ON_LEAVE</code>, or <code>ABSENT</code>.</li>
+    </ul>
+
+    <h3>12.2 Talent Acquisition & Resume Screening</h3>
+    <p>
+      Recruiting components manage job requisitions and candidate pipelines. Server-side libraries (<code>pdf-parse</code>, <code>mammoth</code>) extract text from uploaded resumes. The screening service extracts skills, experience, and education, generating an assistive match score. Final hiring decisions remain human-driven.
+    </p>
+
+    <h3>12.3 Email Automation Architecture</h3>
+    <p>
+      The email automation engine (<code>emailAutomationService.ts</code>) manages multi-step lifecycle drip campaigns:
+    </p>
+    <ul>
+      <li><strong>Dual Gateway:</strong> Primary transactional delivery via Brevo API with webhook tracking; Nodemailer SMTP fallback.</li>
+      <li><strong>Workflow State:</strong> Step delays, dynamic token replacement, and enrollment status tracking.</li>
+      <li><strong>Safety Throttle:</strong> Enforces a strict 250 emails/day cap (<code>EMAIL_AUTOMATION_DAILY_LIMIT</code>) to prevent domain blacklisting.</li>
+    </ul>
+
+    <h3>12.4 Daily Todos (Personal Productivity)</h3>
+    <p>
+      <code>DailyTodo</code> provides private personal checklist management. To ensure employee psychological safety and fairness, personal to-dos are strictly excluded from performance algorithms and manager review screens.
+    </p>
+  </div>
+  <div class="page-footer">
+    <span>INTERNAL TECHNICAL DOCUMENTATION</span>
+    <span>v2.0 | 10 Sep 2026</span>
+    <span>Page 15</span>
+  </div>
+</div>
+
+<!-- PAGE 16: COMMERCIAL SALES & GIS MAPPING -->
+<div class="page">
+  <div class="page-header">MOBIUS BLOOM / MOBIUSEMS / ENGINEERING</div>
+  <div class="content">
+    <h1>13. Commercial Sales Intelligence & Spatial GIS</h1>
+    <p>
+      The Commercial Sales Intelligence subsystem bridges human capital management with revenue operations, providing end-to-end sales lifecycle tracking, territory alignment, and geospatial workforce mapping.
+    </p>
+
+    <h3>13.1 Canonical GIS Hierarchy (GeoNode)</h3>
+    <p>
+      Geographic intelligence is structured into a canonical, self-referencing tree model (<code>GeoNode</code>):
+      <code>GLOBAL</code> &rarr; <code>COUNTRY</code> &rarr; <code>STATE</code> &rarr; <code>DISTRICT</code> &rarr; <code>CITY</code> &rarr; <code>AREA</code> &rarr; <code>PINCODE</code>.
+      GeoNodes store geospatial coordinates and boundary polygons, decoupled from dynamic sales territories.
+    </p>
+
+    <h3>13.2 Sales Territories & 3-Tier Scoping</h3>
+    <ul>
+      <li><strong>Dynamic Boundaries:</strong> <code>SalesTerritory</code> groups multiple GeoNodes under commercial ownership.</li>
+      <li><strong>Staff Allocation:</strong> <code>EmployeeTerritoryAssignment</code> manages effective-dated rep allocations.</li>
+      <li><strong>3-Tier ABAC Scoping:</strong> <code>salesScopeService.ts</code> dynamically evaluates actor permissions:
+        <ul>
+          <li><strong><code>SELF</code>:</strong> Sales rep views only self-owned leads, pipeline, targets, and revenue.</li>
+          <li><strong><code>TEAM</code>:</strong> Sales manager views self plus all direct/indirect reporting team members in assigned territories.</li>
+          <li><strong><code>ALL</code>:</strong> HR Admin receives tenant-wide read-only visibility; Super Admin receives mutation rights.</li>
+        </ul>
+      </li>
+    </ul>
+
+    <h3>13.3 Lead Lifecycle & Automated Revenue Booking</h3>
+    <p>
+      Leads move through <code>NEW</code> &rarr; <code>CONTACTED</code> &rarr; <code>QUALIFIED</code> &rarr; <code>CONVERTED</code> / <code>LOST</code>. Marking a lead as <code>CONVERTED</code> automatically provisions a linked <code>SalesCustomer</code>. Commercial deals are tracked through <code>SalesOpportunity</code>. Moving an opportunity to <code>WON</code> automatically generates an audited <code>SalesRevenueTransaction</code> and increments customer lifetime revenue idempotently.
+    </p>
+
+    <h3>13.4 Deterministic Capacity & Opportunity Math</h3>
+    <table>
+      <thead><tr><th style="width: 25%;">Metric Engine</th><th>Mathematical Formula & Architectural Logic</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Weighted Pipeline</strong></td><td>&Sigma; (Opportunity Amount &times; Stage Probability)</td></tr>
+        <tr><td><strong>Capacity Gap</strong></td><td>max(0, &lceil;Lead Load / Capacity per Rep&rceil; - Active Headcount). Flags staffing deficits.</td></tr>
+        <tr><td><strong>Opportunity Score</strong></td><td>Normalized 0-100 index combining Demand, Coverage Gaps, White Space, and Pipeline. Bounded into LOW, MEDIUM, HIGH, and CRITICAL bands.</td></tr>
+        <tr><td><strong>Estimated Lost Revenue</strong></td><td>Quantifies unrealized pipeline decay when leads exceed SLA response thresholds.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="page-footer">
+    <span>INTERNAL TECHNICAL DOCUMENTATION</span>
+    <span>v2.0 | 10 Sep 2026</span>
+    <span>Page 16</span>
+  </div>
+</div>
+
+<!-- PAGE 17: GOVERNANCE, AUDIT & DEPLOYMENT -->
+<div class="page">
+  <div class="page-header">MOBIUS BLOOM / MOBIUSEMS / ENGINEERING</div>
+  <div class="content">
+    <h1>14. Documents, Notifications and Governance</h1>
+    <h3>14.1 Private Document Storage</h3>
+    <ul>
+      <li>Cloudinary authenticated private storage; database stores only metadata and randomized storage keys.</li>
+      <li>Signed, short-lived download URLs generated only after backend RBAC and ownership verification.</li>
+      <li>Employee records must never reside under <code>client/public</code> or predictable public paths.</li>
+    </ul>
+
+    <h3>14.2 Tamper-Evident Audit Logging</h3>
+    <p>
+      The <code>AuditLog</code> collection records actor ID, action verb, entity type, entity ID, client IP address, browser user-agent, and before/after JSON diffs. The application exposes zero update or delete endpoints for audit records.
+    </p>
+
+    <h1>15. Deployment and Environment Architecture</h1>
+    <div class="diagram-box">
+      <div style="font-size: 8pt; font-weight: 700; color: #0f172a; margin-bottom: 8px;">Current Documented Hostinger Production Deployment Topology</div>
+      <div style="display: flex; justify-content: space-between; gap: 8px; text-align: left;">
+        <div style="flex: 1; background: #e0f2fe; border: 1px solid #7dd3fc; border-radius: 4px; padding: 8px;">
+          <div style="font-weight: 700; color: #0369a1; font-size: 7.5pt;">Internet Ingress</div>
+          <div style="font-size: 7pt; color: #0c4a6e;">• employee.whalexy.com<br/>• TLS 1.3 Termination<br/>• HttpOnly Cookie Delivery</div>
+        </div>
+        <div style="flex: 1; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px;">
+          <div style="font-weight: 700; color: #334155; font-size: 7.5pt;">Hostinger Node App</div>
+          <div style="font-size: 7pt; color: #1e293b;">• Node.js 20+ LTS<br/>• Express serves SPA & API<br/>• Local faster-whisper STT</div>
+        </div>
+        <div style="flex: 1; background: #fef3c7; border: 1px solid #fde047; border-radius: 4px; padding: 8px;">
+          <div style="font-weight: 700; color: #854d0e; font-size: 7.5pt;">Managed Data Tier</div>
+          <div style="font-size: 7pt; color: #713f12;">• MongoDB Atlas 7+<br/>• Least-privilege DB user<br/>• Pool: Min 2, Max 30</div>
+        </div>
+        <div style="flex: 1; background: #ecfdf5; border: 1px solid #6ee7b7; border-radius: 4px; padding: 8px;">
+          <div style="font-weight: 700; color: #065f46; font-size: 7.5pt;">External Services</div>
+          <div style="font-size: 7pt; color: #064e3b;">• Cloudinary Storage<br/>• Brevo Email API<br/>• Groq / OpenAI LLMs</div>
+        </div>
+      </div>
+      <div class="diagram-title">Figure 4. Hostinger production deployment topology serving employee.whalexy.com.</div>
+    </div>
+
+    <h3>15.2 Root Engineering Commands</h3>
+    <table>
+      <thead><tr><th style="width: 32%;">Command</th><th>Operational Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><code>npm run dev</code></td><td>Run client and server concurrently after shared build.</td></tr>
+        <tr><td><code>npm run build</code></td><td>Compile shared contracts, client SPA, and server TypeScript.</td></tr>
+        <tr><td><code>npm start</code></td><td>Start compiled production server (<code>node dist/index.js</code>).</td></tr>
+        <tr><td><code>npm run typecheck</code></td><td>Static typecheck shared, client, and server workspaces.</td></tr>
+        <tr><td><code>npm run lint</code></td><td>Lint client and server with zero warning allowance.</td></tr>
+        <tr><td><code>npm run seed</code></td><td>Seed permissions, system roles, and initial Super Admin.</td></tr>
+        <tr><td><code>npm run test</code></td><td>Execute automated test suite across all services.</td></tr>
+        <tr><td><code>npm run backup</code></td><td>Create encrypted Extended JSON snapshot under <code>.runtime/backups/</code>.</td></tr>
+        <tr><td><code>npm run preflight:tenants</code></td><td>Validate tenant migration preflight constraints.</td></tr>
+        <tr><td><code>npm run migrate:tenants</code></td><td>Execute idempotent tenant data migration.</td></tr>
+        <tr><td><code>npm run verify:preservation</code></td><td>Cryptographically verify zero data loss after migration.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="page-footer">
+    <span>INTERNAL TECHNICAL DOCUMENTATION</span>
+    <span>v2.0 | 10 Sep 2026</span>
+    <span>Page 17</span>
+  </div>
+</div>
+
+<!-- PAGE 18: TESTING & OBSERVABILITY -->
+<div class="page">
+  <div class="page-header">MOBIUS BLOOM / MOBIUSEMS / ENGINEERING</div>
+  <div class="content">
+    <h1>16. Testing, Quality and Release Gates</h1>
+    <h3>16.1 Tests Evident in Current Service Tree</h3>
+    <p>
+      The active codebase contains 15 test suites and 59 subtests executing with a 100% pass rate in under 2 seconds:
+    </p>
+    <ul>
+      <li><code>additionalRoleSkillCatalog.test.ts</code>: Validates role competency benchmarks and required skills.</li>
+      <li><code>adminAnalyticsMath.test.ts</code>: Verifies admin analytics math and percentile calculations.</li>
+      <li><code>attendanceService.test.ts</code>: Validates Haversine distance, accuracy limits, and 11:30 AM cutoff.</li>
+      <li><code>authLogout.test.ts</code>: Verifies session cookie clearance and token revocation.</li>
+      <li><code>contributionMath.test.ts</code>: Validates deterministic contribution formulas and deliverable weights.</li>
+      <li><code>llmService.test.ts</code>: Verifies provider error handling, timeouts, and fallback mechanisms.</li>
+      <li><code>outcomePeriod.test.ts</code>: Validates quarterly and annual outcome date boundaries.</li>
+      <li><code>performanceMath.test.ts</code>: Tests weighted scoring formulas and immutable grade tier mapping.</li>
+      <li><code>salesAccess.test.ts</code>: Verifies 3-tier sales scoping (SELF, TEAM, ALL) and HR read-only boundaries.</li>
+      <li><code>salesMath.test.ts</code>: Validates pipeline conversions, capacity gaps, and lost revenue formulas.</li>
+      <li><code>taskTransitions.test.ts</code>: Enforces valid Kanban state transitions and blocker resolution rules.</li>
+      <li><code>tenantRegistration.test.ts</code>: Tests public registration isolation and duplicate prevention.</li>
+      <li><code>voiceTaskService.test.ts</code>: Validates multilingual STT parsing, Hinglish, and number words.</li>
+      <li><code>tenantModel.test.ts</code>: Tests fail-closed Mongoose proxy wrapper and compound tenant indexes.</li>
+      <li><code>workValidators.test.ts</code>: Validates task reassignment, deletion, and Zod input schemas.</li>
+    </ul>
+
+    <h3>16.2 Recommended Enterprise Release Gate</h3>
+    <table>
+      <thead><tr><th style="width: 25%;">Gate</th><th>Minimum Requirement</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Static Quality</strong></td><td>Typecheck and lint pass with zero warnings across all workspaces.</td></tr>
+        <tr><td><strong>Unit Tests</strong></td><td>All 59 unit and algorithmic math tests pass synchronously.</td></tr>
+        <tr><td><strong>Tenant Isolation</strong></td><td>Automated cross-tenant read/write/aggregate attempts fail closed.</td></tr>
+        <tr><td><strong>Build Artifacts</strong></td><td>Production client, shared, and server bundles compile without warnings.</td></tr>
+        <tr><td><strong>Staging Smoke</strong></td><td>Auth, task Kanban, attendance geofencing, and sales workflows verified.</td></tr>
+      </tbody>
+    </table>
+
+    <h1>17. Observability and Operational Readiness</h1>
+    <table>
+      <thead><tr><th style="width: 20%;">Signal</th><th>Production Specification</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Health Check</strong></td><td><code>GET /api/health</code> checks Node status and MongoDB connection state (200 / 503).</td></tr>
+        <tr><td><strong>Structured Logs</strong></td><td>JSON logging with timestamp, requestId, tenantId, actorId, route, status, latency.</td></tr>
+        <tr><td><strong>Operational Metrics</strong></td><td>Monitor request rate, 5xx rate, Atlas pool saturation, STT latency, and Brevo delivery.</td></tr>
+        <tr><td><strong>Alerting Thresholds</strong></td><td>Immediate paging on database disconnect, elevated 5xx (>1%), or auth anomalies.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="page-footer">
+    <span>INTERNAL TECHNICAL DOCUMENTATION</span>
+    <span>v2.0 | 10 Sep 2026</span>
+    <span>Page 18</span>
+  </div>
+</div>
+
+<!-- PAGE 19: RELIABILITY, SCALABILITY & CI/CD -->
+<div class="page">
+  <div class="page-header">MOBIUS BLOOM / MOBIUSEMS / ENGINEERING</div>
+  <div class="content">
+    <h1>18. Reliability, Failure Modes and Recovery</h1>
+    <table>
+      <thead><tr><th style="width: 25%;">Failure Scenario</th><th style="width: 35%;">Expected System Behavior</th><th>Recommended Escalation / Recovery</th></tr></thead>
+      <tbody>
+        <tr><td><strong>MongoDB Unavailable</strong></td><td><code>/api/health</code> returns 503; requests fail fast without fabricating writes.</td><td>Check Atlas status and IP allowlist; restart Node process.</td></tr>
+        <tr><td><strong>AI Provider Outage</strong></td><td>LLM service throws 502/503; core product remains 100% operational.</td><td>Switch <code>AI_PROVIDER</code> to backup provider (OpenAI/Gemini) in Hostinger env.</td></tr>
+        <tr><td><strong>Voice Worker Timeout</strong></td><td>Local process killed after 180s; client falls back to manual entry.</td><td>Inspect host memory and CPU; restart Python background worker.</td></tr>
+        <tr><td><strong>Cloudinary Failure</strong></td><td>Document upload fails safely; existing metadata preserved.</td><td>Verify storage quota and credentials; restore signed download access.</td></tr>
+        <tr><td><strong>Email API Failure</strong></td><td>Failed sends logged in <code>EmailDelivery</code>; duplicate sends prevented.</td><td>Inspect Brevo logs; retry failed enrollments idempotently.</td></tr>
+        <tr><td><strong>Suspected Tenant Leak</strong></td><td>Affected endpoint disabled immediately; logs preserved.</td><td>Trigger security incident response; isolate sessions; audit proxy wrapper.</td></tr>
+      </tbody>
+    </table>
+
+    <h1>19. Performance and Scalability Considerations</h1>
+    <ul>
+      <li><strong>Host Co-location:</strong> Serving static SPA, API, and local Whisper on one host creates a shared scaling boundary. Whisper memory usage must be monitored under load.</li>
+      <li><strong>Atlas Connection Pooling:</strong> Configured via <code>MONGODB_MIN_POOL_SIZE=2</code> and <code>MONGODB_MAX_POOL_SIZE=30</code> to prevent connection exhaustion.</li>
+      <li><strong>External Latency Shielding:</strong> AI inference calls use strict abort timeouts (45s) and low temperatures (0.2) to limit execution duration.</li>
+      <li><strong>Stateless Horizontal Scaling Path:</strong> The Node application is stateless; future load growth can scale horizontally behind a load balancer with Redis session caching.</li>
+    </ul>
+
+    <h1>20. CI/CD and Release Management</h1>
+    <table>
+      <thead><tr><th style="width: 20%;">Stage</th><th>Automated Actions</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Pull Request</strong></td><td>Clean install with lockfile; typecheck; lint; execute all 59 unit tests; scan dependencies.</td></tr>
+        <tr><td><strong>Build</strong></td><td>Compile shared package, client SPA, and server bundle; tag immutable build artifact.</td></tr>
+        <tr><td><strong>Staging</strong></td><td>Deploy to staging environment; run automated smoke and tenant isolation tests.</td></tr>
+        <tr><td><strong>Production</strong></td><td>Deploy approved artifact to Hostinger; execute <code>/api/health</code> check; record release tag.</td></tr>
+        <tr><td><strong>Rollback</strong></td><td>Restore previous known-good deployment artifact in Hostinger console (< 2 minutes).</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="page-footer">
+    <span>INTERNAL TECHNICAL DOCUMENTATION</span>
+    <span>v2.0 | 10 Sep 2026</span>
+    <span>Page 19</span>
+  </div>
+</div>
+
+<!-- PAGE 20: CONFIGURATION & RISK REGISTER -->
+<div class="page">
+  <div class="page-header">MOBIUS BLOOM / MOBIUSEMS / ENGINEERING</div>
+  <div class="content">
+    <h1>21. Configuration and Secrets Management</h1>
+    <table>
+      <thead><tr><th style="width: 22%;">Configuration Family</th><th>Environment Keys & Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Core Runtime</strong></td><td><code>NODE_ENV</code>, <code>PORT</code>, <code>CLIENT_URL</code>, <code>COOKIE_DOMAIN</code></td></tr>
+        <tr><td><strong>Database Persistence</strong></td><td><code>MONGODB_URI</code>, <code>MONGODB_MIN_POOL_SIZE</code>, <code>MONGODB_MAX_POOL_SIZE</code></td></tr>
+        <tr><td><strong>Tenancy Platform</strong></td><td><code>DEFAULT_TENANT_NAME</code>, <code>DEFAULT_TENANT_SLUG</code>, <code>PLATFORM_ADMIN_EMAILS</code></td></tr>
+        <tr><td><strong>Session Security</strong></td><td><code>JWT_ACCESS_SECRET</code>, <code>JWT_REFRESH_SECRET</code> (min 32 chars), <code>JWT_ACCESS_EXPIRES_IN</code></td></tr>
+        <tr><td><strong>Private Storage</strong></td><td><code>CLOUDINARY_CLOUD_NAME</code>, <code>CLOUDINARY_API_KEY</code>, <code>CLOUDINARY_API_SECRET</code></td></tr>
+        <tr><td><strong>Email Automation</strong></td><td><code>BREVO_API_KEY</code>, <code>BREVO_SENDER_EMAIL</code>, <code>BREVO_WEBHOOK_TOKEN</code>, <code>EMAIL_AUTOMATION_DAILY_LIMIT</code></td></tr>
+        <tr><td><strong>AI Provider Gateway</strong></td><td><code>AI_PROVIDER</code>, <code>GROQ_API_KEY</code>, <code>AI_MODEL</code>, <code>AI_TIMEOUT_MS</code>, <code>AI_COMPANY_KNOWLEDGE</code></td></tr>
+        <tr><td><strong>Local Voice STT</strong></td><td><code>VOICE_PYTHON_COMMAND</code>, <code>VOICE_WHISPER_MODEL</code>, <code>VOICE_WHISPER_COMPUTE_TYPE</code></td></tr>
+        <tr><td><strong>Office Geofence</strong></td><td><code>ATTENDANCE_OFFICE_NAME</code>, <code>ATTENDANCE_OFFICE_LATITUDE</code>, <code>ATTENDANCE_OFFICE_LONGITUDE</code></td></tr>
+      </tbody>
+    </table>
+
+    <h1>22. Engineering Risk Register</h1>
+    <table>
+      <thead><tr><th style="width: 10%;">ID</th><th style="width: 25%;">Risk Vector</th><th style="width: 12%;">Severity</th><th>Architectural Impact & Mitigation</th></tr></thead>
+      <tbody>
+        <tr><td><strong>R-01</strong></td><td>Cross-Tenant IDOR Leak</td><td><span class="status-badge status-intent" style="background:#fee2e2; color:#b91c1c;">CRITICAL</span></td><td>Query without tenantId exposes another organization's HR data. Mitigated by fail-closed Mongoose wrapper and automated tests.</td></tr>
+        <tr><td><strong>R-02</strong></td><td>High-Impact AI Misuse</td><td><span class="status-badge status-intent" style="background:#fee2e2; color:#b91c1c;">CRITICAL</span></td><td>Manager uses AI to make autonomous salary/termination decisions. Mitigated by advisory-only policy and deterministic math separation.</td></tr>
+        <tr><td><strong>R-03</strong></td><td>Unauthenticated File Leak</td><td><span class="status-badge status-validate">HIGH</span></td><td>Private employee resumes or contracts exposed publicly. Mitigated by Cloudinary authenticated private storage and signed download URLs.</td></tr>
+        <tr><td><strong>R-04</strong></td><td>Local Voice CPU Spikes</td><td><span class="status-badge status-validate">HIGH</span></td><td>Concurrent faster-whisper calls exhaust host CPU. Mitigated by int8 quantization, 180s timeout, and manual entry fallback.</td></tr>
+        <tr><td><strong>R-05</strong></td><td>Session Replay Attacks</td><td><span class="status-badge status-validate">HIGH</span></td><td>Stolen refresh token used to mint sessions. Mitigated by refresh token rotation and immediate token family invalidation.</td></tr>
+        <tr><td><strong>R-06</strong></td><td>Location Spoofing</td><td><span class="status-badge status-reconciled">MEDIUM</span></td><td>Employees fake GPS for attendance. Mitigated by dual distance (&le; 300m) and accuracy (&le; 200m) gate checks.</td></tr>
+        <tr><td><strong>R-07</strong></td><td>Email Queue Spoilage</td><td><span class="status-badge status-reconciled">MEDIUM</span></td><td>Looping campaign floods customers. Mitigated by 250 emails/day cap and unique workflow enrollment indexes.</td></tr>
+        <tr><td><strong>R-08</strong></td><td>Migration Corruption</td><td><span class="status-badge status-validate">HIGH</span></td><td>Tenancy migration damages data. Mitigated by preflight checks, automated backup, and byte-for-byte verification tooling.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="page-footer">
+    <span>INTERNAL TECHNICAL DOCUMENTATION</span>
+    <span>v2.0 | 10 Sep 2026</span>
+    <span>Page 20</span>
+  </div>
+</div>
+
+<!-- PAGE 21: RUNBOOK & ADRS -->
+<div class="page">
+  <div class="page-header">MOBIUS BLOOM / MOBIUSEMS / ENGINEERING</div>
+  <div class="content">
+    <h1>23. Production Operations Runbook</h1>
+    <table>
+      <thead><tr><th style="width: 25%;">Incident</th><th style="width: 35%;">First Response Protocol</th><th>Escalation & Recovery Workflow</th></tr></thead>
+      <tbody>
+        <tr><td><strong>API 503 / DB Loss</strong></td><td>Check <code>/api/health</code>; inspect Atlas connection pool and IP allowlist.</td><td>Restart Node process; failover Atlas replica if degraded.</td></tr>
+        <tr><td><strong>AI Upstream Outage</strong></td><td>Verify provider status and API key quota; inspect timeout logs.</td><td>Switch <code>AI_PROVIDER</code> to backup (OpenAI/Gemini) in Hostinger env.</td></tr>
+        <tr><td><strong>Voice Worker Hang</strong></td><td>Check host RAM and Python venv; verify disk space in Hugging Face cache.</td><td>Kill hung Python processes; prompt users to use manual entry.</td></tr>
+        <tr><td><strong>Suspected Tenant Leak</strong></td><td>Immediately suspend affected endpoint; export access and audit logs.</td><td>Isolate tenant sessions; trigger security review; test proxy wrapper.</td></tr>
+        <tr><td><strong>High 5xx Error Spike</strong></td><td>Group error logs by requestId and route in Hostinger console.</td><td>Roll back to previous immutable deployment artifact (< 2 minutes).</td></tr>
+      </tbody>
+    </table>
+
+    <h1>24. Key Architecture Decisions (ADR Summary)</h1>
+    <table>
+      <thead><tr><th style="width: 15%;">ADR</th><th style="width: 25%;">Decision</th><th>Architectural Rationale</th></tr></thead>
+      <tbody>
+        <tr><td><strong>ADR-001</strong></td><td>Independent EMS Runtime</td><td>Host on <code>employee.whalexy.com</code> as standalone Node.js service, avoiding coupling to legacy PHP.</td></tr>
+        <tr><td><strong>ADR-002</strong></td><td>Deterministic Scoring</td><td>Prohibit LLMs from computing performance or sales scores; enforce deterministic math modules.</td></tr>
+        <tr><td><strong>ADR-003</strong></td><td>Fail-Closed Tenancy</td><td>Enforce multi-tenancy at Mongoose proxy layer via AsyncLocalStorage, preventing query omission bugs.</td></tr>
+        <tr><td><strong>ADR-004</strong></td><td>Local Zero-Retention STT</td><td>Use faster-whisper on-host and shred audio files immediately, eliminating cloud STT fees and privacy risks.</td></tr>
+        <tr><td><strong>ADR-005</strong></td><td>Dual-Token Cookies</td><td>Store access and refresh tokens in HttpOnly, Secure, SameSite=Strict cookies to block XSS theft.</td></tr>
+        <tr><td><strong>ADR-006</strong></td><td>Multi-Provider LLM</td><td>Build unified adapter for Groq, OpenAI, Anthropic, Gemini, preventing vendor lock-in.</td></tr>
+        <tr><td><strong>ADR-007</strong></td><td>Private Cloudinary Assets</td><td>Store files as private authenticated assets with signed backend-authorized URLs.</td></tr>
+        <tr><td><strong>ADR-008</strong></td><td>Hierarchical GIS Tree</td><td>Model geographic tree (GeoNode) decoupled from dynamic business sales territories.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="page-footer">
+    <span>INTERNAL TECHNICAL DOCUMENTATION</span>
+    <span>v2.0 | 10 Sep 2026</span>
+    <span>Page 21</span>
+  </div>
+</div>
+
+<!-- PAGE 22: APPENDICES & SIGN-OFF -->
+<div class="page">
+  <div class="page-header">MOBIUS BLOOM / MOBIUSEMS / ENGINEERING</div>
+  <div class="content">
+    <h1>Appendix A. Repository Evidence Reviewed</h1>
+    <p>Repository: <code>github.com/ayushRajak19/employee-management</code> (Public main branch, September 2026 baseline):</p>
+    <table>
+      <thead><tr><th style="width: 30%;">Path / Artifact</th><th>Evidence Used</th></tr></thead>
+      <tbody>
+        <tr><td><code>README.md</code>, <code>docs/*</code></td><td>Product scope, sales workflow, multi-tenancy runbook, database schema blueprints.</td></tr>
+        <tr><td><code>package.json</code> (Root/Server/Client)</td><td>Monorepo workspaces, dependency trees, build/test scripts, Node 20+ engine constraints.</td></tr>
+        <tr><td><code>server/src/models/</code> (62 files)</td><td>Complete data collection definitions, compound uniqueness indexes, tenancy proxy hooks.</td></tr>
+        <tr><td><code>server/src/routes/</code> (19 files)</td><td>API routing topology, middleware chains, boundary validators, 3-tier sales scoping.</td></tr>
+        <tr><td><code>server/src/services/</code> (54 files)</td><td>Deterministic scoring algorithms, attendance geofence math, LLM adapter, local Whisper NLP.</td></tr>
+        <tr><td><code>client/src/features/</code> & <code>pages/</code></td><td>41 frontend page components, React 19 routing, TanStack Query cache, Leaflet GIS mapping.</td></tr>
+        <tr><td><code>server/src/**/*.test.ts</code> (15 files)</td><td>59 passing unit/integration tests verifying math, state machines, and tenancy isolation.</td></tr>
+      </tbody>
+    </table>
+
+    <h1>Appendix B. Glossary</h1>
+    <table style="font-size: 7.5pt;">
+      <tbody>
+        <tr><td><strong>EMS</strong></td><td>Employee Management System; MobiusEMS enterprise workforce platform.</td></tr>
+        <tr><td><strong>RBAC / ABAC</strong></td><td>Role-Based & Attribute-Based Access Control (3-tier sales scoping).</td></tr>
+        <tr><td><strong>Tenant</strong></td><td>Isolated customer boundary in a multi-tenant shared database architecture.</td></tr>
+        <tr><td><strong>IDOR</strong></td><td>Insecure Direct Object Reference; completely blocked by tenant proxy scoping.</td></tr>
+        <tr><td><strong>Performance Snapshot</strong></td><td>Immutable historical record preserving raw inputs, weights, and scores.</td></tr>
+        <tr><td><strong>Zero-Retention STT</strong></td><td>Speech-to-Text pipeline where audio is shredded immediately after transcription.</td></tr>
+        <tr><td><strong>GIS / GeoNode</strong></td><td>Geographic Information System hierarchy (Global &rarr; Country &rarr; State &rarr; Area).</td></tr>
+      </tbody>
+    </table>
+
+    <h1>Appendix C. Architecture Review Board & Manager Sign-Off</h1>
+    <div style="border: 1px solid #cbd5e1; background-color: #f8fafc; border-radius: 4px; padding: 8px; font-size: 7.8pt;">
+      <div style="margin-bottom: 3px;">☑ <strong>Product Scope Reconciled:</strong> 62 models, 19 route modules, 41 pages, and 54 services fully documented.</div>
+      <div style="margin-bottom: 3px;">☑ <strong>Commercial Sales & GIS Subsystem:</strong> Restored into architecture, schema, and API specifications.</div>
+      <div style="margin-bottom: 3px;">☑ <strong>Multi-Tenancy Invariants Verified:</strong> AsyncLocalStorage context and fail-closed Mongoose hooks validated.</div>
+      <div style="margin-bottom: 3px;">☑ <strong>Deterministic Math Decoupled:</strong> Performance, contribution, attendance, and sales scoring isolated from AI.</div>
+      <div style="margin-bottom: 3px;">☑ <strong>Ethical AI Guardrail Approved:</strong> Advisory-only boundary enforced in policy and application code.</div>
+      <div style="margin-bottom: 3px;">☑ <strong>Zero-Retention Voice Verified:</strong> 11 Indian languages supported; ephemeral audio shredded.</div>
+      <div style="margin-bottom: 3px;">☑ <strong>Automated Test Suite Passing:</strong> 15 test suites and 59 subtests passing with 100% success rate.</div>
+      <div>☑ <strong>Production Operations Ready:</strong> Hostinger deployment topology, risk register, and runbooks established.</div>
+    </div>
+    
+    <div style="text-align: center; margin-top: 15px; font-weight: 700; color: #64748b; font-size: 8pt; letter-spacing: 1px;">
+      — END OF TECHNICAL SPECIFICATION (MOBIUSEMS v2.0) —
+    </div>
+  </div>
+  <div class="page-footer">
+    <span>INTERNAL TECHNICAL DOCUMENTATION</span>
+    <span>v2.0 | 10 Sep 2026</span>
+    <span>Page 22</span>
+  </div>
+</div>
+
+</body>
+</html>
