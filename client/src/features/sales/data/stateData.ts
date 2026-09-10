@@ -1,0 +1,160 @@
+export interface StateInfo {
+  name: string;
+  code?: string;
+  lat: number;
+  lng: number;
+}
+
+export const COUNTRY_STATES: Record<string, StateInfo[]> = {
+  India: [
+    { name: "Andhra Pradesh", code: "AP", lat: 15.9129, lng: 79.74 },
+    { name: "Arunachal Pradesh", code: "AR", lat: 28.218, lng: 94.7278 },
+    { name: "Assam", code: "AS", lat: 26.2006, lng: 92.9376 },
+    { name: "Bihar", code: "BR", lat: 25.0961, lng: 85.3131 },
+    { name: "Chhattisgarh", code: "CG", lat: 21.2787, lng: 81.8661 },
+    { name: "Goa", code: "GA", lat: 15.2993, lng: 74.124 },
+    { name: "Gujarat", code: "GJ", lat: 22.2587, lng: 71.1924 },
+    { name: "Haryana", code: "HR", lat: 29.0588, lng: 76.0856 },
+    { name: "Himachal Pradesh", code: "HP", lat: 31.1048, lng: 77.1734 },
+    { name: "Jharkhand", code: "JH", lat: 23.6102, lng: 85.2799 },
+    { name: "Karnataka", code: "KA", lat: 15.3173, lng: 75.7139 },
+    { name: "Kerala", code: "KL", lat: 10.8505, lng: 76.2711 },
+    { name: "Madhya Pradesh", code: "MP", lat: 22.9734, lng: 78.6569 },
+    { name: "Maharashtra", code: "MH", lat: 19.7515, lng: 75.7139 },
+    { name: "Manipur", code: "MN", lat: 24.6637, lng: 93.9063 },
+    { name: "Meghalaya", code: "ML", lat: 25.467, lng: 91.3662 },
+    { name: "Mizoram", code: "MZ", lat: 23.1645, lng: 92.9376 },
+    { name: "Nagaland", code: "NL", lat: 26.1584, lng: 94.5624 },
+    { name: "Odisha", code: "OD", lat: 20.9517, lng: 85.9812 },
+    { name: "Punjab", code: "PB", lat: 31.1471, lng: 75.3412 },
+    { name: "Rajasthan", code: "RJ", lat: 27.0238, lng: 74.2179 },
+    { name: "Sikkim", code: "SK", lat: 27.533, lng: 88.5122 },
+    { name: "Tamil Nadu", code: "TN", lat: 11.1271, lng: 78.6569 },
+    { name: "Telangana", code: "TS", lat: 18.1124, lng: 79.0193 },
+    { name: "Tripura", code: "TR", lat: 23.9408, lng: 91.9882 },
+    { name: "Uttar Pradesh", code: "UP", lat: 26.8467, lng: 80.9462 },
+    { name: "Uttarakhand", code: "UK", lat: 30.0668, lng: 79.0193 },
+    { name: "West Bengal", code: "WB", lat: 22.9868, lng: 87.855 },
+    { name: "Andaman and Nicobar Islands", code: "AN", lat: 11.7401, lng: 92.6586 },
+    { name: "Chandigarh", code: "CH", lat: 30.7333, lng: 76.7794 },
+    { name: "Dadra and Nagar Haveli and Daman and Diu", code: "DH", lat: 20.4283, lng: 72.8397 },
+    { name: "Delhi", code: "DL", lat: 28.7041, lng: 77.1025 },
+    { name: "Jammu and Kashmir", code: "JK", lat: 33.7782, lng: 76.5762 },
+    { name: "Ladakh", code: "LA", lat: 34.1526, lng: 77.5771 },
+    { name: "Lakshadweep", code: "LD", lat: 10.5667, lng: 72.6417 },
+    { name: "Puducherry", code: "PY", lat: 11.9416, lng: 79.8083 },
+  ],
+  "United States": [
+    { name: "Alabama", code: "AL", lat: 32.8067, lng: -86.7911 },
+    { name: "Alaska", code: "AK", lat: 61.3707, lng: -152.4044 },
+    { name: "Arizona", code: "AZ", lat: 33.7298, lng: -111.4312 },
+    { name: "Arkansas", code: "AR", lat: 34.9697, lng: -92.3731 },
+    { name: "California", code: "CA", lat: 36.1162, lng: -119.6816 },
+    { name: "Colorado", code: "CO", lat: 39.0598, lng: -105.3111 },
+    { name: "Connecticut", code: "CT", lat: 41.5978, lng: -72.7554 },
+    { name: "Delaware", code: "DE", lat: 39.3185, lng: -75.5071 },
+    { name: "Florida", code: "FL", lat: 27.7663, lng: -81.6868 },
+    { name: "Georgia", code: "GA", lat: 33.0406, lng: -83.6431 },
+    { name: "Hawaii", code: "HI", lat: 21.0943, lng: -157.4983 },
+    { name: "Idaho", code: "ID", lat: 44.2405, lng: -114.4788 },
+    { name: "Illinois", code: "IL", lat: 40.3495, lng: -88.9861 },
+    { name: "Indiana", code: "IN", lat: 39.8494, lng: -86.2583 },
+    { name: "Iowa", code: "IA", lat: 42.0115, lng: -93.2105 },
+    { name: "Kansas", code: "KS", lat: 38.5266, lng: -96.7265 },
+    { name: "Kentucky", code: "KY", lat: 37.6681, lng: -84.6701 },
+    { name: "Louisiana", code: "LA", lat: 31.1695, lng: -91.8678 },
+    { name: "Maine", code: "ME", lat: 44.6939, lng: -69.3819 },
+    { name: "Maryland", code: "MD", lat: 39.0639, lng: -76.8021 },
+    { name: "Massachusetts", code: "MA", lat: 42.2302, lng: -71.5301 },
+    { name: "Michigan", code: "MI", lat: 43.3266, lng: -84.5361 },
+    { name: "Minnesota", code: "MN", lat: 45.6945, lng: -93.9002 },
+    { name: "Mississippi", code: "MS", lat: 32.7416, lng: -89.6787 },
+    { name: "Missouri", code: "MO", lat: 38.4561, lng: -92.2884 },
+    { name: "Montana", code: "MT", lat: 46.9219, lng: -110.4544 },
+    { name: "Nebraska", code: "NE", lat: 41.1254, lng: -98.2681 },
+    { name: "Nevada", code: "NV", lat: 38.3135, lng: -117.0554 },
+    { name: "New Hampshire", code: "NH", lat: 43.4525, lng: -71.5639 },
+    { name: "New Jersey", code: "NJ", lat: 40.2989, lng: -74.521 },
+    { name: "New Mexico", code: "NM", lat: 34.8405, lng: -106.2485 },
+    { name: "New York", code: "NY", lat: 42.1657, lng: -74.9481 },
+    { name: "North Carolina", code: "NC", lat: 35.6301, lng: -79.8064 },
+    { name: "North Dakota", code: "ND", lat: 47.5289, lng: -99.784 },
+    { name: "Ohio", code: "OH", lat: 40.3888, lng: -82.7649 },
+    { name: "Oklahoma", code: "OK", lat: 35.5653, lng: -96.9289 },
+    { name: "Oregon", code: "OR", lat: 44.572, lng: -122.0709 },
+    { name: "Pennsylvania", code: "PA", lat: 40.5908, lng: -77.2098 },
+    { name: "Rhode Island", code: "RI", lat: 41.6809, lng: -71.5118 },
+    { name: "South Carolina", code: "SC", lat: 33.8569, lng: -80.945 },
+    { name: "South Dakota", code: "SD", lat: 44.2998, lng: -99.4388 },
+    { name: "Tennessee", code: "TN", lat: 35.7478, lng: -86.6923 },
+    { name: "Texas", code: "TX", lat: 31.0545, lng: -97.5635 },
+    { name: "Utah", code: "UT", lat: 40.15, lng: -111.8624 },
+    { name: "Vermont", code: "VT", lat: 44.0459, lng: -72.7107 },
+    { name: "Virginia", code: "VA", lat: 37.7693, lng: -78.17 },
+    { name: "Washington", code: "WA", lat: 47.4009, lng: -121.4905 },
+    { name: "West Virginia", code: "WV", lat: 38.4912, lng: -80.9545 },
+    { name: "Wisconsin", code: "WI", lat: 44.2685, lng: -89.6165 },
+    { name: "Wyoming", code: "WY", lat: 42.756, lng: -107.3025 },
+  ],
+  "United Kingdom": [
+    { name: "England", code: "ENG", lat: 52.3555, lng: -1.1743 },
+    { name: "Scotland", code: "SCT", lat: 56.4907, lng: -4.2026 },
+    { name: "Wales", code: "WLS", lat: 52.1307, lng: -3.7837 },
+    { name: "Northern Ireland", code: "NIR", lat: 54.7877, lng: -6.4923 },
+    { name: "Greater London", code: "LDN", lat: 51.5074, lng: -0.1278 },
+  ],
+  Canada: [
+    { name: "Ontario", code: "ON", lat: 51.2538, lng: -85.3232 },
+    { name: "Quebec", code: "QC", lat: 52.9399, lng: -73.5491 },
+    { name: "British Columbia", code: "BC", lat: 53.7267, lng: -127.6476 },
+    { name: "Alberta", code: "AB", lat: 53.9333, lng: -116.5765 },
+    { name: "Manitoba", code: "MB", lat: 53.7609, lng: -98.8139 },
+    { name: "Saskatchewan", code: "SK", lat: 52.9399, lng: -106.4509 },
+    { name: "Nova Scotia", code: "NS", lat: 44.682, lng: -63.7443 },
+    { name: "New Brunswick", code: "NB", lat: 46.5653, lng: -66.4619 },
+    { name: "Newfoundland and Labrador", code: "NL", lat: 53.1355, lng: -57.6604 },
+  ],
+  Australia: [
+    { name: "New South Wales", code: "NSW", lat: -31.8402, lng: 145.6128 },
+    { name: "Victoria", code: "VIC", lat: -37.4713, lng: 144.7852 },
+    { name: "Queensland", code: "QLD", lat: -20.9176, lng: 142.7028 },
+    { name: "Western Australia", code: "WA", lat: -27.6728, lng: 121.6283 },
+    { name: "South Australia", code: "SA", lat: -30.0002, lng: 136.2092 },
+    { name: "Tasmania", code: "TAS", lat: -41.4545, lng: 145.9707 },
+    { name: "Australian Capital Territory", code: "ACT", lat: -35.2809, lng: 149.13 },
+  ],
+  "United Arab Emirates": [
+    { name: "Dubai", code: "DXB", lat: 25.2048, lng: 55.2708 },
+    { name: "Abu Dhabi", code: "AUH", lat: 24.4539, lng: 54.3773 },
+    { name: "Sharjah", code: "SHJ", lat: 25.3463, lng: 55.4209 },
+    { name: "Ajman", code: "AJM", lat: 25.4052, lng: 55.5136 },
+    { name: "Ras Al Khaimah", code: "RAK", lat: 25.6741, lng: 55.9804 },
+    { name: "Fujairah", code: "FUJ", lat: 25.1288, lng: 56.3265 },
+    { name: "Umm Al Quwain", code: "UAQ", lat: 25.5647, lng: 55.5532 },
+  ],
+  Germany: [
+    { name: "Bavaria", code: "BY", lat: 48.7904, lng: 11.4979 },
+    { name: "Berlin", code: "BE", lat: 52.52, lng: 13.405 },
+    { name: "North Rhine-Westphalia", code: "NW", lat: 51.4332, lng: 7.6616 },
+    { name: "Baden-Württemberg", code: "BW", lat: 48.6616, lng: 9.3501 },
+    { name: "Hesse", code: "HE", lat: 50.6521, lng: 9.1624 },
+    { name: "Lower Saxony", code: "NI", lat: 52.6367, lng: 9.8451 },
+    { name: "Saxony", code: "SN", lat: 51.1045, lng: 13.2017 },
+    { name: "Hamburg", code: "HH", lat: 53.5511, lng: 9.9937 },
+  ],
+};
+
+export const getStatesForCountry = (country: string): StateInfo[] => {
+  if (!country) return [];
+  const direct = COUNTRY_STATES[country];
+  if (direct) return direct;
+  const lower = country.trim().toLowerCase();
+  const key = Object.keys(COUNTRY_STATES).find((k) => k.toLowerCase() === lower);
+  return key ? COUNTRY_STATES[key] : [];
+};
+
+export const getStateCoordinates = (country: string, stateName: string): [number, number] | null => {
+  const states = getStatesForCountry(country);
+  const found = states.find((s) => s.name.toLowerCase() === stateName.trim().toLowerCase());
+  return found ? [found.lat, found.lng] : null;
+};

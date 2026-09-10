@@ -260,23 +260,76 @@ export const countrySales = async (viewer: SessionUser) => {
   };
   const entities = ["leads", "customers", "opportunities", "revenue", "channelPartners"] as const;
   const groups = new Map<string, { country: string; leads: number; customers: number; partners: number; converted: number; pipeline: Record<string, number>; revenue: Record<string, number> }>();
+  const locations: Array<{
+    _id: string;
+    name: string;
+    entity: "lead" | "customer";
+    country: string;
+    state?: string;
+    coordinates: [number, number]; // [lng, lat]
+    status: string;
+    value?: number;
+    currency?: string;
+    phone?: string;
+    email?: string;
+    companyName?: string;
+  }> = [];
+
   for (const entity of entities) {
-    const records = await modelFor(entity).find(scopeFilter(scope, entity)).select("market geoNode customer status currency amount estimatedValue").populate(entity === "revenue" || entity === "opportunities" ? [{ path: "customer", select: "market geoNode" }] : []).lean();
+    const records = await modelFor(entity)
+      .find(scopeFilter(scope, entity))
+      .select("name companyName primaryContactName market coordinates geoNode customer status currency amount estimatedValue confirmedSaleAmount lifetimeRevenue phone email")
+      .populate(entity === "revenue" || entity === "opportunities" ? [{ path: "customer", select: "market geoNode" }] : [])
+      .lean();
+
     for (const record of records) {
       const customer = record.customer as { market?: string; geoNode?: unknown } | undefined;
-      const country = String(record.market || customer?.market || countryForGeo(record.geoNode || customer?.geoNode) || "Country not set").trim();
+      const rawMarket = String(record.market || customer?.market || countryForGeo(record.geoNode || customer?.geoNode) || "Country not set").trim();
+
+      let country = rawMarket;
+      let state: string | undefined;
+      if (rawMarket.includes(",")) {
+        const parts = rawMarket.split(",").map((p) => p.trim());
+        country = parts[parts.length - 1] || rawMarket;
+        state = parts.slice(0, -1).join(", ");
+      }
+
       const key = country.toLowerCase();
       const row = groups.get(key) ?? { country, leads: 0, customers: 0, partners: 0, converted: 0, pipeline: {}, revenue: {} };
-      if (entity === "leads") { row.leads++; if (record.status === "CONVERTED") row.converted++; }
+      if (entity === "leads") {
+        row.leads++;
+        if (record.status === "CONVERTED") row.converted++;
+      }
       if (entity === "customers") row.customers++;
       if (entity === "channelPartners") row.partners++;
       const currency = String(record.currency || "INR");
       if (entity === "opportunities" && record.status === "OPEN") row.pipeline[currency] = (row.pipeline[currency] || 0) + Number(record.estimatedValue || 0);
       if (entity === "revenue") row.revenue[currency] = (row.revenue[currency] || 0) + Number(record.amount || 0);
       groups.set(key, row);
+
+      // Collect specific located coordinates for leads and customers
+      if ((entity === "leads" || entity === "customers") && record.coordinates && Array.isArray((record.coordinates as { coordinates?: unknown }).coordinates)) {
+        const coords = (record.coordinates as { coordinates: [number, number] }).coordinates;
+        if (coords.length === 2 && !Number.isNaN(coords[0]) && !Number.isNaN(coords[1])) {
+          locations.push({
+            _id: String(record._id),
+            name: String(record.name || (entity === "leads" ? "Lead" : "Customer")),
+            entity: entity === "leads" ? "lead" : "customer",
+            country,
+            state,
+            coordinates: coords,
+            status: String(record.status || "ACTIVE"),
+            value: Number((record as Record<string, unknown>).confirmedSaleAmount || (record as Record<string, unknown>).lifetimeRevenue || (record as Record<string, unknown>).estimatedValue || 0),
+            currency,
+            phone: record.phone ? String(record.phone) : undefined,
+            email: record.email ? String(record.email) : undefined,
+            companyName: ((record as Record<string, unknown>).companyName || (record as Record<string, unknown>).primaryContactName) ? String((record as Record<string, unknown>).companyName || (record as Record<string, unknown>).primaryContactName) : undefined,
+          });
+        }
+      }
     }
   }
-  return { items: [...groups.values()] };
+  return { items: [...groups.values()], locations };
 };
 
 export const listTerritorySalesData = async (viewer: SessionUser, entity: SalesEntityName, territoryId: string) => {

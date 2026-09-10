@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/Input";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { salesApi, type SalesRecord } from "../salesApi";
+import { getStatesForCountry, getStateCoordinates } from "../data/stateData";
+import { LocationPickerMap } from "../components/LocationPickerMap";
 
 type SalesDataPath = "leads" | "customers" | "pipeline" | "targets" | "revenue" | "channel-partners";
 type Column = { label: string; align?: "right"; render: (item: SalesRecord) => ReactNode };
@@ -98,11 +100,13 @@ const countryOptions = countryMaster.map((country) => country.name.common).sort(
 const today = () => new Date().toISOString().slice(0, 10);
 const monthEnd = () => { const now = new Date(); return new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10); };
 const initialForm = () => ({
-  name: "", companyName: "", contactName: "", email: "", phone: "", notes: "", market: "", code: "", employee: "", territory: "", customer: "", channelPartner: "",
+  name: "", companyName: "", contactName: "", email: "", phone: "", notes: "", market: "", country: "", state: "", code: "", employee: "", territory: "", customer: "", channelPartner: "",
   value: "0", probability: "20", source: "REFERRAL", date: today(), endDate: monthEnd(),
   stage: "DISCOVERY", type: "OTHER", customerType: "BUSINESS", reference: "",
   leadTarget: "0", conversionTarget: "0", periodType: "MONTHLY", targetScope: "EMPLOYEE", currency: "INR", justification: "",
   commissionRate: "5", bonusRate: "2",
+  latitude: undefined as number | undefined,
+  longitude: undefined as number | undefined,
 });
 
 const StatusControl = ({ item, path, nextStatuses, reasonRequired = false }: {
@@ -283,7 +287,17 @@ export const SalesDataPage = ({ path, title }: { path: SalesDataPath; title: str
   const create = useMutation({
     mutationFn: () => {
       const value = Number(form.value);
-      const common = { ownerEmployee: form.employee || undefined, ...(form.territory ? { territory: form.territory } : {}), currency: form.currency, market: form.market || undefined };
+      const coords = (typeof form.latitude === "number" && typeof form.longitude === "number" && !Number.isNaN(form.latitude) && !Number.isNaN(form.longitude))
+        ? { type: "Point" as const, coordinates: [form.longitude, form.latitude] as [number, number] }
+        : undefined;
+      const marketVal = form.market || (form.country ? (form.state ? `${form.state}, ${form.country}` : form.country) : undefined);
+      const common = {
+        ownerEmployee: form.employee || undefined,
+        ...(form.territory ? { territory: form.territory } : {}),
+        currency: form.currency,
+        market: marketVal,
+        ...(coords ? { coordinates: coords } : {}),
+      };
       if (path === "leads") return salesApi.createRecord(path, { ...common, name: form.name, companyName: form.companyName || undefined, email: form.email || undefined, phone: form.phone || undefined, notes: form.notes || undefined, estimatedValue: value, source: form.source });
       if (path === "customers") return salesApi.createRecord(path, { ...common, name: form.name, primaryContactName: form.contactName || undefined, email: form.email || undefined, phone: form.phone || undefined, customerType: form.customerType, lifetimeRevenue: 0 });
       if (path === "pipeline") return salesApi.createRecord(path, { ...common, customer: form.customer, name: form.name, stage: form.stage, estimatedValue: value, probability: Number(form.probability), expectedCloseDate: form.date });
@@ -334,6 +348,42 @@ export const SalesDataPage = ({ path, title }: { path: SalesDataPath; title: str
   const employeeField = hasTeamScope && <label className="text-sm font-medium">{path === "targets" ? "Target employee" : "Owner employee"}<select required={path !== "channel-partners"} className="mt-2 h-11 w-full rounded-xl border bg-white px-3" value={form.employee} onChange={(event) => setForm({ ...form, employee: event.target.value })}><option value="">Select employee</option>{employees.data?.items.map((employee) => <option key={employee._id} value={employee._id}>{employee.firstName} {employee.lastName}</option>)}</select></label>;
   const territoryField = <label className="text-sm font-medium">Territory (optional)<select required={path === "targets" && form.targetScope === "TERRITORY"} className="mt-2 h-11 w-full rounded-xl border bg-white px-3" value={form.territory} onChange={(event) => setForm({ ...form, territory: event.target.value })}><option value="">Leave unassigned</option>{territories.data?.items.map((territory) => <option key={territory._id} value={territory._id}>{territory.name}</option>)}</select><span className="mt-1 block text-xs font-normal text-slate-400">Use a territory only when your manager has defined one.</span></label>;
 
+  const handleCountryChange = (countryName: string) => {
+    const cObj = countryMaster.find((c) => c.name.common === countryName);
+    const defaultCoords = cObj?.latlng ? [cObj.latlng[0], cObj.latlng[1]] : undefined;
+    const states = getStatesForCountry(countryName);
+    const firstState = states[0];
+    const initialCoords = (countryName === "India" && firstState)
+      ? [firstState.lat, firstState.lng]
+      : defaultCoords;
+
+    const stateVal = (countryName === "India" && firstState) ? firstState.name : "";
+    const marketVal = stateVal ? `${stateVal}, ${countryName}` : countryName;
+
+    setForm((prev) => ({
+      ...prev,
+      country: countryName,
+      state: stateVal,
+      market: marketVal,
+      latitude: initialCoords ? initialCoords[0] : undefined,
+      longitude: initialCoords ? initialCoords[1] : undefined,
+    }));
+  };
+
+  const handleStateChange = (stateName: string) => {
+    const coords = getStateCoordinates(form.country, stateName);
+    const marketVal = stateName ? `${stateName}, ${form.country}` : form.country;
+    setForm((prev) => ({
+      ...prev,
+      state: stateName,
+      market: marketVal,
+      latitude: coords ? coords[0] : prev.latitude,
+      longitude: coords ? coords[1] : prev.longitude,
+    }));
+  };
+
+  const statesForSelectedCountry = getStatesForCountry(form.country);
+
   return <main className="flex-1 px-5 py-8 sm:px-8"><div className="mx-auto max-w-[1440px]">
     <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="text-sm font-medium text-brand-700">Sales Intelligence</p><h1 className="mt-1 text-3xl font-semibold">{title}</h1><p className="mt-2 max-w-3xl text-sm text-slate-500">{sectionMeta[path].purpose}</p></div>{canManage && <Button onClick={openCreate}><Plus size={16}/> Add {addLabel}</Button>}</div>
     <div className={`mt-5 rounded-xl border p-4 text-sm ${isHrView ? "border-blue-100 bg-blue-50 text-blue-900" : "border-emerald-100 bg-emerald-50 text-emerald-900"}`}><p className="font-medium">{isHrView ? "HR view · Read only" : hasTeamScope ? "Team workflow" : "Your sales workflow"}</p><p className="mt-1 text-xs opacity-80">{isHrView ? sectionMeta[path].hr : sectionMeta[path].next}</p></div>
@@ -344,8 +394,77 @@ export const SalesDataPage = ({ path, title }: { path: SalesDataPath; title: str
     {hasTeamScope && !territories.isLoading && !territories.data?.items.length && path !== "targets" && <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">No territories are configured yet. You can still capture unassigned sales records; add territories later for reporting.</div>}
     <div className="mt-5 grid gap-4 sm:grid-cols-2">
       {["leads", "customers", "pipeline", "channel-partners"].includes(path) && <label className="text-sm font-medium sm:col-span-2">{path === "channel-partners" ? "Partner name" : path === "pipeline" ? "Opportunity name" : path === "customers" ? "Customer name" : "Lead name"}<Input required className="mt-2" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })}/></label>}
-      {path === "leads" && <><label className="text-sm font-medium">Company/account (optional)<Input className="mt-2" value={form.companyName} onChange={(event) => setForm({ ...form, companyName: event.target.value })}/></label><label className="text-sm font-medium">Country / market (optional)<select className="mt-2 h-11 w-full rounded-xl border bg-white px-3" value={form.market} onChange={(event) => setForm({ ...form, market: event.target.value })}><option value="">Select country</option>{countryOptions.map((name) => <option key={name}>{name}</option>)}</select></label><label className="text-sm font-medium">Phone<Input required inputMode="tel" className="mt-2" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })}/></label><label className="text-sm font-medium">Email (optional)<Input type="email" className="mt-2" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })}/></label><label className="text-sm font-medium sm:col-span-2">Follow-up notes (optional)<textarea className="mt-2 min-h-20 w-full rounded-xl border bg-white px-3 py-2" maxLength={2000} value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })}/></label></>}
-      {path === "customers" && <><label className="text-sm font-medium">Primary contact<Input className="mt-2" value={form.contactName} onChange={(event) => setForm({ ...form, contactName: event.target.value })}/></label><label className="text-sm font-medium">Country / market (optional)<select className="mt-2 h-11 w-full rounded-xl border bg-white px-3" value={form.market} onChange={(event) => setForm({ ...form, market: event.target.value })}><option value="">Select country</option>{countryOptions.map((name) => <option key={name}>{name}</option>)}</select></label><label className="text-sm font-medium">Phone<Input required inputMode="tel" className="mt-2" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })}/></label><label className="text-sm font-medium">Email (optional)<Input type="email" className="mt-2" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })}/></label></>}
+      {path === "leads" && <>
+        <label className="text-sm font-medium">Company/account (optional)<Input className="mt-2" value={form.companyName} onChange={(event) => setForm({ ...form, companyName: event.target.value })}/></label>
+        <label className="text-sm font-medium">Country (optional)
+          <select className="mt-2 h-11 w-full rounded-xl border bg-white px-3" value={form.country} onChange={(event) => handleCountryChange(event.target.value)}>
+            <option value="">Select country</option>
+            {countryOptions.map((name) => <option key={name}>{name}</option>)}
+          </select>
+        </label>
+        {Boolean(form.country) && (
+          <label className="text-sm font-medium">State / Region (optional)
+            {statesForSelectedCountry.length > 0 ? (
+              <select className="mt-2 h-11 w-full rounded-xl border bg-white px-3" value={form.state} onChange={(event) => handleStateChange(event.target.value)}>
+                <option value="">Select state / region</option>
+                {statesForSelectedCountry.map((st) => <option key={st.name} value={st.name}>{st.name}{st.code ? ` (${st.code})` : ""}</option>)}
+              </select>
+            ) : (
+              <Input className="mt-2" placeholder="Enter state or region" value={form.state} onChange={(event) => handleStateChange(event.target.value)}/>
+            )}
+          </label>
+        )}
+        {Boolean(form.country) && (
+          <div className="sm:col-span-2">
+            <label className="mb-2 block text-sm font-medium">Map Location Pinpoint</label>
+            <LocationPickerMap
+              lat={form.latitude}
+              lng={form.longitude}
+              onChange={(lat, lng) => setForm((prev) => ({ ...prev, latitude: lat, longitude: lng }))}
+              label={form.state ? `${form.state}, ${form.country}` : form.country}
+              zoom={form.state ? 8 : 5}
+            />
+          </div>
+        )}
+        <label className="text-sm font-medium">Phone<Input required inputMode="tel" className="mt-2" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })}/></label>
+        <label className="text-sm font-medium">Email (optional)<Input type="email" className="mt-2" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })}/></label>
+        <label className="text-sm font-medium sm:col-span-2">Follow-up notes (optional)<textarea className="mt-2 min-h-20 w-full rounded-xl border bg-white px-3 py-2" maxLength={2000} value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })}/></label>
+      </>}
+      {path === "customers" && <>
+        <label className="text-sm font-medium">Primary contact<Input className="mt-2" value={form.contactName} onChange={(event) => setForm({ ...form, contactName: event.target.value })}/></label>
+        <label className="text-sm font-medium">Country (optional)
+          <select className="mt-2 h-11 w-full rounded-xl border bg-white px-3" value={form.country} onChange={(event) => handleCountryChange(event.target.value)}>
+            <option value="">Select country</option>
+            {countryOptions.map((name) => <option key={name}>{name}</option>)}
+          </select>
+        </label>
+        {Boolean(form.country) && (
+          <label className="text-sm font-medium">State / Region (optional)
+            {statesForSelectedCountry.length > 0 ? (
+              <select className="mt-2 h-11 w-full rounded-xl border bg-white px-3" value={form.state} onChange={(event) => handleStateChange(event.target.value)}>
+                <option value="">Select state / region</option>
+                {statesForSelectedCountry.map((st) => <option key={st.name} value={st.name}>{st.name}{st.code ? ` (${st.code})` : ""}</option>)}
+              </select>
+            ) : (
+              <Input className="mt-2" placeholder="Enter state or region" value={form.state} onChange={(event) => handleStateChange(event.target.value)}/>
+            )}
+          </label>
+        )}
+        {Boolean(form.country) && (
+          <div className="sm:col-span-2">
+            <label className="mb-2 block text-sm font-medium">Map Location Pinpoint</label>
+            <LocationPickerMap
+              lat={form.latitude}
+              lng={form.longitude}
+              onChange={(lat, lng) => setForm((prev) => ({ ...prev, latitude: lat, longitude: lng }))}
+              label={form.state ? `${form.state}, ${form.country}` : form.country}
+              zoom={form.state ? 8 : 5}
+            />
+          </div>
+        )}
+        <label className="text-sm font-medium">Phone<Input required inputMode="tel" className="mt-2" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })}/></label>
+        <label className="text-sm font-medium">Email (optional)<Input type="email" className="mt-2" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })}/></label>
+      </>}
       {path === "pipeline" && <label className="text-sm font-medium sm:col-span-2">Customer<select required className="mt-2 h-11 w-full rounded-xl border bg-white px-3" value={form.customer} onChange={(event) => chooseCustomer(event.target.value)}><option value="">Select confirmed customer</option>{customers.data?.items.filter((item) => item.status === "ACTIVE").map((item) => <option key={item._id} value={item._id}>{item.name}</option>)}</select><span className="mt-1 block text-xs font-normal text-slate-400">Convert a lead or add a direct customer first.</span></label>}
       {path === "revenue" && <><label className="text-sm font-medium">Customer<select required className="mt-2 h-11 w-full rounded-xl border bg-white px-3" value={form.customer} onChange={(event) => chooseCustomer(event.target.value)}><option value="">Select customer</option>{customers.data?.items.filter((item) => item.status === "ACTIVE").map((item) => <option key={item._id} value={item._id}>{item.name}</option>)}</select></label><label className="text-sm font-medium">Channel partner (optional)<select className="mt-2 h-11 w-full rounded-xl border bg-white px-3" value={form.channelPartner} onChange={(event) => setForm({ ...form, channelPartner: event.target.value })}><option value="">Direct sale</option>{partners.data?.items.filter((item) => item.status === "ACTIVE").map((item) => <option key={item._id} value={item._id}>{item.name}</option>)}</select></label></>}
       {path === "channel-partners" && <><label className="text-sm font-medium">Partner code<Input required className="mt-2" value={form.code} onChange={(event) => setForm({ ...form, code: event.target.value.toUpperCase() })}/></label><label className="text-sm font-medium">Partner type<select className="mt-2 h-11 w-full rounded-xl border bg-white px-3" value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value })}>{["DISTRIBUTOR", "DEALER", "RESELLER", "RETAILER", "SERVICE_PARTNER", "OTHER"].map((type) => <option key={type}>{type.replaceAll("_", " ")}</option>)}</select></label><label className="text-sm font-medium">Country / market (optional)<select className="mt-2 h-11 w-full rounded-xl border bg-white px-3" value={form.market} onChange={(event) => setForm({ ...form, market: event.target.value })}><option value="">Select country</option>{countryOptions.map((name) => <option key={name}>{name}</option>)}</select></label></>}

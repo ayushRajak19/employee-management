@@ -54,6 +54,8 @@ export interface SalesRecord {
   achievementPercentage?: number;
   remainingAmount?: number;
   remainingPercentage?: number;
+  state?: string;
+  coordinates?: { type: "Point"; coordinates: [number, number] };
 }
 
 export interface SalesTerritory {
@@ -138,6 +140,21 @@ export interface TargetPerformanceDto {
   };
 }
 
+export interface SalesLocationPin {
+  _id: string;
+  name: string;
+  entity: "lead" | "customer";
+  country: string;
+  state?: string;
+  coordinates: [number, number];
+  status: string;
+  value?: number;
+  currency?: string;
+  phone?: string;
+  email?: string;
+  companyName?: string;
+}
+
 export const salesApi = {
   targetPerformance: () => api.get<{ items: TargetPerformanceDto[] }>("/api/v1/sales/target-performance/me"),
   teamTargetPerformance: () => api.get<{ items: TargetPerformanceDto[] }>("/api/v1/sales/target-performance/team"),
@@ -145,7 +162,10 @@ export const salesApi = {
   targetReminders: (targetId: string) => api.get<{ totalRemindersSent: number; lastReminderSentAt: string | null; history: unknown[] }>(`/api/v1/sales/targets/${targetId}/reminders`),
   triggerReminder: (targetId: string) => api.post<{ shouldSend: boolean; reason: string }>(`/api/v1/sales/targets/${targetId}/remind`, {}),
   commitment: (targetId: string, body: { committedRevenue: number }) => api.post(`/api/v1/sales/target-performance/${targetId}/commitment`, body),
-  countries: () => api.get<{ items: { country: string; leads: number; customers: number; partners: number; converted: number; pipeline: Record<string, number>; revenue: Record<string, number> }[] }>("/api/v1/sales/countries"),
+  countries: () => api.get<{
+    items: { country: string; leads: number; customers: number; partners: number; converted: number; pipeline: Record<string, number>; revenue: Record<string, number> }[];
+    locations?: SalesLocationPin[];
+  }>("/api/v1/sales/countries"),
   selfAnalytics: () => api.get<SalesAnalytics>("/api/v1/sales/me/analytics"),
   teamAnalytics: () => api.get<SalesAnalytics>("/api/v1/sales/team/analytics"),
   overviewAnalytics: () => api.get<SalesAnalytics>("/api/v1/sales/analytics/overview"),

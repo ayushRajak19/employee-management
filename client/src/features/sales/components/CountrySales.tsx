@@ -27,9 +27,9 @@ export const CountrySales = () => {
   const money = (values: Record<string, number>) => Object.entries(values).map(([currency, amount]) => currency + " " + amount.toLocaleString("en-IN")).join(" · ") || "0";
   return <section className="mt-6 space-y-5">
     <h2 className="text-xl font-semibold">Sales by country</h2>
-    <p className="text-sm text-slate-500">All-time records you can access. Select a country on the map or a card to see its dashboard. Pins show country centres.</p>
+    <p className="text-sm text-slate-500">All-time records you can access. Select a country or click pins on the map to see exact lead and customer locations.</p>
     {query.isLoading ? <p>Loading countries…</p> : query.isError ? <p role="alert" className="text-red-600">{query.error.message}</p> : <>
-      <GeoSalesMap nodes={nodes} selectedId={selected} onSelect={setSelected} metricLabel="Customers" metricValue={active ? String(active.customers) : undefined}/>
+      <GeoSalesMap nodes={nodes} locations={query.data?.locations} selectedId={selected} onSelect={setSelected} metricLabel="Customers" metricValue={active ? String(active.customers) : undefined}/>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{[...rows.values()].sort((a,b) => a.country.localeCompare(b.country)).map((row) => <button key={row.country} aria-pressed={selected === row.country} onClick={() => setSelected(row.country)} className="rounded-xl border bg-white p-4 text-left hover:border-teal-600"><strong>{row.country}</strong><p>{row.customers} customers · {row.leads} leads</p></button>)}</div>
       {!rows.size && <p>Add a lead with its country to see your first country here.</p>}
       {active && <section aria-live="polite" className="rounded-xl border bg-white p-5"><h3 className="text-xl font-semibold">{active.country} dashboard</h3><div className="mt-4 grid gap-4 sm:grid-cols-3"><p>Leads: {active.leads}</p><p>Customers: {active.customers}</p><p>Converted leads: {active.converted}</p><p>Partners: {active.partners}</p><p>Open pipeline: {money(active.pipeline)}</p><p>Recorded revenue: {money(active.revenue)}</p></div><p className="mt-4 text-sm text-slate-500">Revenue includes confirmed lead sales and won deals. Create a new deal only for additional business with an existing customer.</p></section>}
