@@ -56,7 +56,6 @@ const groups: { label: string; items: NavItem[] }[] = [
   },
   {
     label: "Sales setup", items: [
-      { label: "Country sales & map", icon: MapPinned, path: "/sales/geography", permissions: ["sales.map.self", "sales.map.team", "sales.map.all"], capability: "SALES_MODULE" },
       { label: "Territories (ownership)", icon: Route, path: "/sales/territories", roles: managementRoles, permission: "sales.territory.view", capability: "SALES_MODULE" },
       { label: "Sales employees", icon: Users, path: "/sales/employees", permissions: ["sales.view.team", "sales.view.all"], capability: "SALES_MODULE" },
     ],
@@ -64,6 +63,7 @@ const groups: { label: string; items: NavItem[] }[] = [
   {
     label: "Sales workflow", items: [
       { label: "Sales dashboard", icon: TrendingUp, path: "/sales", permissions: ["sales.analytics.self", "sales.analytics.team", "sales.analytics.all"], capability: "SALES_MODULE" },
+      { label: "Country sales & map", icon: MapPinned, path: "/sales/geography", permissions: ["sales.map.self", "sales.map.team", "sales.map.all"], capability: "SALES_MODULE" },
       { label: "My target & performance", icon: Target, path: "/sales/my-target", roles: employeeRole, permission: "sales.analytics.self", capability: "SALES_MODULE" },
       { label: "Leads", icon: Users, path: "/sales/leads", permissions: ["sales.view.self", "sales.view.team", "sales.view.all"], capability: "SALES_MODULE" },
       { label: "Customers", icon: UserRound, path: "/sales/customers", permission: "sales.customer.view", capability: "SALES_MODULE" },

@@ -61,9 +61,10 @@ test("Super Admin receives tenant-wide sales actions", () => {
   assert.ok(ROLE_PERMISSIONS.SUPER_ADMIN.includes("sales.revenue.manage"));
 });
 
-test("Sales employees can create their own geography, territory, and channel partner records", () => {
-  assert.ok(ROLE_PERMISSIONS.EMPLOYEE.includes("sales.geography.create.self"));
-  assert.ok(ROLE_PERMISSIONS.EMPLOYEE.includes("sales.territory.create.self"));
+test("Sales employees cannot change shared geography or territory setup", () => {
+  assert.ok(!ROLE_PERMISSIONS.EMPLOYEE.includes("sales.geography.create.self"));
+  assert.ok(!ROLE_PERMISSIONS.EMPLOYEE.includes("sales.territory.create.self"));
+  assert.ok(!ROLE_PERMISSIONS.EMPLOYEE.includes("sales.territory.view"));
   assert.ok(ROLE_PERMISSIONS.EMPLOYEE.includes("sales.channel_partner.manage.self"));
   assert.ok(ROLE_PERMISSIONS.EMPLOYEE.includes("sales.lead.manage.self"));
   assert.ok(ROLE_PERMISSIONS.EMPLOYEE.includes("sales.customer.manage.self"));

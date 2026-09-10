@@ -48,7 +48,7 @@ salesRouter.get("/employees", salesView, asyncHandler(controller.salesEmployees)
 salesRouter.get("/employees/:employeeId/analytics", salesAnalytics, validate(employeeAnalyticsSchema), asyncHandler(controller.employeeAnalytics));
 
 salesRouter.get("/geography/tree", salesMap, asyncHandler(controller.geographyTree));
-salesRouter.post("/geography", requireAnyPermission("sales.configuration.manage", "sales.geography.create.self"), validate(createGeoSchema), asyncHandler(controller.createGeography));
+salesRouter.post("/geography", requirePermission("sales.configuration.manage"), validate(createGeoSchema), asyncHandler(controller.createGeography));
 salesRouter.get("/geography/:geoId", salesMap, validate(geoIdSchema), asyncHandler(controller.geographyDetail));
 salesRouter.get("/geography/:geoId/children", salesMap, validate(geoIdSchema), asyncHandler(controller.geographyChildren));
 salesRouter.get("/geography/:geoId/analytics", salesMap, validate(geoIdSchema), asyncHandler(controller.geographyAnalytics));
@@ -56,8 +56,8 @@ salesRouter.get("/geography/:geoId/trends", salesMap, validate(geoIdSchema), asy
 salesRouter.patch("/geography/:geoId", requirePermission("sales.configuration.manage"), validate(updateGeoSchema), asyncHandler(controller.updateGeography));
 
 salesRouter.get("/territories", requirePermission("sales.territory.view"), asyncHandler(controller.listTerritories));
-salesRouter.post("/territories", requireAnyPermission("sales.territory.manage", "sales.territory.create.self"), validate(createTerritorySchema), asyncHandler(controller.createTerritory));
-salesRouter.post("/territories/assignments", requireAnyPermission("sales.territory.manage", "sales.territory.create.self"), validate(assignmentSchema), asyncHandler(controller.assignTerritory));
+salesRouter.post("/territories", requirePermission("sales.territory.manage"), validate(createTerritorySchema), asyncHandler(controller.createTerritory));
+salesRouter.post("/territories/assignments", requirePermission("sales.territory.manage"), validate(assignmentSchema), asyncHandler(controller.assignTerritory));
 salesRouter.get("/territories/:territoryId", requirePermission("sales.territory.view"), validate(territoryIdSchema), asyncHandler(controller.territoryDetail));
 salesRouter.patch("/territories/:territoryId", requirePermission("sales.territory.manage"), validate(updateTerritorySchema), asyncHandler(controller.updateTerritory));
 salesRouter.get("/territories/:territoryId/analytics", salesAnalytics, validate(territoryIdSchema), asyncHandler(controller.territoryAnalytics));

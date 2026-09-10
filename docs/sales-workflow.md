@@ -4,8 +4,8 @@
 
 | Section | Business purpose | Primary owner |
 | --- | --- | --- |
-| Geographic intelligence | Maintains real places: country, state, district, city, area and pincode. | Sales creates locations it actually covers; HR reads coverage. |
-| Territories | Defines business ownership over one or more geographic locations. | Sales leadership; an individual Sales employee may create and own a new territory. |
+| Country intelligence | Groups sales records by the country/market selected on leads and customers. | Sales records the market; managers and HR review coverage. |
+| Territories | Defines business ownership groups for sales teams. | Sales leadership manages territories and employee assignments. |
 | Sales employees | Shows workforce capacity and performance inside the viewer's resolved scope. | HR and Sales leadership read; employee sees only self analytics. |
 | Leads | Stores potential buyers before they become customers. | Sales employee or manager. |
 | Customers | Stores confirmed buyers, either converted from a lead or added directly. | Sales employee or manager. |
@@ -16,8 +16,8 @@
 
 ## Normal operating flow
 
-1. Add missing geography only when Sales starts working in a real new location.
-2. Create a territory covering that geography. The Sales creator becomes its owner automatically.
+1. Select the country/market while adding a lead or customer.
+2. Sales leadership creates a territory and assigns its team members.
 3. Add a lead in that territory.
 4. Move the lead through `NEW`, `CONTACTED`, `QUALIFIED`, then `CONVERTED` or `LOST`.
 5. `CONVERTED` automatically creates and links one customer. A direct confirmed buyer can instead be added directly to Customers.
@@ -28,7 +28,7 @@
 
 ## Role boundaries
 
-- Sales Employee: manages own geography, territory, leads, customers, opportunities and channel partners; views own targets and revenue.
+- Sales Employee: manages own leads, customers, opportunities and channel partners; views own targets, revenue and country reporting.
 - Sales Manager / Department Head: manages the same workflow for the resolved reporting and territory team, assigns employees and creates team targets.
 - HR Admin: receives tenant-wide read-only Sales visibility for workforce planning. HR cannot alter commercial records.
 - Super Admin: can configure and correct all Sales records, including exceptional manual revenue.
