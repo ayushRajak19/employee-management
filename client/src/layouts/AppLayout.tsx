@@ -98,7 +98,6 @@ const groups: { label: string; items: NavItem[] }[] = [
       { label: "Documents & reports", icon: FileText, path: "/governance", section: "section.governance" },
       { label: "Access & audit", icon: ShieldCheck, path: "/governance", permission: "audit.view", section: "section.governance" },
       { label: "Email automation", icon: MailPlus, path: "/email-automation", section: "section.email_automation" },
-      { label: "Vendor organizations", icon: Building2, path: "/platform/tenants", platformOnly: true },
     ],
   },
 ];

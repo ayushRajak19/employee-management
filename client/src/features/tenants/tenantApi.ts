@@ -30,4 +30,5 @@ export const tenantApi = {
   create: (body: CreateTenantInput) => api.post<{ item: TenantItem }>("/api/v1/platform/tenants", body),
   updateStatus: (id: string, status: "ACTIVE" | "SUSPENDED") => api.patch<{ item: TenantItem }>(`/api/v1/platform/tenants/${id}/status`, { status }),
   analytics: () => api.get<{ summary: { organizations: number; activeOrganizations: number; suspendedOrganizations: number; users: number }; growth: { month: string; organizations: number; users: number }[]; items: TenantItem[] }>("/api/v1/platform/tenants/analytics"),
+  logout: () => api.post("/api/v1/platform/auth/logout"),
 };

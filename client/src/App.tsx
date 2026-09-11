@@ -3,7 +3,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { AppLayout } from "@/layouts/AppLayout";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { LandingPage } from "@/pages/LandingPage";
-import { OnboardingRoute, PasswordChangeRoute, PermissionRoute, PlatformRoute, ProtectedRoute, RoleRoute } from "@/routes/ProtectedRoute";
+import { OnboardingRoute, PasswordChangeRoute, PermissionRoute, ProtectedRoute, RoleRoute } from "@/routes/ProtectedRoute";
 
 const LoginPage = lazy(() => import("@/pages/LoginPage").then((module) => ({ default: module.LoginPage })));
 const SolutionsIndexPage = lazy(() => import("@/pages/SolutionsPage").then((module) => ({ default: module.SolutionsIndexPage })));
@@ -36,6 +36,7 @@ const ContributionPage = lazy(() => import("@/pages/ContributionPage").then((mod
 const AiWorkspacePage = lazy(() => import("@/pages/AiWorkspacePage").then((module) => ({ default: module.AiWorkspacePage })));
 const TaskTrackerPage = lazy(() => import("@/pages/TaskTrackerPage").then((module) => ({ default: module.TaskTrackerPage })));
 const TenantsPage = lazy(() => import("@/pages/TenantsPage").then((module) => ({ default: module.TenantsPage })));
+const PlatformLoginPage = lazy(() => import("@/pages/PlatformLoginPage").then((module) => ({ default: module.PlatformLoginPage })));
 const SalesDashboardPage = lazy(() => import("@/features/sales/pages/SalesDashboardPage").then((module) => ({ default: module.SalesDashboardPage })));
 const GeographicSalesPage = lazy(() => import("@/features/sales/pages/GeographicSalesPage").then((module) => ({ default: module.GeographicSalesPage })));
 const SalesTerritoriesPage = lazy(() => import("@/features/sales/pages/SalesTerritoriesPage").then((module) => ({ default: module.SalesTerritoriesPage })));
@@ -56,6 +57,8 @@ export const App = () => <Suspense fallback={<PageLoader/>}><Routes>
   <Route path="/forgot-password" element={<ForgotPasswordPage/>}/>
   <Route path="/reset-password" element={<ResetPasswordPage/>}/>
   <Route path="/register" element={<RegisterPage/>}/>
+  <Route path="/platform/login" element={<PlatformLoginPage/>}/>
+  <Route path="/platform/tenants" element={<TenantsPage/>}/>
   <Route element={<PasswordChangeRoute/>}><Route path="/change-password" element={<ChangePasswordPage/>}/></Route>
   <Route element={<OnboardingRoute/>}><Route path="/onboarding" element={<OnboardingPage/>}/></Route>
   <Route element={<ProtectedRoute/>}><Route element={<AppLayout/>}>
@@ -82,7 +85,6 @@ export const App = () => <Suspense fallback={<PageLoader/>}><Routes>
     <Route element={<PermissionRoute permissions={["section.resume_screener"]}/>}><Route path="resume-screener" element={<ResumeScreenerPage/>}/></Route>
     <Route element={<RoleRoute roles={["SUPER_ADMIN"]}/>}> <Route path="administrators" element={<AdministratorsPage/>}/></Route>
     <Route element={<PermissionRoute permissions={["section.email_automation"]}/>}><Route path="email-automation" element={<EmailAutomationPage/>}/></Route>
-    <Route element={<PlatformRoute/>}><Route path="platform/tenants" element={<TenantsPage/>}/></Route>
     <Route element={<PermissionRoute permissions={["section.sales"]}/>}>
       <Route element={<PermissionRoute permissions={["sales.analytics.self","sales.analytics.team","sales.analytics.all"]}/>}> <Route path="sales" element={<SalesDashboardPage/>}/></Route>
       <Route element={<PermissionRoute permissions={["sales.analytics.self"]}/>}> <Route path="sales/my-target" element={<TargetPerformancePage/>}/></Route>

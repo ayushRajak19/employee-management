@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { tenantApi, type CreateTenantInput } from "@/features/tenants/tenantApi";
-import { useAuth } from "@/features/auth/AuthProvider";
 
 const password = () => {
   const bytes = crypto.getRandomValues(new Uint8Array(14));
@@ -14,7 +13,7 @@ const password = () => {
 const initialForm = (): CreateTenantInput => ({ name: "", plan: "STANDARD", adminName: "", adminEmail: "", temporaryPassword: password() });
 
 export const TenantsPage = () => {
-  const { user } = useAuth();
+  const user = { tenantId: "" };
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(initialForm);
@@ -24,7 +23,7 @@ export const TenantsPage = () => {
   const update = <K extends keyof CreateTenantInput>(key: K, value: CreateTenantInput[K]) => setForm((current) => ({ ...current, [key]: value }));
 
   return <main className="flex-1 px-5 py-8 sm:px-8"><div className="mx-auto max-w-[1200px]">
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-sm font-medium text-brand-700">Platform administration</p><h1 className="mt-1 text-3xl font-semibold">Vendor organizations</h1><p className="mt-2 text-sm text-slate-500">Provision isolated workspaces, administrators and organization data.</p></div><Button onClick={() => { create.reset(); setOpen(true); }}><Plus size={16}/> Add organization</Button></div>
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-sm font-medium text-brand-700">Independent control plane</p><h1 className="mt-1 text-3xl font-semibold">Vendor organizations</h1><p className="mt-2 text-sm text-slate-500">Platform-wide analytics outside all employee workspaces.</p></div><div className="flex gap-2"><Button variant="ghost" onClick={async () => { await tenantApi.logout(); window.location.replace("/platform/login"); }}>Sign out</Button><Button onClick={() => { create.reset(); setOpen(true); }}><Plus size={16}/> Add organization</Button></div></div>
     <div className="mt-6 flex gap-3 rounded-2xl border border-violet-200 bg-violet-50 p-4 text-violet-900"><ShieldCheck size={19} className="mt-0.5 shrink-0"/><p className="text-sm leading-6">Each organization has its own users, roles, employees, files and records. Suspending one immediately blocks its sessions without deleting any data.</p></div>
     {tenants.data && <><div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{[["Organizations", tenants.data.summary.organizations, Building2], ["Active", tenants.data.summary.activeOrganizations, ShieldCheck], ["Users", tenants.data.summary.users, Users], ["New this month", tenants.data.growth.at(-1)?.organizations ?? 0, TrendingUp]].map(([label, value, Icon]) => { const MetricIcon = Icon as typeof Building2; return <div key={String(label)} className="rounded-2xl border bg-white p-5 shadow-soft"><MetricIcon size={18} className="text-brand-600"/><p className="mt-3 text-2xl font-semibold">{String(value)}</p><p className="text-xs text-slate-500">{String(label)}</p></div>; })}</div>{tenants.data.growth.length > 0 && <section className="mt-5 rounded-2xl border bg-white p-5 shadow-soft"><h2 className="font-semibold">Platform growth</h2><div className="mt-4 flex items-end gap-3 overflow-x-auto">{tenants.data.growth.slice(-12).map((item) => <div className="min-w-20 flex-1" key={item.month}><div className="flex h-28 items-end gap-1"><div title={`${item.organizations} organizations`} className="w-1/2 rounded-t bg-brand-500" style={{ height: `${Math.max(8, item.organizations * 12)}px` }}/><div title={`${item.users} users`} className="w-1/2 rounded-t bg-violet-300" style={{ height: `${Math.max(8, item.users * 6)}px` }}/></div><p className="mt-2 text-center text-[10px] text-slate-400">{item.month}</p></div>)}</div><p className="mt-3 text-xs text-slate-500">Monthly registrations: <span className="text-brand-600">organizations</span> and <span className="text-violet-600">users</span>.</p></section>}</>}
     <section className="mt-5 overflow-hidden rounded-2xl border bg-white shadow-soft">

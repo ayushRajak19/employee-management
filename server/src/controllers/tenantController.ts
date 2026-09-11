@@ -8,10 +8,10 @@ export const analytics = async (_request: Request, response: Response): Promise<
   response.json({ success: true, message: "Platform analytics retrieved", data: await tenantService.platformAnalytics() });
 };
 export const create = async (request: Request, response: Response): Promise<void> => {
-  const item = await tenantService.createTenant(request.body, request.user!.id);
+  const item = await tenantService.createTenant(request.body);
   response.status(201).json({ success: true, message: "Organization provisioned", data: { item } });
 };
 export const updateStatus = async (request: Request, response: Response): Promise<void> => {
-  const item = await tenantService.updateTenantStatus(String(request.params.id), request.body.status, request.user!.tenantId);
+  const item = await tenantService.updateTenantStatus(String(request.params.id), request.body.status, "");
   response.json({ success: true, message: `Organization ${request.body.status === "ACTIVE" ? "activated" : "suspended"}`, data: { item } });
 };
