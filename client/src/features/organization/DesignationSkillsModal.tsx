@@ -198,7 +198,7 @@ export const DesignationSkillsModal = ({
                 <Award size={20} />
               </span>
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <h2 className="text-xl font-semibold text-slate-900">
                     {activeDesignation ? `Skill Assessment: ${activeDesignation.name}` : "AI Skill Builder"}
                   </h2>
@@ -207,6 +207,10 @@ export const DesignationSkillsModal = ({
                       {activeDesignation.code}
                     </span>
                   )}
+                  <span className="inline-flex items-center gap-1 rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-bold text-brand-800">
+                    <Award size={13} className="text-brand-600" />
+                    {targetSkills.length} Skills Required
+                  </span>
                 </div>
                 <p className="mt-0.5 text-xs text-slate-500">
                   Define required competencies & evaluation questions. Employees holding this title will self-rate against these criteria.
@@ -246,7 +250,7 @@ export const DesignationSkillsModal = ({
           </div>
         )}
 
-        {/* Toolbar: AI Skill Builder toggle, Template Catalog & Add Skill */}
+        {/* Toolbar: AI Skill Builder toggle, Direct Number Skills Buttons, Template Catalog & Add Skill */}
         <div className="border-b bg-slate-50/80 px-6 py-3.5">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex flex-wrap items-center gap-2">
@@ -259,6 +263,29 @@ export const DesignationSkillsModal = ({
                 <Sparkles size={14} className={showAiBuilder ? "mr-1.5 text-amber-200" : "mr-1.5 text-amber-500"} />
                 {showAiBuilder ? "Hide AI Skill Builder" : "✨ AI Skill Builder (from JD)"}
               </Button>
+
+              {/* DIRECT NUMBER SKILL BUTTON SELECTOR */}
+              <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-2xs">
+                <span className="px-2 text-[11px] font-semibold text-slate-500">Skills to Generate:</span>
+                {[4, 6, 8, 10, 12].map((num) => (
+                  <button
+                    key={num}
+                    type="button"
+                    onClick={() => {
+                      setAiSkillCount(num);
+                      setShowAiBuilder(true);
+                    }}
+                    className={`h-7 min-w-7 rounded-lg px-2 text-xs font-bold transition ${
+                      aiSkillCount === num
+                        ? "bg-brand-600 text-white shadow-xs"
+                        : "bg-transparent text-slate-600 hover:bg-slate-100"
+                    }`}
+                    title={`Generate ${num} skills with AI`}
+                  >
+                    {num}
+                  </button>
+                ))}
+              </div>
 
               <div className="h-4 w-px bg-slate-200 mx-1 hidden sm:block" />
 
@@ -449,113 +476,189 @@ export const DesignationSkillsModal = ({
               </div>
             </div>
           ) : (
-            targetSkills.map((skill, index) => (
-              <div
-                key={skill.id || index}
-                className="group relative rounded-2xl border border-slate-200 bg-white p-5 shadow-soft transition hover:border-brand-200"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-center gap-2">
-                    <span className="grid size-6 place-items-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">
-                      {index + 1}
-                    </span>
-                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                      Skill Specification
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    title="Remove Skill"
-                    className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 transition"
-                    onClick={() => handleDeleteSkill(index)}
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-
-                <div className="mt-4 grid gap-4 sm:grid-cols-3">
-                  <div className="sm:col-span-2">
-                    <label className="block text-xs font-medium text-slate-600">
-                      Skill Name <span className="text-red-500">*</span>
-                    </label>
-                    <Input
-                      required
-                      placeholder="e.g. Distributed Systems Architecture"
-                      className="mt-1 text-sm font-medium"
-                      value={skill.name}
-                      onChange={(e) => handleSkillChange(index, "name", e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600">
-                      Category
-                    </label>
-                    <Input
-                      placeholder="e.g. Backend, Leadership, Domain"
-                      className="mt-1 text-sm"
-                      value={skill.category}
-                      onChange={(e) => handleSkillChange(index, "category", e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="mt-3 grid gap-4 sm:grid-cols-3">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600">
-                      Proficiency Level
-                    </label>
-                    <select
-                      className="mt-1 h-10 w-full rounded-xl border bg-white px-3 text-sm text-slate-800"
-                      value={skill.level}
-                      onChange={(e) =>
-                        handleSkillChange(index, "level", e.target.value as "Basic" | "Intermediate" | "Advanced")
-                      }
+            <>
+              {/* Sticky Numbered Skills Quick Navigation Strip */}
+              <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-brand-200 bg-brand-50/95 p-3 backdrop-blur-sm shadow-xs">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-xs font-bold text-slate-800 mr-1 flex items-center gap-1">
+                    <Award size={14} className="text-brand-600" />
+                    Skills ({targetSkills.length}):
+                  </span>
+                  {targetSkills.map((skill, idx) => (
+                    <button
+                      key={skill.id || idx}
+                      type="button"
+                      onClick={() => {
+                        const el = document.getElementById(`skill-card-${idx}`);
+                        el?.scrollIntoView({ behavior: "smooth", block: "center" });
+                      }}
+                      className="group inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-2xs hover:border-brand-500 hover:bg-brand-600 hover:text-white transition"
+                      title={`Jump to Skill #${idx + 1}: ${skill.name || "Untitled"}`}
                     >
-                      <option value="Basic">Basic</option>
-                      <option value="Intermediate">Intermediate</option>
-                      <option value="Advanced">Advanced</option>
-                    </select>
+                      <span className="grid size-4 place-items-center rounded-full bg-brand-100 text-[10px] font-bold text-brand-700 group-hover:bg-white group-hover:text-brand-700">
+                        {idx + 1}
+                      </span>
+                      <span className="max-w-[110px] truncate">{skill.name || `Skill ${idx + 1}`}</span>
+                    </button>
+                  ))}
+                </div>
+                <span className="rounded-full bg-brand-600 px-2.5 py-1 text-[11px] font-bold text-white shadow-2xs">
+                  {targetSkills.length} Required Skills
+                </span>
+              </div>
+
+              {targetSkills.map((skill, index) => (
+                <div
+                  id={`skill-card-${index}`}
+                  key={skill.id || index}
+                  className="group relative rounded-2xl border border-slate-200 bg-white p-5 shadow-soft transition hover:border-brand-200"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-2.5">
+                      <span className="grid size-7 place-items-center rounded-full bg-brand-600 text-xs font-bold text-white shadow-xs">
+                        {index + 1}
+                      </span>
+                      <div>
+                        <span className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                          Skill #{index + 1} of {targetSkills.length}
+                        </span>
+                        <span className="ml-2 text-[11px] font-medium text-brand-600">
+                          (Required for employee self-assessment)
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      title="Remove Skill"
+                      className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 transition"
+                      onClick={() => handleDeleteSkill(index)}
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </div>
-                  <div className="sm:col-span-2">
+
+                  <div className="mt-4 grid gap-4 sm:grid-cols-3">
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-medium text-slate-600">
+                        Skill Name <span className="text-red-500">*</span>
+                      </label>
+                      <Input
+                        required
+                        placeholder="e.g. Distributed Systems Architecture"
+                        className="mt-1 text-sm font-medium"
+                        value={skill.name}
+                        onChange={(e) => handleSkillChange(index, "name", e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600">
+                        Category
+                      </label>
+                      <Input
+                        placeholder="e.g. Backend, Leadership, Domain"
+                        className="mt-1 text-sm"
+                        value={skill.category}
+                        onChange={(e) => handleSkillChange(index, "category", e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-3 grid gap-4 sm:grid-cols-3">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600">
+                        Proficiency Level
+                      </label>
+                      <select
+                        className="mt-1 h-10 w-full rounded-xl border bg-white px-3 text-sm text-slate-800"
+                        value={skill.level}
+                        onChange={(e) =>
+                          handleSkillChange(index, "level", e.target.value as "Basic" | "Intermediate" | "Advanced")
+                        }
+                      >
+                        <option value="Basic">Basic</option>
+                        <option value="Intermediate">Intermediate</option>
+                        <option value="Advanced">Advanced</option>
+                      </select>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-medium text-slate-600">
+                        Tools & Software
+                      </label>
+                      <Input
+                        placeholder="e.g. Docker, Kubernetes, AWS, Terraform"
+                        className="mt-1 text-sm"
+                        value={skill.tools || ""}
+                        onChange={(e) => handleSkillChange(index, "tools", e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-3">
                     <label className="block text-xs font-medium text-slate-600">
-                      Tools & Software
+                      What does competency look like in this role?
                     </label>
-                    <Input
-                      placeholder="e.g. Docker, Kubernetes, AWS, Terraform"
-                      className="mt-1 text-sm"
-                      value={skill.tools || ""}
-                      onChange={(e) => handleSkillChange(index, "tools", e.target.value)}
+                    <textarea
+                      rows={2}
+                      placeholder="Describe specific responsibilities, behaviors, or technical standards..."
+                      className="mt-1 w-full rounded-xl border bg-white p-2.5 text-xs text-slate-800 placeholder:text-slate-400 focus:border-brand-500 focus:outline-hidden"
+                      value={skill.description}
+                      onChange={(e) => handleSkillChange(index, "description", e.target.value)}
                     />
                   </div>
-                </div>
 
-                <div className="mt-3">
-                  <label className="block text-xs font-medium text-slate-600">
-                    What does competency look like in this role?
-                  </label>
-                  <textarea
-                    rows={2}
-                    placeholder="Describe specific responsibilities, behaviors, or technical standards..."
-                    className="mt-1 w-full rounded-xl border bg-white p-2.5 text-xs text-slate-800 placeholder:text-slate-400 focus:border-brand-500 focus:outline-hidden"
-                    value={skill.description}
-                    onChange={(e) => handleSkillChange(index, "description", e.target.value)}
-                  />
-                </div>
+                  <div className="mt-3 rounded-xl border border-brand-100 bg-brand-50/50 p-3">
+                    <label className="block text-xs font-medium text-brand-900">
+                      Assessment / Evaluation Question for Employee
+                    </label>
+                    <textarea
+                      rows={2}
+                      placeholder="e.g. Describe a project where you solved a severe architectural bottleneck..."
+                      className="mt-1 w-full rounded-lg border border-brand-200 bg-white p-2.5 text-xs text-slate-800 placeholder:text-slate-400 focus:border-brand-500 focus:outline-hidden"
+                      value={skill.assessmentQuestion || ""}
+                      onChange={(e) => handleSkillChange(index, "assessmentQuestion", e.target.value)}
+                    />
+                  </div>
 
-                <div className="mt-3 rounded-xl border border-brand-100 bg-brand-50/50 p-3">
-                  <label className="block text-xs font-medium text-brand-900">
-                    Assessment / Evaluation Question for Employee
-                  </label>
-                  <textarea
-                    rows={2}
-                    placeholder="e.g. Describe a project where you solved a severe architectural bottleneck..."
-                    className="mt-1 w-full rounded-lg border border-brand-200 bg-white p-2.5 text-xs text-slate-800 placeholder:text-slate-400 focus:border-brand-500 focus:outline-hidden"
-                    value={skill.assessmentQuestion || ""}
-                    onChange={(e) => handleSkillChange(index, "assessmentQuestion", e.target.value)}
-                  />
+                  {/* Benchmark Score Buttons 1 to 10 */}
+                  <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                    <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                      Benchmark Rating Required (1–10) which employee needs to achieve:
+                    </label>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((score) => {
+                        const currentScore = skill.assessmentQuestion?.match(/\[Target:\s*(\d+)\/10\]/)?.[1];
+                        const isSelected = currentScore
+                          ? Number(currentScore) === score
+                          : score === (skill.level === "Advanced" ? 8 : skill.level === "Intermediate" ? 6 : 5);
+                        return (
+                          <button
+                            key={score}
+                            type="button"
+                            onClick={() => {
+                              const cleanQ = (skill.assessmentQuestion || "").replace(/\s*\[Target:\s*\d+\/10\]/g, "").trim();
+                              handleSkillChange(index, "assessmentQuestion", `${cleanQ} [Target: ${score}/10]`.trim());
+                            }}
+                            className={`grid size-7 place-items-center rounded-lg text-xs font-bold transition ${
+                              isSelected
+                                ? "bg-brand-600 text-white shadow-xs ring-2 ring-brand-300"
+                                : "bg-white text-slate-700 hover:bg-slate-200 border border-slate-300"
+                            }`}
+                            title={`Require benchmark rating of ${score}/10`}
+                          >
+                            {score}
+                          </button>
+                        );
+                      })}
+                      <span className="ml-2 text-xs font-medium text-slate-500">
+                        {skill.assessmentQuestion?.match(/\[Target:\s*(\d+)\/10\]/)?.[1]
+                          ? `(Target: ${skill.assessmentQuestion.match(/\[Target:\s*(\d+)\/10\]/)![1]}/10 points)`
+                          : `(Default: ${skill.level === "Advanced" ? 8 : skill.level === "Intermediate" ? 6 : 5}/10 points)`}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))
+              ))}
+            </>
           )}
         </div>
 
