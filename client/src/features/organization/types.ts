@@ -32,6 +32,17 @@ export interface HierarchyEmployeeNode {
     employeeId: string;
     profilePhotoUrl?: string;
   } | null;
+  effectiveReportingManager?: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    name: string;
+    employeeId: string;
+    profilePhotoUrl?: string;
+  } | null;
+  isReportingManagerInferred?: boolean;
+  seniorityRank: number;
+  seniorityTierName: string;
   role: string;
   userId: string;
   status: string;
@@ -40,17 +51,27 @@ export interface HierarchyEmployeeNode {
   directReportsCount: number;
 }
 
+export interface SeniorityTierGroup {
+  rank: number;
+  tierName: string;
+  badgeColor: string;
+  employees: HierarchyEmployeeNode[];
+}
+
 export interface OrganizationHierarchyData {
   departments: NamedEntity[];
   teams: NamedEntity[];
   designations: NamedEntity[];
   employees: HierarchyEmployeeNode[];
+  seniorityTiers?: SeniorityTierGroup[];
   stats: {
     totalEmployees: number;
     totalDepartments: number;
     totalTeams: number;
     totalDesignations: number;
     totalManagers: number;
+    unassignedManagersCount?: number;
   };
 }
+
 

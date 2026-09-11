@@ -69,6 +69,8 @@ export const setDesignationAssessmentSkills = async (id: string, skills: Designa
   return item;
 };
 
+import { calculateSeniorityRank } from "./hierarchyService.js";
+
 export const getRoleCatalogSkills = (role: string) => {
   return roleSkillCatalog.filter((item) => item.role.toLowerCase() === role.toLowerCase());
 };
@@ -89,81 +91,200 @@ export const getOrganizationHierarchyFlow = async () => {
       .lean(),
   ]);
 
-  const employees = rawEmployees.map((emp) => ({
-    _id: emp._id.toString(),
-    employeeId: emp.employeeId,
-    firstName: emp.firstName,
-    lastName: emp.lastName,
-    name: `${emp.firstName} ${emp.lastName}`.trim(),
-    officialEmail: emp.officialEmail,
-    phone: emp.phone,
-    profilePhotoUrl: profilePhotoUrl(emp.profilePhotoKey),
-    department: emp.department
-      ? {
-          _id: (emp.department as any)._id?.toString() || "",
-          name: (emp.department as any).name || "",
-          code: (emp.department as any).code || "",
-        }
-      : null,
-    team: emp.team
-      ? {
-          _id: (emp.team as any)._id?.toString() || "",
-          name: (emp.team as any).name || "",
-          code: (emp.team as any).code || "",
-        }
-      : null,
-    designation: emp.designation
-      ? {
-          _id: (emp.designation as any)._id?.toString() || "",
-          name: (emp.designation as any).name || "",
-          code: (emp.designation as any).code || "",
-          level: (emp.designation as any).level || "",
-        }
-      : null,
-    reportingManager: emp.reportingManager
-      ? {
-          _id: (emp.reportingManager as any)._id?.toString() || "",
-          firstName: (emp.reportingManager as any).firstName || "",
-          lastName: (emp.reportingManager as any).lastName || "",
-          name: `${(emp.reportingManager as any).firstName || ""} ${(emp.reportingManager as any).lastName || ""}`.trim(),
-          employeeId: (emp.reportingManager as any).employeeId || "",
-          profilePhotoUrl: profilePhotoUrl((emp.reportingManager as any).profilePhotoKey),
-        }
-      : null,
-    role: (emp.user as any)?.role || "EMPLOYEE",
-    userId: (emp.user as any)?._id?.toString() || "",
-    status: emp.status,
-    employmentType: emp.employmentType,
-    dateOfJoining: emp.dateOfJoining,
-  }));
+  const mappedEmployees = rawEmployees.map((emp) => {
+    const seniority = calculateSeniorityRank({
+      role: (emp.user as any)?.role,
+      designationTitle: (emp.designation as any)?.name,
+      designationLevel: (emp.designation as any)?.level,
+    });
 
-  // Calculate direct reports count for each employee
-  const directReportsCountMap = new Map<string, number>();
-  for (const emp of employees) {
+    return {
+      _id: emp._id.toString(),
+      employeeId: emp.employeeId,
+      firstName: emp.firstName,
+      lastName: emp.lastName,
+      name: `${emp.firstName} ${emp.lastName}`.trim(),
+      officialEmail: emp.officialEmail,
+      phone: emp.phone,
+      profilePhotoUrl: profilePhotoUrl(emp.profilePhotoKey),
+      department: emp.department
+        ? {
+            _id: (emp.department as any)._id?.toString() || "",
+            name: (emp.department as any).name || "",
+            code: (emp.department as any).code || "",
+          }
+        : null,
+      team: emp.team
+        ? {
+            _id: (emp.team as any)._id?.toString() || "",
+            name: (emp.team as any).name || "",
+            code: (emp.team as any).code || "",
+          }
+        : null,
+      designation: emp.designation
+        ? {
+            _id: (emp.designation as any)._id?.toString() || "",
+            name: (emp.designation as any).name || "",
+            code: (emp.designation as any).code || "",
+            level: (emp.designation as any).level || "",
+          }
+        : null,
+      reportingManager: emp.reportingManager
+        ? {
+            _id: (emp.reportingManager as any)._id?.toString() || "",
+            firstName: (emp.reportingManager as any).firstName || "",
+            lastName: (emp.reportingManager as any).lastName || "",
+            name: `${(emp.reportingManager as any).firstName || ""} ${(emp.reportingManager as any).lastName || ""}`.trim(),
+            employeeId: (emp.reportingManager as any).employeeId || "",
+            profilePhotoUrl: profilePhotoUrl((emp.reportingManager as any).profilePhotoKey),
+          }
+        : null,
+      seniorityRank: seniority.rank,
+      seniorityTierName: seniority.tierName,
+      role: (emp.user as any)?.role || "EMPLOYEE",
+      userId: (emp.user as any)?._id?.toString() || "",
+      status: emp.status,
+      employmentType: emp.employmentType,
+      dateOfJoining: emp.dateOfJoining,
+    };
+  });
+
+  // Sort employees by seniority rank ascending (Rank 1 CEO is top)
+  const sortedBySeniority = [...mappedEmployees].sort((a, b) => a.seniorityRank - b.seniorityRank);
+  const topExecutive = sortedBySeniority[0] || null;
+
+  let unassignedManagersCount = 0;
+
+  // Resolve effective hierarchy: infer reporting lines if reportingManager is null in DB
+  const resolvedEmployees = mappedEmployees.map((emp) => {
     if (emp.reportingManager?._id) {
+      return {
+        ...emp,
+        effectiveReportingManager: emp.reportingManager,
+        isReportingManagerInferred: false,
+      };
+    }
+
+    // Top executive has no reporting manager (root of organization)
+    if (topExecutive && emp._id === topExecutive._id) {
+      return {
+        ...emp,
+        effectiveReportingManager: null,
+        isReportingManagerInferred: false,
+      };
+    }
+
+    unassignedManagersCount++;
+
+    // Tier 2 (C-Suite / VP) reports directly to top executive
+    if (emp.seniorityRank <= 2 && topExecutive) {
+      return {
+        ...emp,
+        effectiveReportingManager: {
+          _id: topExecutive._id,
+          firstName: topExecutive.firstName,
+          lastName: topExecutive.lastName,
+          name: topExecutive.name,
+          employeeId: topExecutive.employeeId,
+          profilePhotoUrl: topExecutive.profilePhotoUrl,
+        },
+        isReportingManagerInferred: true,
+      };
+    }
+
+    // Tier 3-6: Look for departmental superior (same department, higher seniority rank)
+    const deptSuperior = sortedBySeniority.find(
+      (cand) =>
+        cand._id !== emp._id &&
+        cand.department?._id &&
+        cand.department._id === emp.department?._id &&
+        cand.seniorityRank < emp.seniorityRank
+    );
+
+    if (deptSuperior) {
+      return {
+        ...emp,
+        effectiveReportingManager: {
+          _id: deptSuperior._id,
+          firstName: deptSuperior.firstName,
+          lastName: deptSuperior.lastName,
+          name: deptSuperior.name,
+          employeeId: deptSuperior.employeeId,
+          profilePhotoUrl: deptSuperior.profilePhotoUrl,
+        },
+        isReportingManagerInferred: true,
+      };
+    }
+
+    // Fallback: Highest superior across the organization or top executive
+    const fallbackSuperior =
+      sortedBySeniority.find((cand) => cand._id !== emp._id && cand.seniorityRank < emp.seniorityRank) ||
+      topExecutive;
+
+    return {
+      ...emp,
+      effectiveReportingManager:
+        fallbackSuperior && fallbackSuperior._id !== emp._id
+          ? {
+              _id: fallbackSuperior._id,
+              firstName: fallbackSuperior.firstName,
+              lastName: fallbackSuperior.lastName,
+              name: fallbackSuperior.name,
+              employeeId: fallbackSuperior.employeeId,
+              profilePhotoUrl: fallbackSuperior.profilePhotoUrl,
+            }
+          : null,
+      isReportingManagerInferred: Boolean(fallbackSuperior && fallbackSuperior._id !== emp._id),
+    };
+  });
+
+  // Calculate direct reports count for each employee based on effective hierarchy
+  const directReportsCountMap = new Map<string, number>();
+  for (const emp of resolvedEmployees) {
+    const mgrId = emp.effectiveReportingManager?._id;
+    if (mgrId) {
       directReportsCountMap.set(
-        emp.reportingManager._id,
-        (directReportsCountMap.get(emp.reportingManager._id) || 0) + 1
+        mgrId,
+        (directReportsCountMap.get(mgrId) || 0) + 1
       );
     }
   }
 
-  const enrichedEmployees = employees.map((emp) => ({
+  const enrichedEmployees = resolvedEmployees.map((emp) => ({
     ...emp,
     directReportsCount: directReportsCountMap.get(emp._id) || 0,
   }));
+
+  // Group into industry-standard seniority tiers
+  const tierDefinitions = [
+    { rank: 1, tierName: "Executive Leadership (Tier 1)", badgeColor: "amber" },
+    { rank: 2, tierName: "Senior Leadership / C-Suite (Tier 2)", badgeColor: "indigo" },
+    { rank: 3, tierName: "Management & Leads (Tier 3)", badgeColor: "teal" },
+    { rank: 4, tierName: "Senior Staff & Specialists (Tier 4)", badgeColor: "emerald" },
+    { rank: 5, tierName: "Individual Contributors (Tier 5)", badgeColor: "blue" },
+    { rank: 6, tierName: "Associate & Entry Level (Tier 6)", badgeColor: "slate" },
+  ];
+
+  const seniorityTiers = tierDefinitions
+    .map((def) => ({
+      ...def,
+      employees: enrichedEmployees.filter((e) => e.seniorityRank === def.rank),
+    }))
+    .filter((t) => t.employees.length > 0);
 
   return {
     departments,
     teams,
     designations,
     employees: enrichedEmployees,
+    seniorityTiers,
     stats: {
       totalEmployees: enrichedEmployees.length,
       totalDepartments: departments.length,
       totalTeams: teams.length,
       totalDesignations: designations.length,
       totalManagers: directReportsCountMap.size,
+      unassignedManagersCount,
     },
   };
 };

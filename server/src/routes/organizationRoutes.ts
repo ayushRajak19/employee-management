@@ -11,6 +11,5 @@ organizationRouter.patch("/designations/:id", requirePermission("department.upda
 organizationRouter.put("/designations/:id/skills", requirePermission("department.update"), validate(updateDesignationSkillsSchema), asyncHandler(controller.updateDesignationSkills));
 organizationRouter.get("/skill-catalog/:role", requirePermission("department.view"), asyncHandler(controller.getSkillCatalogForRole));
 organizationRouter.post("/generate-skills", requirePermission("department.update"), validate(generateSkillsSchema), asyncHandler(controller.generateSkills));
-
-
-
+organizationRouter.post("/auto-structure", requirePermission("employee.update"), asyncHandler(controller.autoStructureHierarchy));
+organizationRouter.patch("/employees/:id/manager", requirePermission("employee.update"), asyncHandler(controller.updateEmployeeManager));

@@ -193,3 +193,45 @@ test("EMPLOYEE is restricted to SELF only with zero subordinates", () => {
     /not a subordinate/
   );
 });
+
+test("calculateSeniorityRank assigns correct industry-standard executive tiers", async () => {
+  const { calculateSeniorityRank } = await import("./hierarchyService.js");
+
+  const ceo = calculateSeniorityRank({ designationTitle: "Chief Executive Officer" });
+  assert.equal(ceo.rank, 1);
+  assert.equal(ceo.tierName, "Executive Leadership (Tier 1)");
+
+  const founder = calculateSeniorityRank({ designationTitle: "Founder & CEO" });
+  assert.equal(founder.rank, 1);
+
+  const cto = calculateSeniorityRank({ designationTitle: "Chief Technology Officer (CTO)" });
+  assert.equal(cto.rank, 2);
+  assert.equal(cto.tierName, "Senior Leadership / C-Suite (Tier 2)");
+
+  const vpSales = calculateSeniorityRank({ designationTitle: "Vice President of Sales" });
+  assert.equal(vpSales.rank, 2);
+
+  const engManager = calculateSeniorityRank({ designationTitle: "Engineering Manager", role: "MANAGER" });
+  assert.equal(engManager.rank, 3);
+  assert.equal(engManager.tierName, "Management & Leads (Tier 3)");
+
+  const teamLead = calculateSeniorityRank({ designationTitle: "Team Lead", role: "TEAM_LEAD" });
+  assert.equal(teamLead.rank, 3);
+
+  const srDev = calculateSeniorityRank({ designationTitle: "Senior Software Engineer" });
+  assert.equal(srDev.rank, 4);
+  assert.equal(srDev.tierName, "Senior Staff & Specialists (Tier 4)");
+
+  const aimlEngineer = calculateSeniorityRank({ designationTitle: "AI/ML Engineer" });
+  assert.equal(aimlEngineer.rank, 5);
+  assert.equal(aimlEngineer.tierName, "Individual Contributors (Tier 5)");
+
+  const intern = calculateSeniorityRank({ designationTitle: "Software Engineering Intern" });
+  assert.equal(intern.rank, 6);
+  assert.equal(intern.tierName, "Associate & Entry Level (Tier 6)");
+
+  // CEO must be strictly more senior than CTO and AI/ML Engineer
+  assert.ok(ceo.rank < cto.rank, "CEO (Tier 1) must be strictly higher seniority than CTO (Tier 2)");
+  assert.ok(cto.rank < aimlEngineer.rank, "CTO (Tier 2) must be strictly higher seniority than AI/ML Engineer (Tier 5)");
+});
+

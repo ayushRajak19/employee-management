@@ -1,10 +1,15 @@
 import { useState, useMemo, useRef, type FC } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
+  AlertCircle,
+  Award,
   Building2,
+  CheckCircle2,
+  ChevronRight,
   ChevronsDown,
   ChevronsUp,
   CornerDownRight,
+  Crown,
   Focus,
   Layers3,
   Mail,
@@ -15,6 +20,7 @@ import {
   RotateCcw,
   Search,
   ShieldCheck,
+  Sparkles,
   Users,
   Workflow,
   X,
@@ -27,7 +33,60 @@ import type { HierarchyEmployeeNode } from "@/features/organization/types";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 
-type ViewMode = "REPORTING_FLOW" | "DEPARTMENT_FLOW";
+type ViewMode = "REPORTING_FLOW" | "SENIORITY_TIERS" | "DEPARTMENT_FLOW";
+
+export const getSeniorityBadge = (rank: number) => {
+  switch (rank) {
+    case 1:
+      return {
+        label: "Tier 1 • Executive",
+        badgeClass: "bg-gradient-to-r from-amber-500 to-yellow-600 text-white shadow-2xs font-bold",
+        borderClass: "border-amber-400 shadow-amber-50",
+        headerClass: "bg-amber-50 text-amber-900 border-amber-200",
+        icon: Crown,
+      };
+    case 2:
+      return {
+        label: "Tier 2 • C-Suite / VP",
+        badgeClass: "bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold",
+        borderClass: "border-indigo-300 shadow-indigo-50",
+        headerClass: "bg-indigo-50 text-indigo-900 border-indigo-200",
+        icon: ShieldCheck,
+      };
+    case 3:
+      return {
+        label: "Tier 3 • Lead / Manager",
+        badgeClass: "bg-teal-600 text-white font-semibold",
+        borderClass: "border-teal-200 shadow-teal-50",
+        headerClass: "bg-teal-50 text-teal-900 border-teal-200",
+        icon: Users,
+      };
+    case 4:
+      return {
+        label: "Tier 4 • Senior Staff",
+        badgeClass: "bg-emerald-700 text-white font-semibold",
+        borderClass: "border-emerald-200 shadow-emerald-50",
+        headerClass: "bg-emerald-50 text-emerald-900 border-emerald-200",
+        icon: Award,
+      };
+    case 5:
+      return {
+        label: "Tier 5 • IC / Specialist",
+        badgeClass: "bg-slate-700 text-white font-medium",
+        borderClass: "border-slate-200",
+        headerClass: "bg-slate-50 text-slate-900 border-slate-200",
+        icon: Workflow,
+      };
+    default:
+      return {
+        label: "Tier 6 • Associate / Intern",
+        badgeClass: "bg-slate-500 text-white font-normal",
+        borderClass: "border-slate-200",
+        headerClass: "bg-slate-100 text-slate-700 border-slate-200",
+        icon: Users,
+      };
+  }
+};
 
 export const OrgHierarchyPage = () => {
   const { user } = useAuth();
@@ -38,6 +97,15 @@ export const OrgHierarchyPage = () => {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
 
+  // Auto-structure and manager assignment state
+  const [isAutoStructuring, setIsAutoStructuring] = useState(false);
+  const [autoStructureMsg, setAutoStructureMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  const [isEditingManager, setIsEditingManager] = useState(false);
+  const [selectedManagerId, setSelectedManagerId] = useState<string>("");
+  const [isSavingManager, setIsSavingManager] = useState(false);
+  const [managerActionMsg, setManagerActionMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
   const containerRef = useRef<HTMLDivElement>(null);
 
   const { data, isLoading, error, refetch } = useQuery({
@@ -45,10 +113,13 @@ export const OrgHierarchyPage = () => {
     queryFn: organizationApi.getHierarchyFlow,
   });
 
-  const employees = data?.employees || [];
-  const departments = data?.departments || [];
-  const teams = data?.teams || [];
+  const employees = useMemo(() => data?.employees || [], [data?.employees]);
+  const departments = useMemo(() => data?.departments || [], [data?.departments]);
+  const teams = useMemo(() => data?.teams || [], [data?.teams]);
+  const seniorityTiers = useMemo(() => data?.seniorityTiers || [], [data?.seniorityTiers]);
   const stats = data?.stats;
+
+  const canManageHierarchy = user?.role === "SUPER_ADMIN" || user?.role === "HR_ADMIN";
 
   // Identify current logged-in employee node
   const myEmployee = useMemo(() => {
@@ -69,26 +140,33 @@ export const OrgHierarchyPage = () => {
     return map;
   }, [employees]);
 
-  // Direct reports map: managerId -> direct reports array
+  // Direct reports map: managerId -> direct reports array (sorted by seniority)
   const directReportsMap = useMemo(() => {
     const map = new Map<string, HierarchyEmployeeNode[]>();
     for (const emp of employees) {
-      const mgrId = emp.reportingManager?._id;
+      const mgrId = emp.effectiveReportingManager?._id || emp.reportingManager?._id;
       if (mgrId) {
         const existing = map.get(mgrId) || [];
         existing.push(emp);
         map.set(mgrId, existing);
       }
     }
+    for (const [_, list] of map.entries()) {
+      list.sort((a, b) => (a.seniorityRank || 99) - (b.seniorityRank || 99));
+    }
     return map;
   }, [employees]);
 
   // Root employees (those without a reporting manager or manager not in active list)
+  // Ranked so CEO is guaranteed to be the single primary root at the top
   const rootEmployees = useMemo(() => {
-    return employees.filter((emp) => {
-      if (!emp.reportingManager?._id) return true;
-      return !employeeMap.has(emp.reportingManager._id);
+    const roots = employees.filter((emp) => {
+      const mgrId = emp.effectiveReportingManager?._id || emp.reportingManager?._id;
+      if (!mgrId) return true;
+      return !employeeMap.has(mgrId);
     });
+    roots.sort((a, b) => (a.seniorityRank || 99) - (b.seniorityRank || 99));
+    return roots;
   }, [employees, employeeMap]);
 
   // Search filter
@@ -143,15 +221,14 @@ export const OrgHierarchyPage = () => {
     setHighlightedId(myEmployee._id);
     setSelectedEmployee(myEmployee);
 
-    // Ensure all ancestors are uncollapsed so the user's card is visible
-    let currMgrId = myEmployee.reportingManager?._id;
+    let currMgrId = myEmployee.effectiveReportingManager?._id || myEmployee.reportingManager?._id;
     if (currMgrId) {
       setCollapsedNodeIds((prev) => {
         const next = new Set(prev);
         while (currMgrId) {
           next.delete(currMgrId);
           const mgr = employeeMap.get(currMgrId);
-          currMgrId = mgr?.reportingManager?._id;
+          currMgrId = mgr?.effectiveReportingManager?._id || mgr?.reportingManager?._id;
         }
         return next;
       });
@@ -175,14 +252,88 @@ export const OrgHierarchyPage = () => {
     while (curr && !visited.has(curr._id)) {
       visited.add(curr._id);
       chain.unshift(curr);
-      if (curr.reportingManager?._id) {
-        curr = employeeMap.get(curr.reportingManager._id);
+      const mgrId = curr.effectiveReportingManager?._id || curr.reportingManager?._id;
+      if (mgrId) {
+        curr = employeeMap.get(mgrId);
       } else {
         curr = undefined;
       }
     }
     return chain;
   }, [selectedEmployee, employeeMap]);
+
+  // Compute recursive subordinate IDs for selected employee to prevent circular cycles in reassignment
+  const selectedSubordinateIds = useMemo(() => {
+    if (!selectedEmployee) return new Set<string>();
+    const result = new Set<string>();
+    const queue = [selectedEmployee._id];
+    while (queue.length > 0) {
+      const curr = queue.shift()!;
+      const subs = directReportsMap.get(curr) || [];
+      for (const sub of subs) {
+        if (!result.has(sub._id)) {
+          result.add(sub._id);
+          queue.push(sub._id);
+        }
+      }
+    }
+    return result;
+  }, [selectedEmployee, directReportsMap]);
+
+  // Handle Auto-Structure action
+  const handleAutoStructure = async (forceAll = false) => {
+    try {
+      setIsAutoStructuring(true);
+      setAutoStructureMsg(null);
+      const res = await organizationApi.autoStructureHierarchy(forceAll);
+      await refetch();
+      setAutoStructureMsg({
+        type: "success",
+        text: `Hierarchy successfully structured! Updated ${res.updatedCount} reporting lines under ${res.topExecutiveName || "CEO"} (${res.topExecutiveTitle || "Executive Leadership"}).`,
+      });
+      setTimeout(() => setAutoStructureMsg(null), 8000);
+    } catch (err: any) {
+      setAutoStructureMsg({
+        type: "error",
+        text: err?.response?.data?.message || err?.message || "Failed to auto-structure hierarchy.",
+      });
+    } finally {
+      setIsAutoStructuring(false);
+    }
+  };
+
+  // Handle manual manager reassignment
+  const handleSaveManager = async () => {
+    if (!selectedEmployee) return;
+    try {
+      setIsSavingManager(true);
+      setManagerActionMsg(null);
+      const mgrId = selectedManagerId === "ROOT_NONE" ? null : selectedManagerId;
+      await organizationApi.updateEmployeeManager(selectedEmployee._id, mgrId);
+      await refetch();
+      setIsEditingManager(false);
+      setManagerActionMsg({
+        type: "success",
+        text: "Reporting manager updated and saved to company database.",
+      });
+      setTimeout(() => setManagerActionMsg(null), 6000);
+    } catch (err: any) {
+      setManagerActionMsg({
+        type: "error",
+        text: err?.response?.data?.message || err?.message || "Failed to update reporting manager.",
+      });
+    } finally {
+      setIsSavingManager(false);
+    }
+  };
+
+  // Sync selected manager ID when drawer opens
+  const openEmployeeDrawer = (emp: HierarchyEmployeeNode) => {
+    setSelectedEmployee(emp);
+    setIsEditingManager(false);
+    setSelectedManagerId(emp.reportingManager?._id || "ROOT_NONE");
+    setManagerActionMsg(null);
+  };
 
   return (
     <main className="flex-1 overflow-x-hidden bg-[#f8fafc] px-4 py-6 sm:px-8 sm:py-8 min-h-[calc(100vh-4rem)]">
@@ -204,11 +355,11 @@ export const OrgHierarchyPage = () => {
               Visual Hierarchy Flow
             </h1>
             <p className="mt-1 text-xs sm:text-sm text-slate-500">
-              Explore the organizational reporting tree, leadership flow, and departmental structure across the company.
+              Explore the executive chain of command, seniority tiers, and departmental structure across the company.
             </p>
           </div>
 
-          {/* Mode Switcher & Focus on Me */}
+          {/* Mode Switcher, Auto-Structure & Focus on Me */}
           <div className="flex flex-wrap items-center gap-2.5">
             <div className="flex items-center rounded-xl border border-slate-200 bg-white p-1 shadow-2xs">
               <button
@@ -226,6 +377,19 @@ export const OrgHierarchyPage = () => {
               </button>
               <button
                 type="button"
+                onClick={() => setViewMode("SENIORITY_TIERS")}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition",
+                  viewMode === "SENIORITY_TIERS"
+                    ? "bg-brand-600 text-white shadow-2xs"
+                    : "text-slate-600 hover:bg-slate-100"
+                )}
+              >
+                <Crown size={14} />
+                Seniority Tiers (1–6)
+              </button>
+              <button
+                type="button"
                 onClick={() => setViewMode("DEPARTMENT_FLOW")}
                 className={cn(
                   "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition",
@@ -238,6 +402,20 @@ export const OrgHierarchyPage = () => {
                 Departments & Teams
               </button>
             </div>
+
+            {canManageHierarchy && (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => handleAutoStructure(false)}
+                disabled={isAutoStructuring}
+                className="h-9 text-xs font-semibold shadow-2xs bg-amber-50 border-amber-300 text-amber-900 hover:bg-amber-100"
+                title="Automatically structure reporting relationships based on executive seniority"
+              >
+                <Sparkles size={14} className="mr-1.5 text-amber-600 animate-pulse" />
+                {isAutoStructuring ? "Structuring..." : "Auto-Structure Hierarchy"}
+              </Button>
+            )}
 
             {myEmployee && (
               <Button
@@ -254,6 +432,32 @@ export const OrgHierarchyPage = () => {
           </div>
         </div>
 
+        {/* Action Notifications */}
+        {autoStructureMsg && (
+          <div
+            className={cn(
+              "flex items-center gap-2.5 rounded-2xl border p-3.5 text-xs shadow-2xs animate-in fade-in slide-in-from-top-2",
+              autoStructureMsg.type === "success"
+                ? "border-emerald-200 bg-emerald-50/90 text-emerald-900"
+                : "border-red-200 bg-red-50 text-red-900"
+            )}
+          >
+            {autoStructureMsg.type === "success" ? (
+              <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+            ) : (
+              <AlertCircle size={16} className="text-red-600 shrink-0" />
+            )}
+            <span className="font-medium">{autoStructureMsg.text}</span>
+            <button
+              type="button"
+              onClick={() => setAutoStructureMsg(null)}
+              className="ml-auto text-slate-400 hover:text-slate-600"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
+
         {/* Stats Strip */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:gap-4">
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
@@ -264,6 +468,18 @@ export const OrgHierarchyPage = () => {
               <div>
                 <p className="text-xs font-medium text-slate-500">Total Workforce</p>
                 <p className="text-lg font-bold text-slate-900">{stats?.totalEmployees ?? employees.length}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
+            <div className="flex items-center gap-3">
+              <div className="grid size-10 place-items-center rounded-xl bg-amber-50 text-amber-600">
+                <Crown size={18} />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-slate-500">Executive Seniority Tiers</p>
+                <p className="text-lg font-bold text-slate-900">{seniorityTiers.length} Bands</p>
               </div>
             </div>
           </div>
@@ -283,18 +499,6 @@ export const OrgHierarchyPage = () => {
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
             <div className="flex items-center gap-3">
               <div className="grid size-10 place-items-center rounded-xl bg-emerald-50 text-emerald-600">
-                <Layers3 size={18} />
-              </div>
-              <div>
-                <p className="text-xs font-medium text-slate-500">Teams</p>
-                <p className="text-lg font-bold text-slate-900">{stats?.totalTeams ?? teams.length}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
-            <div className="flex items-center gap-3">
-              <div className="grid size-10 place-items-center rounded-xl bg-amber-50 text-amber-600">
                 <ShieldCheck size={18} />
               </div>
               <div>
@@ -305,7 +509,7 @@ export const OrgHierarchyPage = () => {
           </div>
         </div>
 
-        {/* Action & Control Bar */}
+        {/* Action & Search Control Bar */}
         <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-2xs sm:flex-row sm:items-center sm:justify-between">
           {/* Search bar */}
           <div className="relative flex-1 sm:max-w-md">
@@ -328,7 +532,7 @@ export const OrgHierarchyPage = () => {
             )}
           </div>
 
-          {/* Tree Controls */}
+          {/* Tree Controls (Expand/Collapse, Zoom) */}
           {viewMode === "REPORTING_FLOW" && (
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-xs">
@@ -386,6 +590,33 @@ export const OrgHierarchyPage = () => {
           )}
         </div>
 
+        {/* Notice Banner: Unassigned Reporting Managers with One-Click Auto-Structure */}
+        {(stats?.unassignedManagersCount ?? 0) > 0 && canManageHierarchy && (
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50/80 p-4 text-xs shadow-2xs">
+            <div className="flex items-start gap-3">
+              <div className="grid size-9 place-items-center rounded-xl bg-amber-500 text-white shrink-0 shadow-xs mt-0.5">
+                <Sparkles size={18} />
+              </div>
+              <div>
+                <p className="font-bold text-amber-900 text-sm">
+                  Executive Seniority Inference Active ({stats?.unassignedManagersCount} Unassigned Reporting Lines)
+                </p>
+                <p className="text-amber-800/90 mt-0.5">
+                  Employees without explicit reporting managers in the database are dynamically structured by industry seniority (CEO → C-Suite → ICs). Click below to permanently persist these reporting lines.
+                </p>
+              </div>
+            </div>
+            <Button
+              type="button"
+              onClick={() => handleAutoStructure(false)}
+              disabled={isAutoStructuring}
+              className="bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs shrink-0 shadow-xs h-9 px-4"
+            >
+              {isAutoStructuring ? "Persisting..." : "⚡ Persist Hierarchy to Database"}
+            </Button>
+          </div>
+        )}
+
         {/* Main Canvas Area */}
         <div className="relative rounded-3xl border border-slate-200 bg-white p-4 shadow-soft min-h-[550px] overflow-hidden">
           {isLoading ? (
@@ -394,7 +625,7 @@ export const OrgHierarchyPage = () => {
                 <Network size={24} />
               </div>
               <p className="text-sm font-semibold text-slate-800">Building Organization Hierarchy...</p>
-              <p className="mt-1 text-xs text-slate-400">Rendering visual reporting tree & structure</p>
+              <p className="mt-1 text-xs text-slate-400">Rendering visual reporting tree & executive flow</p>
             </div>
           ) : error ? (
             <div className="flex flex-col items-center justify-center p-20 text-center">
@@ -404,7 +635,7 @@ export const OrgHierarchyPage = () => {
               </Button>
             </div>
           ) : viewMode === "REPORTING_FLOW" ? (
-            /* REPORTING HIERARCHY TREE VIEW */
+            /* VIEW 1: INDUSTRY STANDARD REPORTING HIERARCHY TREE VIEW */
             <div
               ref={containerRef}
               className="w-full overflow-auto p-4 sm:p-8"
@@ -421,20 +652,20 @@ export const OrgHierarchyPage = () => {
                 >
                   {/* Organization Root Hub */}
                   <div className="flex flex-col items-center mb-6">
-                    <div className="flex items-center gap-2 rounded-2xl border-2 border-brand-500 bg-gradient-to-r from-brand-600 to-indigo-600 px-5 py-3 text-white shadow-lg">
-                      <Building2 size={20} className="text-amber-300" />
+                    <div className="flex items-center gap-2.5 rounded-2xl border-2 border-brand-500 bg-gradient-to-r from-brand-600 to-indigo-600 px-5 py-3 text-white shadow-lg">
+                      <Building2 size={20} className="text-amber-300 shrink-0" />
                       <div>
                         <h2 className="text-sm font-bold tracking-tight">
                           {user?.tenantName ?? "MobiusEMS Organization"}
                         </h2>
-                        <p className="text-[10px] text-brand-100 font-medium">Executive & Operational Structure</p>
+                        <p className="text-[10px] text-brand-100 font-medium">Executive Seniority & Reporting Tree</p>
                       </div>
                     </div>
                     {/* Trunk vertical line */}
                     <div className="h-6 w-0.5 bg-slate-300" />
                   </div>
 
-                  {/* Level 1 Leaders / Roots */}
+                  {/* Root Leaders (CEO / Managing Director guaranteed at top) */}
                   <div className="flex flex-wrap justify-center gap-8 sm:gap-12">
                     {rootEmployees.map((root) => (
                       <ReportingTreeNode
@@ -443,7 +674,7 @@ export const OrgHierarchyPage = () => {
                         directReportsMap={directReportsMap}
                         collapsedNodeIds={collapsedNodeIds}
                         toggleCollapse={toggleCollapse}
-                        onSelectEmployee={setSelectedEmployee}
+                        onSelectEmployee={openEmployeeDrawer}
                         selectedId={selectedEmployee?._id}
                         highlightedId={highlightedId}
                         myUserId={user?.id}
@@ -454,8 +685,94 @@ export const OrgHierarchyPage = () => {
                 </div>
               )}
             </div>
+          ) : viewMode === "SENIORITY_TIERS" ? (
+            /* VIEW 2: SENIORITY TIERS (LEVEL 1-6 BANDS) */
+            <div className="p-4 sm:p-6 space-y-6">
+              <div className="border-b pb-4">
+                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <Crown size={18} className="text-amber-500" />
+                  Executive Seniority Bands & Tiers
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Employees grouped by organizational seniority level, spanning Executive Leadership (Tier 1) down to Associate & Interns (Tier 6).
+                </p>
+              </div>
+
+              <div className="space-y-6">
+                {seniorityTiers.map((tier) => {
+                  const badge = getSeniorityBadge(tier.rank);
+                  const Icon = badge.icon;
+                  return (
+                    <div
+                      key={tier.rank}
+                      className={cn("rounded-2xl border bg-white p-5 shadow-2xs transition", badge.borderClass)}
+                    >
+                      <div className="flex items-center justify-between border-b pb-3 mb-4">
+                        <div className="flex items-center gap-2.5">
+                          <div className={cn("grid size-8 place-items-center rounded-lg shadow-xs", badge.badgeClass)}>
+                            <Icon size={16} />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-bold text-slate-900">{tier.tierName}</h4>
+                            <span className="text-[11px] text-slate-500">
+                              Level {tier.rank} Organizational Seniority
+                            </span>
+                          </div>
+                        </div>
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
+                          {tier.employees.length} {tier.employees.length === 1 ? "Employee" : "Employees"}
+                        </span>
+                      </div>
+
+                      <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                        {tier.employees.map((emp) => (
+                          <div
+                            key={emp._id}
+                            onClick={() => openEmployeeDrawer(emp)}
+                            className="group flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/60 p-3 hover:border-brand-400 hover:bg-white hover:shadow-soft transition cursor-pointer"
+                          >
+                            {emp.profilePhotoUrl ? (
+                              <img
+                                src={emp.profilePhotoUrl}
+                                alt={emp.name}
+                                className="size-10 rounded-xl object-cover ring-1 ring-slate-200 shrink-0"
+                              />
+                            ) : (
+                              <div className="grid size-10 place-items-center rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-600 text-xs font-bold text-white shadow-xs shrink-0">
+                                {emp.firstName[0]}
+                                {emp.lastName[0]}
+                              </div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <h5 className="truncate text-xs font-bold text-slate-900 group-hover:text-brand-600 transition">
+                                {emp.name}
+                              </h5>
+                              <p className="truncate text-[11px] text-slate-500">
+                                {emp.designation?.name || "Staff Member"}
+                              </p>
+                              <div className="mt-1 flex items-center gap-1.5 text-[10px] text-slate-400">
+                                <span>{emp.department?.name || "General"}</span>
+                                {emp.directReportsCount > 0 && (
+                                  <>
+                                    <span>•</span>
+                                    <span className="font-semibold text-brand-700">
+                                      {emp.directReportsCount} reports
+                                    </span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                            <ChevronRight size={14} className="text-slate-300 group-hover:text-brand-500 shrink-0 transition" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           ) : (
-            /* DEPARTMENT & TEAM FLOW VIEW */
+            /* VIEW 3: DEPARTMENT & TEAM FLOW VIEW */
             <div className="p-4 sm:p-6 space-y-6">
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {departments.map((dept) => {
@@ -515,7 +832,7 @@ export const OrgHierarchyPage = () => {
                                     <button
                                       key={e._id}
                                       type="button"
-                                      onClick={() => setSelectedEmployee(e)}
+                                      onClick={() => openEmployeeDrawer(e)}
                                       className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700 hover:bg-brand-50 hover:text-brand-700 transition"
                                     >
                                       <span className="size-1.5 rounded-full bg-brand-500" />
@@ -541,7 +858,7 @@ export const OrgHierarchyPage = () => {
                                   <button
                                     key={e._id}
                                     type="button"
-                                    onClick={() => setSelectedEmployee(e)}
+                                    onClick={() => openEmployeeDrawer(e)}
                                     className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700 hover:bg-brand-50 hover:text-brand-700 transition"
                                   >
                                     <span className="size-1.5 rounded-full bg-slate-400" />
@@ -581,10 +898,10 @@ export const OrgHierarchyPage = () => {
                 <img
                   src={selectedEmployee.profilePhotoUrl}
                   alt={selectedEmployee.name}
-                  className="size-16 rounded-2xl object-cover ring-2 ring-brand-100"
+                  className="size-16 rounded-2xl object-cover ring-2 ring-brand-100 shrink-0"
                 />
               ) : (
-                <div className="grid size-16 place-items-center rounded-2xl bg-gradient-to-tr from-brand-600 to-indigo-600 text-lg font-bold text-white shadow-xs">
+                <div className="grid size-16 place-items-center rounded-2xl bg-gradient-to-tr from-brand-600 to-indigo-600 text-lg font-bold text-white shadow-xs shrink-0">
                   {selectedEmployee.firstName[0]}
                   {selectedEmployee.lastName[0]}
                 </div>
@@ -593,7 +910,7 @@ export const OrgHierarchyPage = () => {
                 <div className="flex items-center gap-1.5">
                   <h3 className="truncate text-lg font-bold text-slate-900">{selectedEmployee.name}</h3>
                   {selectedEmployee.userId === user?.id && (
-                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 shrink-0">
                       YOU
                     </span>
                   )}
@@ -609,8 +926,47 @@ export const OrgHierarchyPage = () => {
               </div>
             </div>
 
+            {/* Seniority Tier Banner */}
+            <div className="mt-4">
+              {(() => {
+                const badge = getSeniorityBadge(selectedEmployee.seniorityRank || 5);
+                const Icon = badge.icon;
+                return (
+                  <div className={cn("flex items-center justify-between rounded-xl border p-3 text-xs", badge.headerClass)}>
+                    <div className="flex items-center gap-2">
+                      <Icon size={16} />
+                      <span className="font-bold">{badge.label}</span>
+                    </div>
+                    <span className="font-medium text-[11px]">
+                      Level {selectedEmployee.seniorityRank || 5} Band
+                    </span>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Reassignment Feedback Message */}
+            {managerActionMsg && (
+              <div
+                className={cn(
+                  "mt-3 flex items-center gap-2 rounded-xl border p-3 text-xs",
+                  managerActionMsg.type === "success"
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+                    : "border-red-200 bg-red-50 text-red-900"
+                )}
+              >
+                {managerActionMsg.type === "success" ? (
+                  <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
+                ) : (
+                  <AlertCircle size={15} className="text-red-600 shrink-0" />
+                )}
+                <span>{managerActionMsg.text}</span>
+              </div>
+            )}
+
             {/* Details List */}
             <div className="mt-5 space-y-4 text-xs">
+              {/* Contact */}
               <div>
                 <span className="font-semibold text-slate-400 uppercase tracking-wider text-[10px]">
                   Contact & Communication
@@ -632,6 +988,7 @@ export const OrgHierarchyPage = () => {
                 </div>
               </div>
 
+              {/* Department & Team */}
               <div>
                 <span className="font-semibold text-slate-400 uppercase tracking-wider text-[10px]">
                   Organization Placement
@@ -656,14 +1013,139 @@ export const OrgHierarchyPage = () => {
                 </div>
               </div>
 
+              {/* Reporting Manager / Line Management */}
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-slate-400 uppercase tracking-wider text-[10px]">
+                    Direct Reporting Manager
+                  </span>
+                  {canManageHierarchy && !isEditingManager && (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingManager(true)}
+                      className="text-[11px] font-bold text-brand-600 hover:text-brand-700"
+                    >
+                      Change Manager
+                    </button>
+                  )}
+                </div>
+
+                {isEditingManager ? (
+                  <div className="mt-2 rounded-2xl border border-brand-200 bg-brand-50/30 p-3 space-y-3">
+                    <label className="block text-[11px] font-semibold text-slate-700">
+                      Select New Reporting Manager:
+                    </label>
+                    <select
+                      value={selectedManagerId}
+                      onChange={(e) => setSelectedManagerId(e.target.value)}
+                      className="w-full rounded-xl border border-slate-300 bg-white p-2 text-xs text-slate-800 focus:border-brand-500 focus:outline-hidden"
+                    >
+                      <option value="ROOT_NONE">None (Top Executive / Company Root)</option>
+                      {employees
+                        .filter(
+                          (cand) =>
+                            cand._id !== selectedEmployee._id &&
+                            !selectedSubordinateIds.has(cand._id)
+                        )
+                        .sort((a, b) => (a.seniorityRank || 99) - (b.seniorityRank || 99))
+                        .map((cand) => (
+                          <option key={cand._id} value={cand._id}>
+                            {cand.name} — {cand.designation?.name || "Staff"} ({cand.seniorityTierName || `Tier ${cand.seniorityRank}`})
+                          </option>
+                        ))}
+                    </select>
+                    <p className="text-[10px] text-slate-400 italic">
+                      * Direct subordinates and circular paths are automatically excluded to preserve valid tree structure.
+                    </p>
+                    <div className="flex items-center gap-2 pt-1">
+                      <Button
+                        type="button"
+                        onClick={handleSaveManager}
+                        disabled={isSavingManager}
+                        className="h-8 text-xs font-semibold"
+                      >
+                        {isSavingManager ? "Saving..." : "Save Manager"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => setIsEditingManager(false)}
+                        className="h-8 text-xs"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-2 rounded-xl border bg-slate-50/80 p-2.5">
+                    {selectedEmployee.reportingManager ? (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          {selectedEmployee.reportingManager.profilePhotoUrl ? (
+                            <img
+                              src={selectedEmployee.reportingManager.profilePhotoUrl}
+                              alt={selectedEmployee.reportingManager.name}
+                              className="size-8 rounded-lg object-cover ring-1 ring-slate-200"
+                            />
+                          ) : (
+                            <div className="grid size-8 place-items-center rounded-lg bg-brand-600 text-xs font-bold text-white">
+                              {selectedEmployee.reportingManager.firstName[0]}
+                            </div>
+                          )}
+                          <div>
+                            <p className="font-bold text-slate-800">{selectedEmployee.reportingManager.name}</p>
+                            <span className="text-[10px] text-slate-500 font-mono">
+                              {selectedEmployee.reportingManager.employeeId}
+                            </span>
+                          </div>
+                        </div>
+                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                          Direct Assigned
+                        </span>
+                      </div>
+                    ) : selectedEmployee.effectiveReportingManager ? (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          {selectedEmployee.effectiveReportingManager.profilePhotoUrl ? (
+                            <img
+                              src={selectedEmployee.effectiveReportingManager.profilePhotoUrl}
+                              alt={selectedEmployee.effectiveReportingManager.name}
+                              className="size-8 rounded-lg object-cover ring-1 ring-slate-200"
+                            />
+                          ) : (
+                            <div className="grid size-8 place-items-center rounded-lg bg-amber-600 text-xs font-bold text-white">
+                              {selectedEmployee.effectiveReportingManager.firstName[0]}
+                            </div>
+                          )}
+                          <div>
+                            <p className="font-bold text-slate-800">{selectedEmployee.effectiveReportingManager.name}</p>
+                            <span className="text-[10px] text-amber-700 font-medium">
+                              Auto-Inferred by Seniority
+                            </span>
+                          </div>
+                        </div>
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+                          ⚡ Inferred
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-slate-600">
+                        <Crown size={15} className="text-amber-500" />
+                        <span className="font-medium">Company Root / Executive Leader (No Superior)</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
               {/* Chain of Command (Reporting Line) */}
               <div>
                 <span className="font-semibold text-slate-400 uppercase tracking-wider text-[10px]">
-                  Chain of Command (Reporting Hierarchy)
+                  Chain of Command (Ascending to CEO)
                 </span>
                 <div className="mt-2 rounded-2xl border border-brand-100 bg-brand-50/40 p-3 space-y-2">
-                  {reportingChain.length === 1 ? (
-                    <p className="text-slate-500 italic text-xs">Top of organizational reporting structure (No superior).</p>
+                  {reportingChain.length <= 1 ? (
+                    <p className="text-slate-500 italic text-xs">Pinnacle of organization structure (Company Root).</p>
                   ) : (
                     reportingChain.map((node, idx) => {
                       const isTarget = node._id === selectedEmployee._id;
@@ -674,9 +1156,9 @@ export const OrgHierarchyPage = () => {
                           </span>
                           <button
                             type="button"
-                            onClick={() => setSelectedEmployee(node)}
+                            onClick={() => openEmployeeDrawer(node)}
                             className={cn(
-                              "text-left truncate hover:underline",
+                              "text-left truncate hover:underline flex-1",
                               isTarget ? "font-bold text-brand-700" : "text-slate-700 font-medium"
                             )}
                           >
@@ -703,7 +1185,7 @@ export const OrgHierarchyPage = () => {
                       <button
                         key={sub._id}
                         type="button"
-                        onClick={() => setSelectedEmployee(sub)}
+                        onClick={() => openEmployeeDrawer(sub)}
                         className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white p-2.5 text-left transition hover:border-brand-300 hover:bg-brand-50/50"
                       >
                         <div className="truncate">
@@ -766,6 +1248,8 @@ const ReportingTreeNode: FC<ReportingTreeNodeProps> = ({
   const isHighlighted = highlightedId === node._id;
   const isSearchMatch = matchingEmployeeIds?.has(node._id);
 
+  const seniorityBadge = getSeniorityBadge(node.seniorityRank || 5);
+
   return (
     <div className="flex flex-col items-center">
       {/* Node Card */}
@@ -787,20 +1271,20 @@ const ReportingTreeNode: FC<ReportingTreeNodeProps> = ({
       >
         {/* Top Badges */}
         <div className="flex items-center justify-between mb-2">
-          {isMe ? (
-            <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[9px] font-bold text-white shadow-2xs">
-              ★ YOU
-            </span>
-          ) : (
-            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
-              {node.department?.code || node.department?.name || "Staff"}
-            </span>
-          )}
+          <span className={cn("rounded-md px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider shrink-0", seniorityBadge.badgeClass)}>
+            {seniorityBadge.label}
+          </span>
 
-          {node.directReportsCount > 0 && (
-            <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-bold text-brand-700">
+          {node.directReportsCount > 0 ? (
+            <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-bold text-brand-700 shrink-0">
               👥 {node.directReportsCount} reports
             </span>
+          ) : (
+            node.isReportingManagerInferred && (
+              <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[9px] font-semibold text-amber-700" title="Seniority-inferred reporting line">
+                ⚡ Inferred
+              </span>
+            )
           )}
         </div>
 
@@ -810,21 +1294,31 @@ const ReportingTreeNode: FC<ReportingTreeNodeProps> = ({
             <img
               src={node.profilePhotoUrl}
               alt={node.name}
-              className="size-11 rounded-xl object-cover ring-1 ring-slate-200"
+              className="size-11 rounded-xl object-cover ring-1 ring-slate-200 shrink-0"
             />
           ) : (
-            <div className="grid size-11 place-items-center rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-600 text-xs font-bold text-white shadow-xs">
+            <div className="grid size-11 place-items-center rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-600 text-xs font-bold text-white shadow-xs shrink-0">
               {node.firstName[0]}
               {node.lastName[0]}
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <h4 className="truncate text-xs font-bold text-slate-900 group-hover:text-brand-600 transition">
-              {node.name}
-            </h4>
+            <div className="flex items-center gap-1">
+              <h4 className="truncate text-xs font-bold text-slate-900 group-hover:text-brand-600 transition">
+                {node.name}
+              </h4>
+              {isMe && (
+                <span className="rounded-full bg-amber-100 px-1.5 py-0.2 text-[8px] font-bold text-amber-800 shrink-0">
+                  YOU
+                </span>
+              )}
+            </div>
             <p className="truncate text-[11px] font-medium text-slate-500">
               {node.designation?.name || "Team Member"}
             </p>
+            <span className="text-[10px] text-slate-400 font-medium">
+              {node.department?.name || "General"}
+            </span>
           </div>
         </div>
 

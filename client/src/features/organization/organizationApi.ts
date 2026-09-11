@@ -12,6 +12,13 @@ export const organizationApi = {
   getSkillCatalogForRole: (role: string) => api.get<{ items: DesignationSkillItem[] }>(`/api/v1/organization/skill-catalog/${encodeURIComponent(role)}`),
   generateSkillsWithAi: (body: { designationTitle: string; department?: string; level?: string; jobDescription?: string; skillCount?: number }) =>
     api.post<{ skills: DesignationSkillItem[]; count: number }>("/api/v1/organization/generate-skills", body),
+  autoStructureHierarchy: (forceAll = false) =>
+    api.post<{ updatedCount: number; topExecutiveName: string; topExecutiveTitle: string }>(
+      "/api/v1/organization/auto-structure",
+      { forceAll }
+    ),
+  updateEmployeeManager: (employeeId: string, managerId: string | null) =>
+    api.patch<{ employee: Record<string, unknown> }>(`/api/v1/organization/employees/${employeeId}/manager`, {
+      managerId,
+    }),
 };
-
-

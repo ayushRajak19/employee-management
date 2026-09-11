@@ -38,6 +38,27 @@ export const getHierarchyFlow = async (_request: Request, response: Response): P
   });
 };
 
+export const autoStructureHierarchy = async (request: Request, response: Response): Promise<void> => {
+  const { autoStructureTenantHierarchy } = await import("../services/hierarchyService.js");
+  const forceAll = Boolean(request.body?.forceAll);
+  const result = await autoStructureTenantHierarchy(forceAll);
+  await audit(request, "HIERARCHY_AUTO_STRUCTURED", "Organization", result.topExecutiveId || "TENANT");
+  response.json({
+    success: true,
+    message: `Organization hierarchy auto-structured successfully (${result.updatedCount} reporting lines updated)`,
+    data: result,
+  });
+};
 
-
-
+export const updateEmployeeManager = async (request: Request, response: Response): Promise<void> => {
+  const { updateEmployeeReportingManager } = await import("../services/hierarchyService.js");
+  const employeeId = String(request.params.id);
+  const managerId = request.body.managerId ? String(request.body.managerId) : null;
+  const updated = await updateEmployeeReportingManager(employeeId, managerId);
+  await audit(request, "EMPLOYEE_MANAGER_UPDATED", "Employee", employeeId);
+  response.json({
+    success: true,
+    message: "Employee reporting manager updated successfully",
+    data: { employee: updated },
+  });
+};
