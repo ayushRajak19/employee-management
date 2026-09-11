@@ -5,7 +5,7 @@ import type { CapabilityName, PermissionName, RoleName, SectionPermissionName } 
 import {
   Award, BarChart3, Bot, BrainCircuit, BriefcaseBusiness, Building2, CalendarCheck2,
   ChevronLeft, CircleGauge, FileText, GraduationCap, ListTodo, LogOut, Menu,
-  MailPlus, MapPinned, Route, ShieldCheck, Sparkles, Target, TrendingUp, UserCog, UserPlus, UserRound, Users, X,
+  MailPlus, MapPinned, Route, ShieldCheck, Sparkles, Target, TrendingUp, UserCog, UserPlus, UserRound, Users, Workflow, X,
 } from "lucide-react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { HeaderSearch } from "@/components/HeaderSearch";
@@ -42,6 +42,7 @@ const groups: { label: string; items: NavItem[] }[] = [
     label: "People & HR",
     items: [
       { label: "Employees", icon: Users, path: "/employees", section: "section.employees" },
+      { label: "Org hierarchy", icon: Workflow, path: "/hierarchy" },
       { label: "Organization", icon: Building2, path: "/organization", section: "section.organization" },
       { label: "Attendance", icon: CalendarCheck2, path: "/attendance", section: "section.attendance" },
       { label: "Leave & recognition", icon: Users, path: "/people-ops", section: "section.people_ops" },

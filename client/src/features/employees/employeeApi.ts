@@ -4,7 +4,7 @@ import type { RoleSkillAssessment } from "@/features/skills/skillApi";
 import type { SalesAnalytics } from "@mobius-ems/shared";
 
 export interface EmployeeList { items: EmployeeRow[]; pagination: { page: number; limit: number; total: number; pages: number } }
-export interface CreateEmployeeInput { firstName: string; lastName: string; officialEmail: string; phone?: string; department: string; team?: string; designation: string; reportingManager?: string; dateOfJoining: string; employmentType: string; officeLocation?: string; role: string; status: string }
+export interface CreateEmployeeInput { employeeId: string; firstName: string; lastName: string; officialEmail: string; phone?: string; department: string; team?: string; designation: string; reportingManager?: string; dateOfJoining: string; employmentType: string; officeLocation?: string; role: string; status: string }
 export interface Employee360 {
   employee: EmployeeRow & { dateOfJoining: string; employmentType: string; officeLocation?: string; professionalSummary?: string; personal?: { personalEmail?: string; address?: string; emergencyContact?: string } };
   skills: { _id: string; skill: { name: string; category: string }; selfRating: number; verifiedRating?: number; verificationStatus: string }[];

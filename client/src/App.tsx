@@ -43,6 +43,7 @@ const SalesDataPage = lazy(() => import("@/features/sales/pages/SalesDataPage").
 const EmployeeMapPage = lazy(() => import("@/features/sales/pages/EmployeeMapPage").then((module) => ({ default: module.EmployeeMapPage })));
 const SalesAgentsPage = lazy(() => import("@/features/sales/pages/SalesAgentsPage").then((module) => ({ default: module.SalesAgentsPage })));
 const TargetPerformancePage = lazy(() => import("@/features/sales/pages/TargetPerformancePage").then((module) => ({ default: module.TargetPerformancePage })));
+const OrgHierarchyPage = lazy(() => import("@/pages/OrgHierarchyPage").then((module) => ({ default: module.OrgHierarchyPage })));
 
 const PageLoader = () => <div className="space-y-4 p-8" aria-label="Loading page"><Skeleton className="h-9 w-64"/><Skeleton className="h-48 w-full"/><Skeleton className="h-48 w-full"/></div>;
 const AccessDeniedPage = () => <main className="grid min-h-[60vh] flex-1 place-items-center p-8 text-center"><div><p className="text-sm font-semibold text-brand-700">Access restricted</p><h1 className="mt-2 text-3xl font-semibold">This section is not assigned to your role</h1><p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-slate-500">Ask your Super Admin to enable this section in Administration → Access hierarchy.</p></div></main>;
@@ -64,6 +65,7 @@ export const App = () => <Suspense fallback={<PageLoader/>}><Routes>
     <Route element={<PermissionRoute permissions={["section.profile"]}/>}><Route path="me" element={<MyProfilePage/>}/></Route>
     <Route element={<PermissionRoute permissions={["section.employees"]}/>}><Route path="employees" element={<EmployeesPage/>}/><Route path="employees/:id" element={<EmployeeProfilePage/>}/></Route>
     <Route element={<PermissionRoute permissions={["section.organization"]}/>}><Route path="organization" element={<OrganizationPage/>}/></Route>
+    <Route path="hierarchy" element={<OrgHierarchyPage/>}/>
     <Route element={<PermissionRoute permissions={["section.skills"]}/>}><Route path="skills" element={<SkillsPage/>}/><Route path="skills/builder" element={<SkillsPage/>}/></Route>
     <Route element={<PermissionRoute permissions={["section.skill_matrix"]}/>}><Route path="skill-matrix" element={<SkillMatrixPage/>}/></Route>
     <Route element={<PermissionRoute permissions={["section.assessments"]}/>}><Route path="assessments" element={<AssessmentsPage/>}/></Route>

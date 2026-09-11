@@ -29,5 +29,15 @@ export const generateSkills = async (request: Request, response: Response): Prom
   });
 };
 
+export const getHierarchyFlow = async (_request: Request, response: Response): Promise<void> => {
+  const data = await service.getOrganizationHierarchyFlow();
+  response.json({
+    success: true,
+    message: "Organization hierarchy flow retrieved",
+    data,
+  });
+};
+
+
 
 

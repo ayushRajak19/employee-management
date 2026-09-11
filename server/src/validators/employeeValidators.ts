@@ -4,7 +4,7 @@ const objectId = z.string().regex(/^[a-f\d]{24}$/i, "Invalid identifier");
 const optionalObjectId = z.preprocess((value) => value === "" ? undefined : value, objectId.optional());
 const workLocation = z.object({ geoNode: objectId, coordinates: z.object({ type: z.literal("Point").default("Point"), coordinates: z.tuple([z.number().min(-180).max(180), z.number().min(-90).max(90)]) }).optional() });
 export const createEmployeeSchema = z.object({ body: z.object({
-  firstName: z.string().trim().min(1).max(80), lastName: z.string().trim().min(1).max(80), officialEmail: z.string().email().max(254).transform((v) => v.toLowerCase()), phone: z.string().trim().max(30).optional(),
+  employeeId: z.string().trim().min(1, "Employee ID is required").max(50).transform((value) => value.toUpperCase()), firstName: z.string().trim().min(1).max(80), lastName: z.string().trim().min(1).max(80), officialEmail: z.string().email().max(254).transform((v) => v.toLowerCase()), phone: z.string().trim().max(30).optional(),
   department: objectId, team: optionalObjectId, designation: objectId, reportingManager: optionalObjectId, dateOfJoining: z.coerce.date(), employmentType: z.enum(EMPLOYMENT_TYPES), officeLocation: z.string().trim().max(120).optional(), workLocation: workLocation.optional(), role: z.enum(ROLES).default("EMPLOYEE"), status: z.enum(EMPLOYEE_STATUSES).default("ONBOARDING")
 }) });
 export const listEmployeesSchema = z.object({ query: z.object({ page: z.coerce.number().int().min(1).default(1), limit: z.coerce.number().int().min(1).max(100).default(20), search: z.string().trim().max(100).optional(), department: objectId.optional(), status: z.enum(EMPLOYEE_STATUSES).optional() }) });

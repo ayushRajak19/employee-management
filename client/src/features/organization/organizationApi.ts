@@ -1,6 +1,7 @@
-import { api } from "@/api/client"; import type { DesignationSkillItem, NamedEntity, OrganizationData } from "./types";
+import { api } from "@/api/client"; import type { DesignationSkillItem, NamedEntity, OrganizationData, OrganizationHierarchyData } from "./types";
 export const organizationApi = {
   list: () => api.get<OrganizationData>("/api/v1/organization"),
+  getHierarchyFlow: () => api.get<OrganizationHierarchyData>("/api/v1/organization/hierarchy-flow"),
   createDepartment: (body: { name: string; code: string; description?: string; capabilities?: ("SALES_MODULE")[] }) => api.post("/api/v1/organization/departments", body),
   createTeam: (body: { name: string; code: string; department: string; description?: string }) => api.post("/api/v1/organization/teams", body),
   createDesignation: (body: { name: string; code: string; department?: string; level?: string; description?: string; catalogRole?: string }) => api.post("/api/v1/organization/designations", body),
