@@ -10,6 +10,8 @@ const SolutionsIndexPage = lazy(() => import("@/pages/SolutionsPage").then((modu
 const SolutionDetailPage = lazy(() => import("@/pages/SolutionsPage").then((module) => ({ default: module.SolutionDetailPage })));
 const RegisterPage = lazy(() => import("@/pages/RegisterPage").then((module) => ({ default: module.RegisterPage })));
 const ChangePasswordPage = lazy(() => import("@/pages/ChangePasswordPage").then((module) => ({ default: module.ChangePasswordPage })));
+const ForgotPasswordPage = lazy(() => import("@/pages/ResetPasswordPage").then((module) => ({ default: module.ForgotPasswordPage })));
+const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage").then((module) => ({ default: module.ResetPasswordPage })));
 const OnboardingPage = lazy(() => import("@/pages/OnboardingPage").then((module) => ({ default: module.OnboardingPage })));
 const DashboardPage = lazy(() => import("@/pages/DashboardPage").then((module) => ({ default: module.DashboardPage })));
 const EmployeesPage = lazy(() => import("@/pages/EmployeesPage").then((module) => ({ default: module.EmployeesPage })));
@@ -50,6 +52,8 @@ export const App = () => <Suspense fallback={<PageLoader/>}><Routes>
   <Route path="/solutions" element={<SolutionsIndexPage/>}/>
   <Route path="/solutions/:slug" element={<SolutionDetailPage/>}/>
   <Route path="/login" element={<LoginPage/>}/>
+  <Route path="/forgot-password" element={<ForgotPasswordPage/>}/>
+  <Route path="/reset-password" element={<ResetPasswordPage/>}/>
   <Route path="/register" element={<RegisterPage/>}/>
   <Route element={<PasswordChangeRoute/>}><Route path="/change-password" element={<ChangePasswordPage/>}/></Route>
   <Route element={<OnboardingRoute/>}><Route path="/onboarding" element={<OnboardingPage/>}/></Route>

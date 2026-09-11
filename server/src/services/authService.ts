@@ -9,10 +9,13 @@ import { writeAudit } from "./auditService.js";
 import type { RoleDocument } from "../models/Role.js";
 import { runWithTenant } from "../tenancy/tenantContext.js";
 import { requireActiveTenant, resolveTenantForLogin, tenantIdForRefreshTokenHash, type ActiveTenant } from "../tenancy/tenantResolver.js";
-import { isPlatformAdminEmail } from "../middleware/platformAdmin.js";
 import { Employee } from "../models/Employee.js";
 import { Department } from "../models/Department.js";
 import type { CapabilityName } from "@mobius-ems/shared";
+import { randomBytes, createHash } from "node:crypto";
+import nodemailer from "nodemailer";
+import { env } from "../config/env.js";
+import { isPlatformAdminEmail } from "../middleware/platformAdmin.js";
 
 type PopulatedUser = Awaited<ReturnType<typeof getPopulatedUser>>;
 const getPopulatedUser = async (id: string) => User.findById(id).populate<{ role: RoleDocument }>("role").exec();
@@ -36,6 +39,36 @@ const sessionUser = async (user: NonNullable<PopulatedUser>, tenant: ActiveTenan
   });
 };
 const requestMeta = (request: Request) => ({ ip: request.ip, userAgent: request.get("user-agent")?.slice(0, 500) });
+const resetHash = (token: string) => createHash("sha256").update(token).digest("hex");
+const resetMessage = "If the account is an eligible Super Admin, a password reset link has been sent.";
+
+export const requestSuperAdminPasswordReset = async (email: string, request: Request) => {
+  let tenant: ActiveTenant;
+  try { tenant = await resolveTenantForLogin(email, undefined); } catch { return resetMessage; }
+  await runWithTenant(tenant._id, async () => {
+    const user = await User.findOne({ email, isActive: true }).populate<{ role: RoleDocument }>("role");
+    if (!user || user.role.name !== "SUPER_ADMIN" || !isPlatformAdminEmail(user.email)) return;
+    const token = randomBytes(32).toString("hex");
+    user.passwordResetTokenHash = resetHash(token); user.passwordResetTokenExpiresAt = new Date(Date.now() + 30 * 60 * 1000); await user.save();
+    if (env.SMTP_HOST && env.SMTP_PORT && env.SMTP_USER && env.SMTP_PASSWORD) {
+      const transport = nodemailer.createTransport({ host: env.SMTP_HOST, port: env.SMTP_PORT, secure: env.SMTP_PORT === 465, auth: { user: env.SMTP_USER, pass: env.SMTP_PASSWORD } });
+      const link = `${env.CLIENT_URL}/reset-password?token=${token}&email=${encodeURIComponent(user.email)}&tenant=${tenant.slug}`;
+      await transport.sendMail({ from: env.SMTP_USER, to: user.email, subject: "MobiusEMS Super Admin password reset", text: `Reset your password within 30 minutes: ${link}` });
+    }
+  });
+  return resetMessage;
+};
+
+export const resetSuperAdminPassword = async (email: string, token: string, newPassword: string, request: Request) => {
+  const tenant = await resolveTenantForLogin(email, undefined);
+  return runWithTenant(tenant._id, async () => {
+    const user = await User.findOne({ email, isActive: true }).select("+passwordHash +passwordResetTokenHash").populate<{ role: RoleDocument }>("role");
+    if (!user || user.role.name !== "SUPER_ADMIN" || !isPlatformAdminEmail(user.email) || !user.passwordResetTokenHash || !user.passwordResetTokenExpiresAt || user.passwordResetTokenExpiresAt < new Date() || user.passwordResetTokenHash !== resetHash(token)) throw new AppError("Reset link is invalid or expired", 400, "INVALID_RESET_TOKEN");
+    user.passwordHash = await bcrypt.hash(newPassword, 12); user.passwordChangedAt = new Date(); user.forcePasswordChange = false; user.passwordResetTokenHash = undefined; user.passwordResetTokenExpiresAt = undefined; await user.save();
+    await RefreshSession.updateMany({ user: user._id, revokedAt: { $exists: false } }, { $set: { revokedAt: new Date() } });
+    await writeAudit({ user: user._id, action: "SUPER_ADMIN_PASSWORD_RESET", entityType: "User", entityId: user.id, ipAddress: request.ip, userAgent: request.get("user-agent") });
+  });
+};
 
 export const login = async (email: string, password: string, tenantSlug: string | undefined, request: Request) => {
   const tenant = await resolveTenantForLogin(email, tenantSlug);
