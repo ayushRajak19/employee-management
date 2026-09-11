@@ -3,6 +3,8 @@ import { Assessment, type AssessmentDocument } from "../models/Assessment.js"; i
 import { recalculateProfileCompletion } from "./profileCompletionService.js";
 import { roleSkillCatalog } from "../data/roleSkillCatalog.js";
 import { RoleSkillAssessment } from "../models/RoleSkillAssessment.js";
+import { Task } from "../models/Task.js";
+import { buildSkillEvidence } from "./skillEvidence.js";
 const catalogRoles: string[] = [...new Set(roleSkillCatalog.map((item) => item.role))];
 const normalized = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, "");
 const legacyDesignationRole = (name: string, code: string) => { const exact = catalogRoles.find((role) => normalized(role) === normalized(name)); if (exact) return exact; const combined = `${name} ${code}`.toLowerCase(); if (combined.includes("data") && combined.includes("analyst")) return "Data Analyst"; if (/(software|engineer|developer|ai|ml)/.test(combined)) return "AI/ML Developer"; if (combined.includes("field") && combined.includes("sales")) return "Field Sales Executive"; if (combined.includes("sales")) return "SaaS Sales (AE)"; if (combined.includes("bde")) return "BDE"; if (combined.includes("bdm")) return "BDM"; if (combined.includes("sdr")) return "SDR"; if (combined.includes("executive assistant") || normalized(code) === "ea") return "EA"; if (combined.includes("hr")) return "HR"; if (combined.includes("admin") || combined.includes("operation")) return "Admin"; return undefined; };
@@ -16,7 +18,9 @@ export const roleCatalogAssessment = async (userId: string) => {
   if (!employee) throw new AppError("Employee profile not found", 404);
   const assessment = await RoleSkillAssessment.findOne({ employee: employee._id }).lean();
   const assignedRole = await assignedCatalogRole(employee.designation);
-  return { catalog: assessment ? [] : roleSkillCatalog.filter((item) => item.role === assignedRole), assessment, designation: employee.designation, assignedRole };
+  const taskEvidence = assessment ? await Task.find({ assignedEmployee: employee._id, isActive: true }).select("taskId name description completionNote status deadline completionDate qualityRating").sort({ updatedAt: -1 }).lean() : [];
+  const assessmentWithEvidence = assessment ? { ...assessment, evidenceAnalytics: assessment.scores.map((score) => ({ skillId: score.skillId, ...buildSkillEvidence(score, taskEvidence) })) } : null;
+  return { catalog: assessment ? [] : roleSkillCatalog.filter((item) => item.role === assignedRole), assessment: assessmentWithEvidence, designation: employee.designation, assignedRole };
 };
 export const submitRoleCatalogAssessment = async (userId: string, input: { ratings: { skillId: string; rating: number; implementationNote: string }[] }, meta: { ip?: string; userAgent?: string }) => {
   const employee = await Employee.findOne({ user: userId, isActive: true }).select("_id designation").populate<{ designation: { _id?: unknown; name: string; code: string; catalogRole?: string } }>("designation", "name code catalogRole");
