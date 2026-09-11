@@ -7,12 +7,14 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { employeeApi } from "@/features/employees/employeeApi";
+import { useAuth } from "@/features/auth/AuthProvider";
 
 type ExperienceForm = { company: string; role: string; startDate: string; endDate: string; summary: string };
 const blankExperience = (): ExperienceForm => ({ company: "", role: "", startDate: "", endDate: "", summary: "" });
 const isPartialExperience = (item: ExperienceForm) => Boolean(item.company || item.role || item.startDate || item.endDate || item.summary) && !(item.company && item.role && item.startDate);
 
 export const MyProfilePage = () => {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const query = useQuery({ queryKey: ["employee", "me"], queryFn: employeeApi.me });
   const [form, setForm] = useState({ firstName: "", lastName: "", phone: "", personalEmail: "", address: "", emergencyContact: "", professionalSummary: "" });
@@ -41,7 +43,29 @@ export const MyProfilePage = () => {
 
   if (query.isLoading) return <main className="p-8"><Skeleton className="h-96"/></main>;
   const employee = query.data?.employee;
-  if (!employee) return <main className="grid min-h-96 place-items-center text-sm text-slate-500">Your employee profile is unavailable.</main>;
+  if (!employee) {
+    return (
+      <main className="mx-auto max-w-4xl p-4 sm:p-8">
+        <div className="rounded-3xl border bg-white p-8 shadow-soft text-center">
+          <h2 className="text-xl font-semibold text-slate-800">Administrator Profile</h2>
+          <p className="mt-2 text-sm text-slate-500">
+            Welcome, {user?.name || "Admin"}. Your staff employee profile can be loaded or initialized below.
+          </p>
+          <div className="mt-6 inline-flex flex-col gap-2 rounded-2xl border bg-slate-50 p-5 text-left text-sm text-slate-600">
+            <div><span className="font-semibold text-slate-700">Account Name:</span> {user?.name}</div>
+            <div><span className="font-semibold text-slate-700">Email:</span> {user?.email}</div>
+            <div><span className="font-semibold text-slate-700">Role:</span> {user?.role}</div>
+            <div><span className="font-semibold text-slate-700">Organization:</span> {user?.tenantName}</div>
+          </div>
+          <div className="mt-6">
+            <Button onClick={() => query.refetch()} variant="primary">
+              Load / Refresh Profile
+            </Button>
+          </div>
+        </div>
+      </main>
+    );
+  }
   const message = save.error?.message ?? photo.error?.message;
 
   const updateExperience = (index: number, key: keyof ExperienceForm, value: string) => setExperiences((items) => items.map((item, itemIndex) => itemIndex === index ? { ...item, [key]: value } : item));

@@ -53,7 +53,47 @@ export const listEmployees = async (query: { page: number; limit: number; search
   const [items, total] = await Promise.all([Employee.find(filter).populate("department team designation reportingManager", "name code firstName lastName employeeId").sort({ createdAt: -1 }).skip((query.page - 1) * query.limit).limit(query.limit).lean(), Employee.countDocuments(filter)]); return { items, pagination: { page: query.page, limit: query.limit, total, pages: Math.ceil(total / query.limit) } };
 };
 const withPhoto = <T extends object>(employee: T & { profilePhotoKey?: string }) => ({ ...employee, profilePhotoUrl: profilePhotoUrl(employee.profilePhotoKey) });
-export const getMyEmployee = async (userId: string) => { const employee = await Employee.findOne({ user: userId, isActive: true }); if (!employee) throw new AppError("Employee profile not found", 404); await recalculateProfileCompletion(employee.id); const refreshed = await Employee.findById(employee._id).populate("department team designation reportingManager", "name code firstName lastName employeeId").lean(); if (!refreshed) throw new AppError("Employee profile not found", 404); return withPhoto(refreshed); };
+export const getMyEmployee = async (userId: string) => {
+  let employee = await Employee.findOne({ user: userId, isActive: true });
+  if (!employee) {
+    const user = await User.findById(userId);
+    if (user?.isActive) {
+      let dept = await Department.findOne({ isActive: true });
+      if (!dept) {
+        dept = await Department.create({ name: "General", code: "GEN", capabilities: [], isActive: true });
+      }
+      let desig = await Designation.findOne({ isActive: true });
+      if (!desig) {
+        desig = await Designation.create({ name: "Administrator", code: "ADMIN", department: dept._id, requiredSkills: [], customSkills: [], isActive: true });
+      }
+      const parts = (user.name || "Admin User").trim().split(/\s+/);
+      const firstName = parts[0] || "Admin";
+      const lastName = parts.slice(1).join(" ") || "User";
+      employee = await Employee.create({
+        employeeId: employeeId(),
+        user: user._id,
+        firstName,
+        lastName,
+        officialEmail: user.email,
+        department: dept._id,
+        designation: desig._id,
+        dateOfJoining: user.get("createdAt") || new Date(),
+        employmentType: "FULL_TIME",
+        status: "ACTIVE",
+        onboardingStep: 8,
+        profileCompletion: 60,
+        isActive: true,
+      });
+      user.employee = employee._id;
+      await user.save();
+    }
+  }
+  if (!employee) throw new AppError("Employee profile not found", 404);
+  await recalculateProfileCompletion(employee.id);
+  const refreshed = await Employee.findById(employee._id).populate("department team designation reportingManager", "name code firstName lastName employeeId").lean();
+  if (!refreshed) throw new AppError("Employee profile not found", 404);
+  return withPhoto(refreshed);
+};
 export const updateOnboarding = async (userId: string, input: { step: number; personal?: EmployeeDocument["personal"]; professionalSummary?: string; previousExperience?: EmployeeDocument["previousExperience"]; complete?: boolean }) => {
   const employee = await Employee.findOne({ user: userId, isActive: true }); if (!employee) throw new AppError("Employee profile not found", 404);
   if (input.personal) employee.personal = { ...employee.personal, ...input.personal };
