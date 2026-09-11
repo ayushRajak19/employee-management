@@ -19,7 +19,7 @@ const getPopulatedUser = async (id: string) => User.findById(id).populate<{ role
 const sessionUser = async (user: NonNullable<PopulatedUser>, tenant: ActiveTenant): Promise<SessionUser> => {
   const departmentCapabilities = user.role.permissions.includes("sales.view.all")
     ? (await Department.exists({ capabilities: "SALES_MODULE", isActive: true }) ? ["SALES_MODULE" as CapabilityName] : [])
-    : ((await Employee.findOne({ user: user._id, isActive: true }).populate<{ department: { capabilities?: CapabilityName[] } }>("department", "capabilities").select("department").lean())?.department.capabilities ?? []);
+    : ((await Employee.findOne({ user: user._id, isActive: true }).populate<{ department?: { capabilities?: CapabilityName[] } | null }>("department", "capabilities").select("department").lean())?.department?.capabilities ?? []);
   return ({
   id: user.id,
   name: user.name,
