@@ -43,7 +43,7 @@ test("updateDesignationSkillsSchema rejects invalid object id or missing descrip
 test("getRoleCatalogSkills returns catalog items for standard roles", () => {
   const daSkills = getRoleCatalogSkills("Data Analyst");
   assert.ok(daSkills.length > 0);
-  assert.equal(daSkills[0].role, "Data Analyst");
+  assert.equal(daSkills[0]?.role, "Data Analyst");
 
   const unknownSkills = getRoleCatalogSkills("NonExistentRole");
   assert.equal(unknownSkills.length, 0);
