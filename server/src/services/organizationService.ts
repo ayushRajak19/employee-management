@@ -85,7 +85,6 @@ export const getOrganizationHierarchyFlow = async () => {
       .populate("team", "name code")
       .populate("designation", "name code level")
       .populate("reportingManager", "firstName lastName employeeId profilePhotoKey")
-      .populate("user", "role")
       .select("employeeId firstName lastName officialEmail phone profilePhotoKey department team designation reportingManager status employmentType user dateOfJoining")
       .sort("firstName")
       .lean(),
@@ -93,7 +92,6 @@ export const getOrganizationHierarchyFlow = async () => {
 
   const mappedEmployees = rawEmployees.map((emp) => {
     const seniority = calculateSeniorityRank({
-      role: (emp.user as any)?.role,
       designationTitle: (emp.designation as any)?.name,
       designationLevel: (emp.designation as any)?.level,
     });
@@ -142,7 +140,7 @@ export const getOrganizationHierarchyFlow = async () => {
       seniorityRank: seniority.rank,
       seniorityTierName: seniority.tierName,
       role: (emp.user as any)?.role || "EMPLOYEE",
-      userId: (emp.user as any)?._id?.toString() || "",
+      userId: (emp.user as any)?._id?.toString() || (emp.user as any)?.toString() || "",
       status: emp.status,
       employmentType: emp.employmentType,
       dateOfJoining: emp.dateOfJoining,

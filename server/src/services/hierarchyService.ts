@@ -272,7 +272,6 @@ export const autoStructureTenantHierarchy = async (forceAll = false) => {
   const employees = await Employee.find({ isActive: true })
     .populate("designation", "name level")
     .populate("department", "name code")
-    .populate("user", "role")
     .lean();
 
   if (employees.length === 0) {
@@ -281,7 +280,6 @@ export const autoStructureTenantHierarchy = async (forceAll = false) => {
 
   const ranked = employees.map((emp) => {
     const seniority = calculateSeniorityRank({
-      role: (emp.user as any)?.role,
       designationTitle: (emp.designation as any)?.name,
       designationLevel: (emp.designation as any)?.level,
     });
