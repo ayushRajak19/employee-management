@@ -70,8 +70,8 @@ export const resetSuperAdminPassword = async (email: string, token: string, newP
   });
 };
 
-export const login = async (email: string, password: string, tenantSlug: string | undefined, request: Request) => {
-  const tenant = await resolveTenantForLogin(email, tenantSlug);
+export const login = async (email: string, password: string, request: Request) => {
+  const tenant = await resolveTenantForLogin(email);
   return runWithTenant(tenant._id, async () => {
     const user = await User.findOne({ email, isActive: true }).select("+passwordHash").populate<{ role: RoleDocument }>("role");
     if (!user || !(await bcrypt.compare(password, user.passwordHash))) throw new AppError("Email, password or organization is incorrect", 401, "INVALID_CREDENTIALS");

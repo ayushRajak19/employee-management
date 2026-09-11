@@ -20,7 +20,7 @@ export const resolveTenantForLogin = async (email: string, slug?: string): Promi
     return tenant;
   }
   const users = await User.collection.find({ email: email.toLowerCase(), isActive: true }, { projection: { tenantId: 1 } }).limit(2).toArray();
-  if (users.length > 1) throw new AppError("Enter your organization ID to sign in", 422, "TENANT_REQUIRED");
+  if (users.length > 1) throw new AppError("This email belongs to multiple legacy workspaces. Contact platform support to merge the accounts", 409, "DUPLICATE_LOGIN_EMAIL");
   const tenantId = users[0]?.tenantId;
   if (!tenantId) throw new AppError("Email or password is incorrect", 401, "INVALID_CREDENTIALS");
   return requireActiveTenant(tenantId.toString());

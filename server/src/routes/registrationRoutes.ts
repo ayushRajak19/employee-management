@@ -9,10 +9,17 @@ import { validate } from "../middleware/validate.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { AppError } from "../utils/AppError.js";
 import { createTenantSchema } from "../validators/tenantValidators.js";
-import { createTenant } from "../services/tenantService.js";
-import { Tenant } from "../models/Tenant.js";
+import { createTenant, generateTenantSlug } from "../services/tenantService.js";
+import { User } from "../models/User.js";
 
-const details = createTenantSchema.shape.body.omit({ temporaryPassword: true, plan: true });
+const baseDetails = createTenantSchema.shape.body.omit({ temporaryPassword: true, plan: true });
+const details = baseDetails.omit({ slug: true }).extend({
+  industry: createTenantSchema.shape.body.shape.industry.unwrap(),
+  companySize: createTenantSchema.shape.body.shape.companySize.unwrap(),
+  country: createTenantSchema.shape.body.shape.country.unwrap(),
+  referralSource: createTenantSchema.shape.body.shape.referralSource.unwrap(),
+  primaryUseCase: createTenantSchema.shape.body.shape.primaryUseCase.unwrap(),
+});
 
 const verifyOtpSchema = z.object({
   body: z.object({
@@ -45,16 +52,15 @@ registrationRouter.post(
   asyncHandler(async (request, response) => {
     const input = details.parse(request.body);
 
-    if (await Tenant.exists({ slug: input.slug })) {
-      throw new AppError("That organization ID is already in use", 409);
-    }
+    if (await User.collection.findOne({ email: input.adminEmail }, { projection: { _id: 1 } })) throw new AppError("An account already uses this email. Sign in instead or use another email", 409, "EMAIL_EXISTS");
+    const slug = await generateTenantSlug(input.name);
 
     // Generate 6-digit OTP and secure SHA-256 hash
     const otp = randomInt(100000, 1000000).toString();
     const otpHash = createHash("sha256").update(otp).digest("hex");
 
     const registrationToken = jwt.sign(
-      { ...input, otpHash, purpose: "organization-registration-otp" },
+      { ...input, slug, otpHash, purpose: "organization-registration-otp" },
       env.JWT_ACCESS_SECRET,
       { expiresIn: "15m", audience: "organization-registration-otp", issuer: "mobius-ems" }
     );
@@ -237,12 +243,12 @@ registrationRouter.post(
       throw new AppError("Invalid verification code. Please check and try again.", 400);
     }
 
-    const verified = details.parse(payload);
+    const verified = details.extend({ slug: z.string() }).parse(payload);
     const tenant = await createTenant({ ...verified, plan: "STANDARD", temporaryPassword: password });
 
     response.status(201).json({
       success: true,
-      message: "Organization created successfully! Sign in with your organization ID and password.",
+      message: "Organization created successfully! Sign in with your email and password.",
       data: { slug: tenant!.slug },
     });
   })
@@ -261,14 +267,14 @@ registrationRouter.post(
         issuer: "mobius-ems",
       });
       if (typeof payload === "string") throw new Error();
-      verified = details.parse(payload);
+      verified = baseDetails.required({ slug: true }).parse(payload);
     } catch {
       throw new AppError("Verification link is invalid or expired. Please register again.", 400);
     }
     const tenant = await createTenant({ ...verified, plan: "STANDARD", temporaryPassword: input.password });
     response.status(201).json({
       success: true,
-      message: "Organization created. Sign in with your organization ID and password.",
+      message: "Organization created. Sign in with your email and password.",
       data: { slug: tenant!.slug },
     });
   })

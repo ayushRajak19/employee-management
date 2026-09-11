@@ -8,8 +8,8 @@ import { Input } from "@/components/ui/Input";
 export const RegisterPage = () => {
   // Check if loaded with legacy token in hash
   const [legacyToken] = useState(() => new URLSearchParams(window.location.hash.slice(1)).get("token"));
-  const [step, setStep] = useState<"form" | "otp" | "legacy" | "complete">(() => (legacyToken ? "legacy" : "form"));
-  const [form, setForm] = useState({ name: "", slug: "", adminName: "", adminEmail: "", password: "", confirmPassword: "", otp: "" });
+  const [step, setStep] = useState<"form" | "account" | "otp" | "legacy" | "complete">(() => (legacyToken ? "legacy" : "form"));
+  const [form, setForm] = useState({ name: "", industry: "", companySize: "", country: "", website: "", referralSource: "", primaryUseCase: "", adminName: "", adminEmail: "", password: "", confirmPassword: "", otp: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [registrationToken, setRegistrationToken] = useState("");
@@ -39,7 +39,12 @@ export const RegisterPage = () => {
         directOtp?: string;
       }>("/api/v1/registration/request", {
         name: form.name,
-        slug: form.slug,
+        industry: form.industry,
+        companySize: form.companySize,
+        country: form.country,
+        website: form.website,
+        referralSource: form.referralSource,
+        primaryUseCase: form.primaryUseCase,
         adminName: form.adminName,
         adminEmail: form.adminEmail,
       });
@@ -131,6 +136,8 @@ export const RegisterPage = () => {
             ? "Verify email with OTP"
             : step === "legacy"
             ? "Finish organization registration"
+            : step === "account"
+            ? "Create your administrator account"
             : "Register your organization"}
         </h1>
         <p className="mt-3 text-sm text-slate-500">
@@ -140,7 +147,9 @@ export const RegisterPage = () => {
             ? `Enter the 6-digit verification code sent to ${form.adminEmail} and set your password.`
             : step === "legacy"
             ? "Choose a secure administrator password to create your workspace."
-            : "Create a separate workspace for your team. An OTP verification code will be sent to your email."}
+            : step === "account"
+            ? "Your email will identify the correct workspace automatically when you sign in."
+            : "Tell us about your company. Your organization ID will be generated automatically."}
         </p>
 
         {/* Step 3: Registration Complete */}
@@ -276,7 +285,7 @@ export const RegisterPage = () => {
                 type="button"
                 className="text-slate-500 hover:text-slate-800"
                 onClick={() => {
-                  setStep("form");
+                  setStep("account");
                   setError("");
                 }}
               >
@@ -363,15 +372,9 @@ export const RegisterPage = () => {
           </form>
         )}
 
-        {/* Step 1: Initial Registration Details */}
+        {/* Step 1: Company profile */}
         {step === "form" && (
-          <form
-            className="mt-6 space-y-4"
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSendOtp();
-            }}
-          >
+          <form className="mt-6 space-y-4" onSubmit={(event) => { event.preventDefault(); setError(""); setStep("account"); }}>
             <label className="block text-sm font-medium">
               Organization name
               <Input
@@ -385,58 +388,31 @@ export const RegisterPage = () => {
               />
             </label>
             <label className="block text-sm font-medium">
-              Organization ID
-              <Input
-                className="mt-2"
-                required
-                maxLength={63}
-                pattern="[a-z0-9]([a-z0-9-]*[a-z0-9])?"
-                placeholder="acme-corp"
-                value={form.slug}
-                onChange={(e) => setForm({ ...form, slug: e.target.value.toLowerCase() })}
-              />
-              <span className="mt-1 block text-xs text-slate-500">
-                Use lowercase letters, numbers and hyphens. This is your company workspace identifier.
-              </span>
+              Industry
+              <select required className="mt-2 h-11 w-full rounded-xl border bg-white px-3 text-sm" value={form.industry} onChange={(event) => setForm({ ...form, industry: event.target.value })}><option value="">Select industry</option>{["Technology", "Financial services", "Healthcare", "Education", "Retail & e-commerce", "Manufacturing", "Professional services", "Real estate", "Media & entertainment", "Nonprofit", "Other"].map((value) => <option key={value}>{value}</option>)}</select>
             </label>
             <label className="block text-sm font-medium">
-              Your name
-              <Input
-                className="mt-2"
-                required
-                minLength={2}
-                maxLength={120}
-                autoComplete="name"
-                placeholder="e.g. John Doe"
-                value={form.adminName}
-                onChange={(e) => setForm({ ...form, adminName: e.target.value })}
-              />
+              Company size
+              <select required className="mt-2 h-11 w-full rounded-xl border bg-white px-3 text-sm" value={form.companySize} onChange={(event) => setForm({ ...form, companySize: event.target.value })}><option value="">Select employee count</option>{["1-10", "11-50", "51-200", "201-500", "501-1000", "1000+"].map((value) => <option key={value}>{value}</option>)}</select>
             </label>
             <label className="block text-sm font-medium">
-              Work email
-              <Input
-                className="mt-2"
-                required
-                type="email"
-                maxLength={254}
-                autoComplete="email"
-                placeholder="admin@company.com"
-                value={form.adminEmail}
-                onChange={(e) => setForm({ ...form, adminEmail: e.target.value })}
-              />
+              Country<Input className="mt-2" required maxLength={80} value={form.country} onChange={(event) => setForm({ ...form, country: event.target.value })}/>
             </label>
-
-            {error && (
-              <p role="alert" className="text-sm text-red-600">
-                {error}
-              </p>
-            )}
-
-            <Button className="w-full" disabled={pending}>
-              {pending ? "Sending OTP…" : "Send Verification Code"}
-            </Button>
+            <label className="block text-sm font-medium">Company website <span className="font-normal text-slate-400">(optional)</span><Input className="mt-2" type="url" placeholder="https://company.com" value={form.website} onChange={(event) => setForm({ ...form, website: event.target.value })}/></label>
+            <label className="block text-sm font-medium">What do you want to improve?<select required className="mt-2 h-11 w-full rounded-xl border bg-white px-3 text-sm" value={form.primaryUseCase} onChange={(event) => setForm({ ...form, primaryUseCase: event.target.value })}><option value="">Select primary goal</option>{["Employee records", "Skills & development", "Performance management", "Attendance", "Sales workforce", "Complete HR operations"].map((value) => <option key={value}>{value}</option>)}</select></label>
+            <label className="block text-sm font-medium">How did you hear about us?<select required className="mt-2 h-11 w-full rounded-xl border bg-white px-3 text-sm" value={form.referralSource} onChange={(event) => setForm({ ...form, referralSource: event.target.value })}><option value="">Select source</option>{["Search engine", "Social media", "Friend or colleague", "Partner", "Event", "Advertisement", "Other"].map((value) => <option key={value}>{value}</option>)}</select></label>
+            <Button className="w-full">Continue</Button>
           </form>
         )}
+
+        {/* Step 2: Account owner */}
+        {step === "account" && <form className="mt-6 space-y-4" onSubmit={(event) => { event.preventDefault(); void handleSendOtp(); }}>
+          <div className="rounded-xl bg-brand-50 p-3 text-xs text-brand-800">Your organization ID is assigned automatically and shown after verification. You will sign in using only your email and password.</div>
+          <label className="block text-sm font-medium">Your name<Input className="mt-2" required minLength={2} maxLength={120} autoComplete="name" placeholder="e.g. John Doe" value={form.adminName} onChange={(event) => setForm({ ...form, adminName: event.target.value })}/></label>
+          <label className="block text-sm font-medium">Work email<Input className="mt-2" required type="email" maxLength={254} autoComplete="email" placeholder="admin@company.com" value={form.adminEmail} onChange={(event) => setForm({ ...form, adminEmail: event.target.value })}/></label>
+          {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+          <div className="flex gap-2"><Button type="button" variant="ghost" onClick={() => setStep("form")}>Back</Button><Button className="flex-1" disabled={pending}>{pending ? "Sending OTP…" : "Send verification code"}</Button></div>
+        </form>}
 
         <Link className="mt-6 block text-sm font-medium text-brand-700" to="/login">
           Already registered? Sign in

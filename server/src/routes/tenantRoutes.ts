@@ -9,6 +9,6 @@ import { createTenantSchema, updateTenantStatusSchema } from "../validators/tena
 export const tenantRouter = Router();
 tenantRouter.use(authenticate, requirePlatformAdmin);
 tenantRouter.get("/", asyncHandler(controller.list));
+tenantRouter.get("/analytics", asyncHandler(controller.analytics));
 tenantRouter.post("/", validate(createTenantSchema), asyncHandler(controller.create));
 tenantRouter.patch("/:id/status", validate(updateTenantStatusSchema), asyncHandler(controller.updateStatus));
-
