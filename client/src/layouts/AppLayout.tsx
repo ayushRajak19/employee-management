@@ -3,7 +3,7 @@ import logoMark from "@/assets/mobius-mark.png";
 import { useMutation } from "@tanstack/react-query";
 import type { CapabilityName, PermissionName, RoleName, SectionPermissionName } from "@mobius-ems/shared";
 import {
-  BarChart3, Bot, BrainCircuit, BriefcaseBusiness, Building2, CalendarCheck2,
+  Award, BarChart3, Bot, BrainCircuit, BriefcaseBusiness, Building2, CalendarCheck2,
   ChevronLeft, CircleGauge, FileText, GraduationCap, ListTodo, LogOut, Menu,
   MailPlus, MapPinned, Route, ShieldCheck, Sparkles, Target, TrendingUp, UserCog, UserRound, Users, X,
 } from "lucide-react";
@@ -70,7 +70,8 @@ const groups: { label: string; items: NavItem[] }[] = [
   },
   {
     label: "Capability", items: [
-      { label: "Skills", icon: Sparkles, path: "/skills", section: "section.skills" },
+      { label: "Skills", icon: Award, path: "/skills", section: "section.skills" },
+      { label: "AI Skill Builder", icon: Sparkles, path: "/skills/builder", section: "section.skills" },
       { label: "Skill matrix", icon: BarChart3, path: "/skill-matrix", section: "section.skill_matrix" },
       { label: "Assessments", icon: ShieldCheck, path: "/assessments", section: "section.assessments" },
     ],
