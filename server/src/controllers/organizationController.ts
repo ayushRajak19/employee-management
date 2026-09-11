@@ -19,4 +19,15 @@ export const getSkillCatalogForRole = async (request: Request, response: Respons
   response.json({ success: true, message: "Role catalog retrieved", data: { items } });
 };
 
+export const generateSkills = async (request: Request, response: Response): Promise<void> => {
+  const { generateDesignationSkills } = await import("../services/skillBuilderService.js");
+  const skills = await generateDesignationSkills(request.body);
+  response.json({
+    success: true,
+    message: "Skills generated successfully",
+    data: { skills, count: skills.length }
+  });
+};
+
+
 

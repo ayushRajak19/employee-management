@@ -24,6 +24,15 @@ export const OrganizationPage = () => {
   const [selectedTemplateRole, setSelectedTemplateRole] = useState<string>("");
   const [isLoadingTemplate, setIsLoadingTemplate] = useState(false);
 
+  // AI Skill Builder State
+  const [showAiBuilder, setShowAiBuilder] = useState(false);
+  const [aiJd, setAiJd] = useState("");
+  const [aiLevel, setAiLevel] = useState("Senior");
+  const [aiSkillCount, setAiSkillCount] = useState(8);
+  const [aiAppendMode, setAiAppendMode] = useState(false);
+  const [isGeneratingAi, setIsGeneratingAi] = useState(false);
+  const [aiFeedback, setAiFeedback] = useState<string | null>(null);
+
   const mutation = useMutation({
     mutationFn: () => kind === "department"
       ? organizationApi.createDepartment({ ...form, capabilities: form.salesEnabled ? ["SALES_MODULE"] : [] })
@@ -85,6 +94,40 @@ export const OrganizationPage = () => {
     setSkillsTarget(item);
     setTargetSkills(item.customSkills ? JSON.parse(JSON.stringify(item.customSkills)) : []);
     setSelectedTemplateRole(item.catalogRole ?? "");
+    setShowAiBuilder(!item.customSkills || item.customSkills.length === 0);
+    setAiJd("");
+    setAiFeedback(null);
+  };
+
+  const handleGenerateSkillsWithAi = async () => {
+    if (!skillsTarget) return;
+    try {
+      setIsGeneratingAi(true);
+      setAiFeedback(null);
+      const res = await organizationApi.generateSkillsWithAi({
+        designationTitle: skillsTarget.name,
+        department: skillsTarget.department?.name,
+        level: aiLevel,
+        jobDescription: aiJd.trim() || undefined,
+        skillCount: aiSkillCount,
+      });
+      const generated = res.skills || [];
+      if (generated.length === 0) {
+        throw new Error("No skills were returned. Please try again.");
+      }
+      if (aiAppendMode) {
+        setTargetSkills((prev) => [...prev, ...generated]);
+        setAiFeedback(`✨ Added ${generated.length} AI-generated skills to the assessment!`);
+      } else {
+        setTargetSkills(generated);
+        setAiFeedback(`✨ Generated ${generated.length} skills tailored for ${skillsTarget.name}!`);
+      }
+      setShowAiBuilder(false);
+    } catch (err: any) {
+      setAiFeedback(err?.message || "Failed to generate skills. Please try again.");
+    } finally {
+      setIsGeneratingAi(false);
+    }
   };
 
   const handleAddCustomSkill = () => {
@@ -267,10 +310,22 @@ export const OrganizationPage = () => {
           </button>
         </div>
 
-        {/* Toolbar: Import Template & Add Custom Skill */}
+        {/* Toolbar: AI Skill Builder, Import Template & Add Custom Skill */}
         <div className="border-b bg-slate-50/80 px-6 py-3.5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant={showAiBuilder ? "primary" : "secondary"}
+                className="h-9 text-xs font-semibold shadow-xs"
+                onClick={() => setShowAiBuilder(!showAiBuilder)}
+              >
+                <Sparkles size={14} className={showAiBuilder ? "mr-1.5 text-amber-200" : "mr-1.5 text-amber-500"} />
+                {showAiBuilder ? "Hide AI Skill Builder" : "✨ AI Skill Builder (from JD)"}
+              </Button>
+
+              <div className="h-4 w-px bg-slate-200 mx-1 hidden sm:block" />
+
               <select
                 className="h-9 rounded-xl border bg-white px-3 text-xs text-slate-700 shadow-xs focus:border-brand-500 focus:outline-hidden"
                 value={selectedTemplateRole}
@@ -291,7 +346,7 @@ export const OrganizationPage = () => {
                 onClick={handleLoadTemplate}
               >
                 <Download size={13} className="mr-1" />
-                {isLoadingTemplate ? "Loading..." : "Import Template"}
+                {isLoadingTemplate ? "Loading..." : "Import"}
               </Button>
             </div>
 
@@ -306,8 +361,132 @@ export const OrganizationPage = () => {
           </div>
         </div>
 
-        {/* Scrollable Skills List */}
+        {/* Scrollable Skills List & AI Builder */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          {/* AI Skill Builder Panel */}
+          {showAiBuilder && (
+            <div className="rounded-2xl border border-brand-200 bg-gradient-to-br from-brand-50/70 via-white to-sky-50/50 p-5 shadow-xs">
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="grid size-7 place-items-center rounded-lg bg-brand-600 text-white shadow-xs">
+                    <Sparkles size={15} />
+                  </div>
+                  <h3 className="text-sm font-semibold text-slate-800">
+                    AI Skill Builder for {skillsTarget.name}
+                  </h3>
+                  <span className="rounded-full bg-brand-100 px-2.5 py-0.5 text-[10px] font-semibold text-brand-700">
+                    AI Powered
+                  </span>
+                </div>
+                <span className="text-xs text-slate-500 font-medium">
+                  Dept: {skillsTarget.department?.name || "General"}
+                </span>
+              </div>
+              
+              <p className="mt-2 text-xs leading-relaxed text-slate-600">
+                Paste your Job Description (JD), key deliverables, or requirements below. The AI will analyze the JD and generate comprehensive technical & operational competencies, proficiency tiers, tools, and evidence-based workplace assessment questions.
+              </p>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-600">
+                    Target Seniority / Level
+                  </label>
+                  <select
+                    className="mt-1 h-9 w-full rounded-xl border bg-white px-3 text-xs text-slate-700 shadow-xs"
+                    value={aiLevel}
+                    onChange={(e) => setAiLevel(e.target.value)}
+                  >
+                    <option value="Junior / Associate">Junior / Associate</option>
+                    <option value="Mid-level">Mid-level</option>
+                    <option value="Senior">Senior</option>
+                    <option value="Lead / Principal">Lead / Principal</option>
+                    <option value="Manager / Head">Manager / Head</option>
+                    <option value="Executive / C-Level">Executive / C-Level</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-600">
+                    Number of Skills
+                  </label>
+                  <select
+                    className="mt-1 h-9 w-full rounded-xl border bg-white px-3 text-xs text-slate-700 shadow-xs"
+                    value={aiSkillCount}
+                    onChange={(e) => setAiSkillCount(Number(e.target.value))}
+                  >
+                    <option value={4}>4 Skills (Quick Overview)</option>
+                    <option value={6}>6 Skills (Focused Core)</option>
+                    <option value={8}>8 Skills (Standard Assessment)</option>
+                    <option value={10}>10 Skills (In-depth Role Spec)</option>
+                    <option value={12}>12 Skills (Full Spectrum)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-600">
+                    Insertion Mode
+                  </label>
+                  <div className="mt-1 flex h-9 items-center gap-4 rounded-xl border bg-white px-3 text-xs text-slate-700">
+                    <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="aiMode"
+                        checked={!aiAppendMode}
+                        onChange={() => setAiAppendMode(false)}
+                      />
+                      <span>Replace all</span>
+                    </label>
+                    <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="aiMode"
+                        checked={aiAppendMode}
+                        onChange={() => setAiAppendMode(true)}
+                      />
+                      <span>Append</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-3">
+                <label className="block text-xs font-medium text-slate-600">
+                  Job Description (JD) / Requirements & Responsibilities <span className="text-slate-400 font-normal">(Optional)</span>
+                </label>
+                <textarea
+                  rows={4}
+                  value={aiJd}
+                  onChange={(e) => setAiJd(e.target.value)}
+                  placeholder={`Paste full Job Description (JD) here...\nExample: Responsible for cloud architecture, microservices design, leading a team of 15 engineers, maintaining 99.99% uptime, CI/CD automation and managing technical roadmap.\n(Leave blank to auto-generate standard JD competencies for ${skillsTarget.name})`}
+                  className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-3 text-xs leading-relaxed text-slate-800 placeholder:text-slate-400 focus:border-brand-500 focus:outline-hidden"
+                />
+              </div>
+
+              <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <p className="text-[11px] text-slate-500">
+                  💡 Tip: Pasting an actual JD produces exact matching assessment criteria and tools.
+                </p>
+                <Button
+                  type="button"
+                  disabled={isGeneratingAi}
+                  onClick={handleGenerateSkillsWithAi}
+                  className="h-9 px-4 text-xs bg-brand-600 hover:bg-brand-700 text-white font-medium shadow-sm"
+                >
+                  <Sparkles size={13} className={isGeneratingAi ? "mr-1.5 animate-spin text-amber-300" : "mr-1.5 text-amber-300"} />
+                  {isGeneratingAi ? "Analyzing JD & Generating Skills..." : "Generate Skills from JD"}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* AI Feedback Banner */}
+          {aiFeedback && (
+            <div className={`rounded-xl px-4 py-2.5 text-xs font-medium ${aiFeedback.includes("Failed") || aiFeedback.includes("error") ? "bg-red-50 text-red-700 border border-red-200" : "bg-emerald-50 text-emerald-700 border border-emerald-200"}`}>
+              {aiFeedback}
+            </div>
+          )}
+
           {targetSkills.length === 0 ? (
             <div className="rounded-2xl border-2 border-dashed border-slate-200 p-10 text-center">
               <div className="mx-auto grid size-12 place-items-center rounded-2xl bg-brand-50 text-brand-600 mb-3">
@@ -315,11 +494,17 @@ export const OrganizationPage = () => {
               </div>
               <h3 className="text-sm font-semibold text-slate-800">No Assessment Skills Configured</h3>
               <p className="mt-1 text-xs text-slate-500 max-w-sm mx-auto">
-                Add custom skills or import from one of our pre-built role templates above to establish the skills assessment.
+                Use our AI Skill Builder with your Job Description (JD), choose a catalog template, or add custom skills manually.
               </p>
-              <div className="mt-4 flex justify-center gap-2">
+              <div className="mt-4 flex flex-wrap justify-center gap-2">
+                <Button
+                  className="h-8 px-3 text-xs bg-brand-600 text-white"
+                  onClick={() => setShowAiBuilder(true)}
+                >
+                  <Sparkles size={13} className="mr-1 text-amber-300" /> Open AI Skill Builder
+                </Button>
                 <Button variant="secondary" className="h-8 px-3 text-xs" onClick={handleAddCustomSkill}>
-                  <Plus size={13} className="mr-1" /> Add First Skill
+                  <Plus size={13} className="mr-1" /> Add Custom Skill
                 </Button>
               </div>
             </div>

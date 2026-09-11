@@ -6,7 +6,7 @@ type CompletionInput = { system: string; user: string; temperature?: number; max
 export interface CompletionResult { text: string; provider: string; model: string }
 
 const defaults = {
-  groq: { baseUrl: "https://api.groq.com/openai/v1", model: "llama-3.3-70b-versatile" },
+  groq: { baseUrl: "https://api.groq.com/openai/v1", model: "openai/gpt-oss-120b" },
   openai: { baseUrl: "https://api.openai.com/v1", model: "gpt-4.1-mini" },
   openrouter: { baseUrl: "https://openrouter.ai/api/v1", model: "openai/gpt-4.1-mini" },
   together: { baseUrl: "https://api.together.xyz/v1", model: "meta-llama/Llama-3.3-70B-Instruct-Turbo" },
@@ -47,10 +47,35 @@ export const complete = async (input: CompletionInput): Promise<CompletionResult
     const candidates = payload.candidates as { content?: { parts?: { text?: string }[] } }[] | undefined;
     text = candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("") ?? "";
   } else {
+    const candidateModels = provider === "groq"
+      ? [...new Set([model, "openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b"])]
+      : [model];
     const messages: Message[] = [{ role: "system", content: input.system }, { role: "user", content: input.user }];
-    const payload = await requestJson(`${baseUrl}/chat/completions`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` }, body: JSON.stringify({ model, messages, temperature: input.temperature ?? 0.2, max_tokens: input.maxTokens ?? 900 }) });
-    const choices = payload.choices as { message?: { content?: unknown } }[] | undefined;
-    text = responseText(choices?.[0]?.message?.content);
+    let lastError: unknown = null;
+    let successfulModel = model;
+
+    for (const currentModel of candidateModels) {
+      try {
+        const payload = await requestJson(`${baseUrl}/chat/completions`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+          body: JSON.stringify({ model: currentModel, messages, temperature: input.temperature ?? 0.2, max_tokens: input.maxTokens ?? 1200 })
+        });
+        const choices = payload.choices as { message?: { content?: unknown } }[] | undefined;
+        text = responseText(choices?.[0]?.message?.content);
+        if (text.trim()) {
+          successfulModel = currentModel;
+          break;
+        }
+      } catch (err) {
+        lastError = err;
+      }
+    }
+    if (!text.trim() && lastError) {
+      if (lastError instanceof AppError) throw lastError;
+      throw new AppError("AI provider request failed", 502, "AI_PROVIDER_ERROR");
+    }
+    return { text: text.trim(), provider, model: successfulModel };
   }
   if (!text.trim()) throw new AppError("AI provider returned an empty response", 502, "AI_EMPTY_RESPONSE");
   return { text: text.trim(), provider, model };

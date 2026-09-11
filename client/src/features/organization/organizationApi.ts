@@ -9,6 +9,8 @@ export const organizationApi = {
   updateDesignation: (id: string, body: Record<string, unknown>) => api.patch(`/api/v1/organization/designations/${id}`, body),
   updateDesignationSkills: (id: string, body: { skills: DesignationSkillItem[]; catalogRole?: string }) => api.put<{ item: NamedEntity }>(`/api/v1/organization/designations/${id}/skills`, body),
   getSkillCatalogForRole: (role: string) => api.get<{ items: DesignationSkillItem[] }>(`/api/v1/organization/skill-catalog/${encodeURIComponent(role)}`),
+  generateSkillsWithAi: (body: { designationTitle: string; department?: string; level?: string; jobDescription?: string; skillCount?: number }) =>
+    api.post<{ skills: DesignationSkillItem[]; count: number }>("/api/v1/organization/generate-skills", body),
 };
 
 

@@ -26,3 +26,14 @@ export const updateDesignationSkillsSchema = z.object({
     catalogRole: z.string().trim().max(120).optional(),
   }),
 });
+
+export const generateSkillsSchema = z.object({
+  body: z.object({
+    designationTitle: z.string().trim().min(1).max(120),
+    department: z.string().trim().max(120).optional(),
+    level: z.string().trim().max(50).optional(),
+    jobDescription: z.string().trim().max(25000).optional(),
+    skillCount: z.number().int().min(3).max(20).optional(),
+  }),
+});
+
