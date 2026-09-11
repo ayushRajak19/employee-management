@@ -88,7 +88,7 @@ export const LandingPage = () => {
     <a className="sr-only focus:not-sr-only" href="#main-content">Skip to content</a>
     <header className="lp-nav">
       <Link to="/welcome" className="lp-brand" aria-label="MobiusEMS home"><img src={logo} alt=""/><span>MobiusEMS</span><small>BY MOBIUS BLOOM</small></Link>
-      <nav aria-label="Main navigation"><Link to="/solutions">All capabilities</Link><a href="#enterprise-engine">Enterprise engine</a><Link to="/solutions/employee-360">Employee 360</Link><Link to="/solutions/mobius-ems-ai">MobiusEMS AI</Link><Link to="/solutions/voice-task-assistant">Voice control</Link></nav>
+      <nav aria-label="Main navigation"><a href="#features">Features</a><a href="#enterprise-engine">Enterprise engine</a><Link to="/solutions/employee-360">Employee 360</Link><Link to="/solutions/mobius-ems-ai">MobiusEMS AI</Link><Link to="/solutions/voice-task-assistant">Voice control</Link></nav>
       <div className="lp-nav-actions"><Link to={user ? "/" : "/login"}>{user ? "Workspace" : "Sign in"}</Link><Link className="lp-button lp-button-dark" to={destination}>Start building <ArrowRight size={16}/></Link></div>
     </header>
 
@@ -383,6 +383,20 @@ export const LandingPage = () => {
               </div>
             </div>
           </article>
+        </div>
+      </section>
+
+      <section className="lp-feature-atlas" id="features">
+        <div className="lp-feature-atlas-head"><span className="lp-section-number">05</span><div><p className="lp-kicker">EVERY FEATURE HAS A JOB</p><h2>One platform.<br/><em>Zero mystery.</em></h2></div><p>Here is exactly what each part of MobiusEMS does, who it is for, and what it helps your company decide next.</p></div>
+        <div className="lp-feature-atlas-grid">
+          {[
+            ["People 360", "A single source of truth for every employee, team, role, location, and reporting line.", "HR & leadership", "Know who is here, who owns what, and where support is needed."],
+            ["Work & Task Tracker", "Turn goals into assigned work with owners, due dates, status, priorities, and review queues.", "Every team", "See what is moving, what is late, and what needs a decision."],
+            ["Performance & Contributions", "Connect completed work and verified evidence to fair, review-ready growth conversations.", "Managers", "Replace memory-based reviews with a clear record of impact."],
+            ["Onboarding & Development", "Guide new hires through structured steps, then turn skill gaps into focused learning paths.", "People ops", "Move from first day to next capability without dropped handoffs."],
+            ["Governance & Security", "Control access by tenant, role, and section while keeping a durable audit trail of sensitive actions.", "Admins & compliance", "Scale confidently without losing accountability."],
+            ["Email Automation", "Create repeatable, permission-aware messages for onboarding, reminders, updates, and workflows.", "Operations", "Keep routine communication moving while people focus on judgment."],
+          ].map(([title, description, audience, outcome], index) => <article key={title}><div className="lp-feature-atlas-index">0{index + 1}</div><div><span>{audience}</span><h3>{title}</h3><p>{description}</p><strong>→ {outcome}</strong></div></article>)}
         </div>
       </section>
 

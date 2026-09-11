@@ -1,4 +1,8 @@
-import type { Request, Response } from "express"; import * as service from "../services/skillService.js"; import { AppError } from "../utils/AppError.js";
+import type { Request, Response } from "express";
+import * as service from "../services/skillService.js";
+import { generateAssessmentQuestions } from "../services/assessmentGeneratorService.js";
+import { AppError } from "../utils/AppError.js";
+
 export const list = async (_request: Request, response: Response): Promise<void> => { response.json({ success: true, message: "Skills retrieved", data: { items: await service.listSkills() } }); };
 export const create = async (request: Request, response: Response): Promise<void> => { response.status(201).json({ success: true, message: "Skill created", data: { item: await service.createSkill(request.body) } }); };
 export const claim = async (request: Request, response: Response): Promise<void> => { response.status(201).json({ success: true, message: "Skill submitted for verification", data: { item: await service.claimSkill(request.user!.id, request.body) } }); };
@@ -9,6 +13,64 @@ export const pending = async (_request: Request, response: Response): Promise<vo
 export const verify = async (request: Request, response: Response): Promise<void> => { response.json({ success: true, message: "Skill verification recorded", data: { item: await service.verify(String(request.params.id), request.user!.id, request.body, { ip: request.ip, userAgent: request.get("user-agent") }) } }); };
 export const designationSkills = async (request: Request, response: Response): Promise<void> => { response.json({ success: true, message: "Role skill requirements updated", data: { item: await service.setDesignationSkills(String(request.params.id), request.body.requiredSkills) } }); };
 export const heatmap = async (_request: Request, response: Response): Promise<void> => { response.json({ success: true, message: "Skill heatmap retrieved", data: { items: await service.heatmap() } }); };
+
 export const assessments = async (request: Request, response: Response): Promise<void> => { response.json({ success: true, message: "Assessments retrieved", data: { items: await service.listAssessments({ id: request.user!.id, role: request.user!.role }) } }); };
 export const assignAssessment = async (request: Request, response: Response): Promise<void> => { response.status(201).json({ success: true, message: "Assessment assigned", data: { item: await service.assignAssessment(request.body, request.user!.id) } }); };
 export const recordAssessmentResult = async (request: Request, response: Response): Promise<void> => { response.json({ success: true, message: "Assessment result recorded", data: { item: await service.recordAssessmentResult(String(request.params.id), request.body, request.user!.id) } }); };
+
+export const generateAssessment = async (request: Request, response: Response): Promise<void> => {
+  const result = await generateAssessmentQuestions(request.body);
+  response.json({
+    success: true,
+    message: "Assessment questions generated successfully",
+    data: result
+  });
+};
+
+export const getAssessment = async (request: Request, response: Response): Promise<void> => {
+  const item = await service.getAssessmentById(String(request.params.id), {
+    id: request.user!.id,
+    role: request.user!.role
+  });
+  response.json({
+    success: true,
+    message: "Assessment details retrieved",
+    data: { item }
+  });
+};
+
+export const startAssessment = async (request: Request, response: Response): Promise<void> => {
+  const item = await service.startAssessment(String(request.params.id), {
+    id: request.user!.id,
+    role: request.user!.role
+  });
+  response.json({
+    success: true,
+    message: "Assessment started",
+    data: { item }
+  });
+};
+
+export const submitAssessment = async (request: Request, response: Response): Promise<void> => {
+  const item = await service.submitAssessment(String(request.params.id), {
+    id: request.user!.id,
+    role: request.user!.role
+  }, request.body);
+  response.json({
+    success: true,
+    message: "Assessment submitted and evaluated",
+    data: { item }
+  });
+};
+
+export const deleteAssessment = async (request: Request, response: Response): Promise<void> => {
+  const result = await service.deleteAssessment(String(request.params.id), {
+    id: request.user!.id,
+    role: request.user!.role
+  });
+  response.json({
+    success: true,
+    message: result.message
+  });
+};
+

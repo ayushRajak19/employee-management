@@ -120,6 +120,266 @@ export const heatmap = async () => {
   const activeEmployeeIds = await Employee.distinct("_id", { isActive: true });
   return EmployeeSkill.find({ employee: { $in: activeEmployeeIds }, verificationStatus: { $in: ["VERIFIED","EXPERT_VERIFIED"] }, isActive: true }).populate("employee", "firstName lastName employeeId department team").populate("skill", "name category").select("employee skill verifiedRating verificationStatus").lean();
 };
-export const assignAssessment = async (input: { name: string; skill: string; difficulty: AssessmentDocument["difficulty"]; maximumScore: number; passingScore: number; timeLimitMinutes: number; assignedEmployee: string }, assignedBy: string) => { if (!await Employee.exists({ _id: input.assignedEmployee, isActive: true })) throw new AppError("Employee not found", 404); if (!await Skill.exists({ _id: input.skill, isActive: true })) throw new AppError("Skill not found", 404); return Assessment.create({ ...input, assignedBy }); };
-export const listAssessments = async (viewer: { id: string; role: string }) => { const filter: Record<string, unknown> = {}; if (viewer.role === "EMPLOYEE") { const employee = await Employee.findOne({ user: viewer.id }).select("_id"); filter.assignedEmployee = employee?._id; } return Assessment.find(filter).populate("skill", "name category").populate("assignedEmployee", "firstName lastName employeeId").populate("assignedBy", "name").sort({ createdAt: -1 }).lean(); };
-export const recordAssessmentResult = async (assessmentId: string, input: { attemptDate: Date; score: number; notes?: string }, evaluator: string) => { const assessment = await Assessment.findById(assessmentId); if (!assessment) throw new AppError("Assessment not found", 404); if (input.score > assessment.maximumScore) throw new AppError("Score cannot exceed maximum score", 422); const result = input.score >= assessment.passingScore ? "PASSED" : "FAILED"; assessment.attemptDate = input.attemptDate; assessment.score = input.score; assessment.result = result; await assessment.save(); return AssessmentResult.create({ assessment: assessment._id, employee: assessment.assignedEmployee, attemptDate: input.attemptDate, score: input.score, result, evaluatedBy: evaluator, notes: input.notes }); };
+export interface AssignAssessmentInput {
+  name: string;
+  skill?: string;
+  skillName?: string;
+  jobDescription?: string;
+  difficulty: AssessmentDocument["difficulty"];
+  maximumScore?: number;
+  passingScore?: number;
+  timeLimitMinutes?: number;
+  assignedEmployee?: string;
+  assignedEmployees?: string[];
+  questions?: AssessmentDocument["questions"];
+}
+
+export const assignAssessment = async (input: AssignAssessmentInput, assignedBy: string) => {
+  const employeeIds = input.assignedEmployees && input.assignedEmployees.length > 0
+    ? input.assignedEmployees
+    : input.assignedEmployee ? [input.assignedEmployee] : [];
+
+  if (employeeIds.length === 0) {
+    throw new AppError("At least one employee must be selected for assignment", 400);
+  }
+
+  if (input.skill && !await Skill.exists({ _id: input.skill, isActive: true })) {
+    throw new AppError("Skill not found", 404);
+  }
+
+  const questions = (input.questions || []).map((q, idx) => ({
+    id: q.id || `q-${Date.now()}-${idx + 1}`,
+    question: q.question,
+    type: q.type || "MCQ",
+    options: q.options || [],
+    correctOptionIndex: typeof q.correctOptionIndex === "number" ? q.correctOptionIndex : 0,
+    explanation: q.explanation || "",
+    points: q.points || 10
+  }));
+
+  const calcMaxScore = questions.length > 0
+    ? questions.reduce((sum, q) => sum + (q.points || 10), 0)
+    : (input.maximumScore || 100);
+
+  const passingScore = typeof input.passingScore === "number"
+    ? input.passingScore
+    : 70;
+
+  const timeLimitMinutes = Number(input.timeLimitMinutes) || 30;
+
+  const createdDocs = await Promise.all(
+    employeeIds.map(async (empId) => {
+      const exists = await Employee.exists({ _id: empId, isActive: true });
+      if (!exists) throw new AppError(`Employee ${empId} not found`, 404);
+
+      return Assessment.create({
+        name: input.name,
+        skill: input.skill || undefined,
+        skillName: input.skillName || undefined,
+        jobDescription: input.jobDescription || undefined,
+        difficulty: input.difficulty || "INTERMEDIATE",
+        maximumScore: calcMaxScore,
+        passingScore,
+        timeLimitMinutes,
+        assignedEmployee: empId,
+        assignedBy,
+        status: "PENDING",
+        questions,
+        result: "PENDING"
+      });
+    })
+  );
+
+  return createdDocs.length === 1 ? createdDocs[0] : createdDocs;
+};
+
+export const listAssessments = async (viewer: { id: string; role: string }) => {
+  const filter: Record<string, unknown> = {};
+  const isEmployee = viewer.role === "EMPLOYEE";
+
+  if (isEmployee) {
+    const employee = await Employee.findOne({ user: viewer.id }).select("_id");
+    filter.assignedEmployee = employee?._id;
+  }
+
+  const items = await Assessment.find(filter)
+    .populate("skill", "name category")
+    .populate({
+      path: "assignedEmployee",
+      select: "firstName lastName employeeId department designation",
+      populate: [
+        { path: "department", select: "name" },
+        { path: "designation", select: "name" }
+      ]
+    })
+    .sort({ createdAt: -1 })
+    .lean();
+
+  return items.map((item) => {
+    const isCompleted = item.status === "COMPLETED";
+    if (isEmployee && !isCompleted && item.questions) {
+      return {
+        ...item,
+        questions: item.questions.map((q: any) => ({
+          id: q.id,
+          question: q.question,
+          type: q.type,
+          options: q.options,
+          points: q.points
+        }))
+      };
+    }
+    return item;
+  });
+};
+
+export const getAssessmentById = async (id: string, viewer: { id: string; role: string }) => {
+  const assessment = await Assessment.findById(id)
+    .populate("skill", "name category")
+    .populate({
+      path: "assignedEmployee",
+      select: "firstName lastName employeeId department designation user",
+      populate: [
+        { path: "department", select: "name" },
+        { path: "designation", select: "name" }
+      ]
+    })
+    .lean();
+
+  if (!assessment) throw new AppError("Assessment not found", 404);
+
+  const assignedEmp = assessment.assignedEmployee as any;
+  const isOwner = assignedEmp?.user?.toString() === viewer.id;
+
+  if (viewer.role === "EMPLOYEE" && !isOwner) {
+    throw new AppError("Access denied to this assessment", 403);
+  }
+
+  if (viewer.role === "EMPLOYEE" && assessment.status !== "COMPLETED" && assessment.questions) {
+    return {
+      ...assessment,
+      questions: assessment.questions.map((q: any) => ({
+        id: q.id,
+        question: q.question,
+        type: q.type,
+        options: q.options,
+        points: q.points
+      }))
+    };
+  }
+
+  return assessment;
+};
+
+export const startAssessment = async (id: string, viewer: { id: string; role: string }) => {
+  const assessment = await Assessment.findById(id).populate("assignedEmployee", "user");
+  if (!assessment) throw new AppError("Assessment not found", 404);
+
+  const assignedEmp = assessment.assignedEmployee as any;
+  if (viewer.role === "EMPLOYEE" && assignedEmp?.user?.toString() !== viewer.id) {
+    throw new AppError("Access denied to this assessment", 403);
+  }
+
+  if (assessment.status === "COMPLETED") {
+    throw new AppError("This assessment has already been completed.", 400);
+  }
+
+  if (assessment.status === "PENDING") {
+    assessment.status = "IN_PROGRESS";
+    assessment.startedAt = new Date();
+    await assessment.save();
+  }
+
+  return getAssessmentById(id, viewer);
+};
+
+export const submitAssessment = async (
+  id: string,
+  viewer: { id: string; role: string },
+  input: { answers: { questionId: string; selectedOption?: number; textAnswer?: string }[] }
+) => {
+  const assessment = await Assessment.findById(id).populate("assignedEmployee", "user");
+  if (!assessment) throw new AppError("Assessment not found", 404);
+
+  const assignedEmp = assessment.assignedEmployee as any;
+  if (viewer.role === "EMPLOYEE" && assignedEmp?.user?.toString() !== viewer.id) {
+    throw new AppError("Access denied to this assessment", 403);
+  }
+
+  if (assessment.status === "COMPLETED") {
+    throw new AppError("This assessment has already been submitted and completed.", 400);
+  }
+
+  const answerMap = new Map((input.answers || []).map((a) => [a.questionId, a]));
+  let totalEarnedPoints = 0;
+  const questions = assessment.questions || [];
+  const maxPoints = questions.length > 0
+    ? questions.reduce((sum, q) => sum + (q.points || 10), 0)
+    : (assessment.maximumScore || 100);
+
+  const evaluatedAnswers = questions.map((q) => {
+    const userAns = answerMap.get(q.id);
+    const selectedOption = userAns?.selectedOption;
+    const isCorrect = typeof q.correctOptionIndex === "number" && selectedOption === q.correctOptionIndex;
+    const earnedPoints = isCorrect ? (q.points || 10) : 0;
+    totalEarnedPoints += earnedPoints;
+
+    return {
+      questionId: q.id,
+      selectedOption,
+      textAnswer: userAns?.textAnswer,
+      isCorrect,
+      earnedPoints
+    };
+  });
+
+  const percentage = maxPoints > 0 ? Math.round((totalEarnedPoints / maxPoints) * 100) : 0;
+  const passingScore = assessment.passingScore <= 100
+    ? assessment.passingScore
+    : Math.round((assessment.passingScore / (assessment.maximumScore || 100)) * 100);
+  const result = percentage >= passingScore ? "PASSED" : "FAILED";
+
+  assessment.answers = evaluatedAnswers as any;
+  assessment.score = totalEarnedPoints;
+  assessment.maximumScore = maxPoints;
+  assessment.percentage = percentage;
+  assessment.result = result;
+  assessment.status = "COMPLETED";
+  assessment.completedAt = new Date();
+  assessment.attemptDate = new Date();
+  await assessment.save();
+
+  await AssessmentResult.create({
+    assessment: assessment._id,
+    employee: (assignedEmp?._id || assessment.assignedEmployee) as any,
+    attemptDate: new Date(),
+    score: totalEarnedPoints,
+    result,
+    evaluatedBy: viewer.id as any,
+    notes: `Assessment submission: ${totalEarnedPoints}/${maxPoints} points (${percentage}%). Status: ${result}.`
+  });
+
+  return getAssessmentById(id, viewer);
+};
+
+export const deleteAssessment = async (id: string, viewer: { id: string; role: string }) => {
+  const assessment = await Assessment.findById(id);
+  if (!assessment) throw new AppError("Assessment not found", 404);
+  await AssessmentResult.deleteMany({ assessment: assessment._id });
+  await Assessment.findByIdAndDelete(id);
+  return { success: true, message: "Assessment deleted successfully" };
+};
+
+export const recordAssessmentResult = async (assessmentId: string, input: { attemptDate: Date; score: number; notes?: string }, evaluator: string) => {
+  const assessment = await Assessment.findById(assessmentId);
+  if (!assessment) throw new AppError("Assessment not found", 404);
+  if (input.score > assessment.maximumScore) throw new AppError("Score cannot exceed maximum score", 422);
+  const result = input.score >= assessment.passingScore ? "PASSED" : "FAILED";
+  assessment.attemptDate = input.attemptDate;
+  assessment.score = input.score;
+  assessment.percentage = Math.round((input.score / assessment.maximumScore) * 100);
+  assessment.result = result;
+  assessment.status = "COMPLETED";
+  await assessment.save();
+  return AssessmentResult.create({ assessment: assessment._id, employee: assessment.assignedEmployee, attemptDate: input.attemptDate, score: input.score, result, evaluatedBy: evaluator as any, notes: input.notes });
+};
