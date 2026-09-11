@@ -327,6 +327,72 @@ export const DesignationSkillsModal = ({
           </div>
         </div>
 
+        {/* Compact Single-Row Skills Navigation Subheader (Outside scroll area, strictly 1 row, never obscures cards) */}
+        {targetSkills.length > 0 && (
+          <div className="border-b bg-slate-50/95 px-6 py-2 flex items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="flex items-center gap-1.5 font-bold text-slate-700">
+                <Award size={14} className="text-brand-600" />
+                <span>Skills ({targetSkills.length}):</span>
+              </span>
+              <select
+                className="h-7 max-w-[200px] rounded-lg border border-slate-300 bg-white px-2 text-xs font-semibold text-slate-700 focus:border-brand-500 focus:outline-hidden"
+                onChange={(e) => {
+                  const idx = Number(e.target.value);
+                  if (!isNaN(idx)) {
+                    const el = document.getElementById(`skill-card-${idx}`);
+                    el?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }
+                }}
+                defaultValue=""
+              >
+                <option value="" disabled>Jump to skill...</option>
+                {targetSkills.map((s, idx) => (
+                  <option key={s.id || idx} value={idx}>
+                    #{idx + 1}: {s.name ? (s.name.length > 25 ? s.name.substring(0, 25) + "..." : s.name) : `Skill ${idx + 1}`}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Horizontal scrollable mini-number badges (strictly 1 line, no wrapping) */}
+            <div className="flex items-center gap-1 overflow-x-auto py-0.5 max-w-xl scrollbar-thin">
+              {targetSkills.map((s, idx) => (
+                <button
+                  key={s.id || idx}
+                  type="button"
+                  onClick={() => {
+                    const el = document.getElementById(`skill-card-${idx}`);
+                    el?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                  className="size-6 shrink-0 rounded-md border border-slate-200 bg-white text-[11px] font-bold text-slate-700 hover:border-brand-500 hover:bg-brand-600 hover:text-white transition shadow-2xs"
+                  title={`Jump to Skill #${idx + 1}: ${s.name || "Untitled"}`}
+                >
+                  {idx + 1}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm(`Are you sure you want to remove all ${targetSkills.length} skills?`)) {
+                    setTargetSkills([]);
+                  }
+                }}
+                className="text-[11px] font-medium text-slate-400 hover:text-red-600 transition"
+                title="Clear all skills"
+              >
+                Clear all
+              </button>
+              <span className="rounded-full bg-brand-600 px-2.5 py-0.5 text-[11px] font-bold text-white shadow-2xs hidden md:inline-block">
+                {targetSkills.length} Required
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Scrollable Skills List & AI Builder */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {/* AI Skill Builder Panel */}
@@ -480,41 +546,11 @@ export const DesignationSkillsModal = ({
             </div>
           ) : (
             <>
-              {/* Sticky Numbered Skills Quick Navigation Strip */}
-              <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-brand-200 bg-brand-50/95 p-3 backdrop-blur-sm shadow-xs">
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="text-xs font-bold text-slate-800 mr-1 flex items-center gap-1">
-                    <Award size={14} className="text-brand-600" />
-                    Skills ({targetSkills.length}):
-                  </span>
-                  {targetSkills.map((skill, idx) => (
-                    <button
-                      key={skill.id || idx}
-                      type="button"
-                      onClick={() => {
-                        const el = document.getElementById(`skill-card-${idx}`);
-                        el?.scrollIntoView({ behavior: "smooth", block: "center" });
-                      }}
-                      className="group inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-2xs hover:border-brand-500 hover:bg-brand-600 hover:text-white transition"
-                      title={`Jump to Skill #${idx + 1}: ${skill.name || "Untitled"}`}
-                    >
-                      <span className="grid size-4 place-items-center rounded-full bg-brand-100 text-[10px] font-bold text-brand-700 group-hover:bg-white group-hover:text-brand-700">
-                        {idx + 1}
-                      </span>
-                      <span className="max-w-[110px] truncate">{skill.name || `Skill ${idx + 1}`}</span>
-                    </button>
-                  ))}
-                </div>
-                <span className="rounded-full bg-brand-600 px-2.5 py-1 text-[11px] font-bold text-white shadow-2xs">
-                  {targetSkills.length} Required Skills
-                </span>
-              </div>
-
               {targetSkills.map((skill, index) => (
                 <div
                   id={`skill-card-${index}`}
                   key={skill.id || index}
-                  className="group relative rounded-2xl border border-slate-200 bg-white p-5 shadow-soft transition hover:border-brand-200"
+                  className="group relative scroll-mt-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-soft transition hover:border-brand-200"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-center gap-2.5">
