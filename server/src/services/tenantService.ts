@@ -75,14 +75,18 @@ export const createTenant = async (input: CreateTenantInput, actorId?: string) =
 };
 
 export const platformAnalytics = async () => {
-  const [tenants, usersByTenant, monthlyOrganizations, monthlyUsers] = await Promise.all([
+  const [tenants, usersByTenant, employeesByTenant, adminsByTenant, monthlyOrganizations, monthlyUsers] = await Promise.all([
     Tenant.find().select(publicFields).sort({ createdAt: -1 }).lean(),
     User.collection.aggregate<{ _id: unknown; count: number }>([{ $match: { isActive: true } }, { $group: { _id: "$tenantId", count: { $sum: 1 } } }]).toArray(),
+    User.collection.aggregate<{ _id: unknown; count: number }>([{ $match: { isActive: true, employee: { $exists: true } } }, { $group: { _id: "$tenantId", count: { $sum: 1 } } }]).toArray(),
+    User.collection.aggregate<{ _id: unknown; admins: { name: string; email: string }[] }>([{ $match: { isActive: true } }, { $lookup: { from: "roles", localField: "role", foreignField: "_id", as: "role" } }, { $unwind: "$role" }, { $match: { "role.name": "SUPER_ADMIN" } }, { $group: { _id: "$tenantId", admins: { $push: { name: "$name", email: "$email" } } } }]).toArray(),
     Tenant.aggregate<{ _id: string; count: number }>([{ $group: { _id: { $dateToString: { format: "%Y-%m", date: "$createdAt" } }, count: { $sum: 1 } } }, { $sort: { _id: 1 } }]),
     User.collection.aggregate<{ _id: string; count: number }>([{ $match: { isActive: true } }, { $group: { _id: { $dateToString: { format: "%Y-%m", date: "$createdAt" } }, count: { $sum: 1 } } }, { $sort: { _id: 1 } }]).toArray(),
   ]);
   const counts = new Map(usersByTenant.map((item) => [String(item._id), item.count]));
-  const items = tenants.map((tenant) => ({ ...tenant, userCount: counts.get(String(tenant._id)) ?? 0 }));
+  const employeeCounts = new Map(employeesByTenant.map((item) => [String(item._id), item.count]));
+  const admins = new Map(adminsByTenant.map((item) => [String(item._id), item.admins.slice(0, 10)]));
+  const items = tenants.map((tenant) => ({ ...tenant, userCount: counts.get(String(tenant._id)) ?? 0, employeeCount: employeeCounts.get(String(tenant._id)) ?? 0, adminUsers: admins.get(String(tenant._id)) ?? [] }));
   return {
     summary: { organizations: items.length, activeOrganizations: items.filter((item) => item.status === "ACTIVE").length, suspendedOrganizations: items.filter((item) => item.status === "SUSPENDED").length, users: items.reduce((sum, item) => sum + item.userCount, 0) },
     growth: [...new Set([...monthlyOrganizations.map((item) => item._id), ...monthlyUsers.map((item) => item._id)])].sort().map((month) => ({ month, organizations: monthlyOrganizations.find((item) => item._id === month)?.count ?? 0, users: monthlyUsers.find((item) => item._id === month)?.count ?? 0 })),

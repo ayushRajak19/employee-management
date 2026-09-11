@@ -14,6 +14,8 @@ export interface TenantItem {
   referralSource?: string;
   primaryUseCase?: string;
   userCount?: number;
+  employeeCount?: number;
+  adminUsers?: { name: string; email: string }[];
 }
 
 export interface CreateTenantInput {
