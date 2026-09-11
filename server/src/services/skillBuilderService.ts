@@ -68,7 +68,7 @@ export const generateDesignationSkills = async (input: GenerateSkillsInput): Pro
     throw new AppError("Designation title is required to generate skills", 400, "MISSING_DESIGNATION_TITLE");
   }
 
-  const count = Math.max(3, Math.min(20, Number(input.skillCount) || 8));
+  const count = Math.max(1, Math.min(50, Number(input.skillCount) || 8));
 
   const system = `You are an expert workforce competency architect and HR assessment specialist.
 Generate a structured, rigorous list of core skills and competency assessments tailored to the specified job designation and job description (JD).
@@ -92,11 +92,12 @@ ${input.jobDescription?.trim() || `Core responsibilities, delivery standards, an
 Generate exactly ${count} skills with practical assessment questions.`;
 
   try {
+    const maxTokens = Math.max(2000, Math.min(6000, count * 220));
     const result = await complete({
       system,
       user,
       temperature: 0.2,
-      maxTokens: 2500
+      maxTokens
     });
 
     const parsed = parseJson(result.text);

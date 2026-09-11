@@ -33,7 +33,7 @@ export const generateSkillsSchema = z.object({
     department: z.string().trim().max(120).optional(),
     level: z.string().trim().max(50).optional(),
     jobDescription: z.string().trim().max(25000).optional(),
-    skillCount: z.number().int().min(3).max(20).optional(),
+    skillCount: z.number().int().min(1).max(50).optional(),
   }),
 });
 

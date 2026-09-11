@@ -77,12 +77,13 @@ export const DesignationSkillsModal = ({
     try {
       setIsGeneratingAi(true);
       setAiFeedback(null);
+      const requestedCount = Math.max(1, Math.min(50, Number(aiSkillCount) || 8));
       const res = await organizationApi.generateSkillsWithAi({
         designationTitle: activeDesignation.name,
         department: activeDesignation.department?.name,
         level: aiLevel,
         jobDescription: aiJd.trim() || undefined,
-        skillCount: aiSkillCount,
+        skillCount: requestedCount,
       });
 
       const generated: DesignationSkillItem[] = (res.skills || []).map((s) => ({
@@ -264,27 +265,25 @@ export const DesignationSkillsModal = ({
                 {showAiBuilder ? "Hide AI Skill Builder" : "✨ AI Skill Builder (from JD)"}
               </Button>
 
-              {/* DIRECT NUMBER SKILL BUTTON SELECTOR */}
-              <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-2xs">
-                <span className="px-2 text-[11px] font-semibold text-slate-500">Skills to Generate:</span>
-                {[4, 6, 8, 10, 12].map((num) => (
-                  <button
-                    key={num}
-                    type="button"
-                    onClick={() => {
-                      setAiSkillCount(num);
-                      setShowAiBuilder(true);
-                    }}
-                    className={`h-7 min-w-7 rounded-lg px-2 text-xs font-bold transition ${
-                      aiSkillCount === num
-                        ? "bg-brand-600 text-white shadow-xs"
-                        : "bg-transparent text-slate-600 hover:bg-slate-100"
-                    }`}
-                    title={`Generate ${num} skills with AI`}
-                  >
-                    {num}
-                  </button>
-                ))}
+              {/* EDITABLE NUMBER FIELD FOR SKILLS */}
+              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-1 shadow-2xs">
+                <label htmlFor="ai-skill-count-toolbar" className="text-xs font-semibold text-slate-600 whitespace-nowrap">
+                  Skills to Generate:
+                </label>
+                <input
+                  id="ai-skill-count-toolbar"
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={aiSkillCount || ""}
+                  onChange={(e) => {
+                    const val = e.target.value === "" ? 0 : Number(e.target.value);
+                    setAiSkillCount(val);
+                  }}
+                  className="h-7 w-16 rounded-lg border border-slate-300 bg-slate-50 px-2 text-center text-xs font-bold text-slate-800 focus:border-brand-500 focus:bg-white focus:outline-hidden"
+                  placeholder="8"
+                />
+                <span className="text-[11px] font-medium text-slate-400">skills</span>
               </div>
 
               <div className="h-4 w-px bg-slate-200 mx-1 hidden sm:block" />
@@ -375,19 +374,23 @@ export const DesignationSkillsModal = ({
 
                 <div>
                   <label className="block text-xs font-medium text-slate-600">
-                    Number of Skills
+                    Number of Skills to Generate (1–50)
                   </label>
-                  <select
-                    className="mt-1 h-9 w-full rounded-xl border bg-white px-3 text-xs text-slate-700 shadow-xs"
-                    value={aiSkillCount}
-                    onChange={(e) => setAiSkillCount(Number(e.target.value))}
-                  >
-                    <option value={4}>4 Skills (Quick Overview)</option>
-                    <option value={6}>6 Skills (Focused Core)</option>
-                    <option value={8}>8 Skills (Standard Assessment)</option>
-                    <option value={10}>10 Skills (In-depth Role Spec)</option>
-                    <option value={12}>12 Skills (Full Spectrum)</option>
-                  </select>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={50}
+                    value={aiSkillCount || ""}
+                    onChange={(e) => {
+                      const val = e.target.value === "" ? 0 : Number(e.target.value);
+                      setAiSkillCount(val);
+                    }}
+                    placeholder="Enter custom count (e.g. 5, 8, 15, 25, 43)..."
+                    className="mt-1 h-9 w-full text-xs font-semibold"
+                  />
+                  <span className="mt-1 block text-[10px] text-slate-400">
+                    Type any custom number of skills (1 to 50).
+                  </span>
                 </div>
 
                 <div>
@@ -441,7 +444,7 @@ export const DesignationSkillsModal = ({
                   className="h-9 px-4 text-xs bg-brand-600 hover:bg-brand-700 text-white font-medium shadow-sm"
                 >
                   <Sparkles size={13} className={isGeneratingAi ? "mr-1.5 animate-spin text-amber-300" : "mr-1.5 text-amber-300"} />
-                  {isGeneratingAi ? "Analyzing JD & Generating Skills..." : "Generate Skills from JD"}
+                  {isGeneratingAi ? `Analyzing JD & Generating ${aiSkillCount || 8} Skills...` : `Generate ${aiSkillCount || 8} Skills from JD`}
                 </Button>
               </div>
             </div>
