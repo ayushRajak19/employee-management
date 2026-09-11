@@ -5,7 +5,7 @@ import type { CapabilityName, PermissionName, RoleName, SectionPermissionName } 
 import {
   Award, BarChart3, Bot, BrainCircuit, BriefcaseBusiness, Building2, CalendarCheck2,
   ChevronLeft, CircleGauge, FileText, GraduationCap, ListTodo, LogOut, Menu,
-  MailPlus, MapPinned, Route, ShieldCheck, Sparkles, Target, TrendingUp, UserCog, UserRound, Users, X,
+  MailPlus, MapPinned, Route, ShieldCheck, Sparkles, Target, TrendingUp, UserCog, UserPlus, UserRound, Users, X,
 } from "lucide-react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { HeaderSearch } from "@/components/HeaderSearch";
@@ -17,7 +17,7 @@ import { cn } from "@/lib/cn";
 
 type NavItem = {
   label: string;
-  icon: ComponentType<{ size?: number }>;
+  icon: ComponentType<{ size?: number; className?: string }>;
   path: string;
   roles?: RoleName[];
   permission?: PermissionName;
@@ -30,77 +30,74 @@ type NavItem = {
 const superAdminRole: RoleName[] = ["SUPER_ADMIN"];
 
 const groups: { label: string; items: NavItem[] }[] = [
-  { label: "Overview", items: [
-    { label: "Dashboard", icon: CircleGauge, path: "/", section: "section.dashboard" },
-  ] },
   {
-    label: "People operations", items: [
-      { label: "Attendance", icon: CalendarCheck2, path: "/attendance", section: "section.attendance" },
-      { label: "Leave & recognition", icon: Users, path: "/people-ops", section: "section.people_ops" },
+    label: "Workspace",
+    items: [
+      { label: "Dashboard", icon: CircleGauge, path: "/", section: "section.dashboard" },
+      { label: "My profile", icon: UserRound, path: "/me", section: "section.profile" },
+      { label: "AI Workspace", icon: Bot, path: "/ai-workspace", section: "section.ai_workspace" },
     ],
   },
-  { label: "My workspace", items: [
-    { label: "AI Workspace", icon: Bot, path: "/ai-workspace", section: "section.ai_workspace" },
-    { label: "My profile", icon: UserRound, path: "/me", section: "section.profile" },
-  ] },
   {
-    label: "People", items: [
+    label: "People & HR",
+    items: [
       { label: "Employees", icon: Users, path: "/employees", section: "section.employees" },
       { label: "Organization", icon: Building2, path: "/organization", section: "section.organization" },
+      { label: "Attendance", icon: CalendarCheck2, path: "/attendance", section: "section.attendance" },
+      { label: "Leave & recognition", icon: Users, path: "/people-ops", section: "section.people_ops" },
       { label: "Employee map", icon: MapPinned, path: "/employee-map", permissions: ["employee_map.self", "employee_map.team", "employee_map.all"], section: "section.employee_map" },
     ],
   },
   {
-    label: "Sales setup", items: [
-      { label: "Territories (ownership)", icon: Route, path: "/sales/territories", permission: "sales.territory.view", capability: "SALES_MODULE", section: "section.sales" },
-      { label: "Sales employees", icon: Users, path: "/sales/employees", permissions: ["sales.view.team", "sales.view.all"], capability: "SALES_MODULE", section: "section.sales" },
+    label: "Talent acquisition",
+    items: [
+      { label: "Applicants", icon: UserPlus, path: "/applicants", section: "section.applicants" },
+      { label: "Resume library", icon: FileText, path: "/resumes", section: "section.resumes" },
+      { label: "Resume screener", icon: BrainCircuit, path: "/resume-screener", section: "section.resume_screener" },
     ],
   },
   {
-    label: "Sales workflow", items: [
+    label: "Performance & growth",
+    items: [
+      { label: "Goals & performance", icon: Target, path: "/performance", section: "section.performance" },
+      { label: "Skills", icon: Award, path: "/skills", section: "section.skills" },
+      { label: "AI Skill Builder", icon: Sparkles, path: "/skills/builder", section: "section.skills" },
+      { label: "Skill matrix", icon: BarChart3, path: "/skill-matrix", section: "section.skill_matrix" },
+      { label: "Assessments", icon: ShieldCheck, path: "/assessments", section: "section.assessments" },
+      { label: "Learning & training", icon: GraduationCap, path: "/development", section: "section.development" },
+      { label: "Contribution & support", icon: TrendingUp, path: "/contribution", section: "section.contribution" },
+    ],
+  },
+  {
+    label: "Work & projects",
+    items: [
+      { label: "Tasks & projects", icon: BriefcaseBusiness, path: "/work", section: "section.work" },
+      { label: "Task tracker", icon: ListTodo, path: "/task-tracker", section: "section.task_tracker" },
+    ],
+  },
+  {
+    label: "Sales & CRM",
+    items: [
       { label: "Sales dashboard", icon: TrendingUp, path: "/sales", permissions: ["sales.analytics.self", "sales.analytics.team", "sales.analytics.all"], capability: "SALES_MODULE", section: "section.sales" },
-      { label: "Country sales & map", icon: MapPinned, path: "/sales/geography", permissions: ["sales.map.self", "sales.map.team", "sales.map.all"], capability: "SALES_MODULE", section: "section.sales" },
       { label: "My target & performance", icon: Target, path: "/sales/my-target", permission: "sales.analytics.self", capability: "SALES_MODULE", section: "section.sales" },
       { label: "Leads", icon: Users, path: "/sales/leads", permissions: ["sales.view.self", "sales.view.team", "sales.view.all"], capability: "SALES_MODULE", section: "section.sales" },
       { label: "Customers", icon: UserRound, path: "/sales/customers", permission: "sales.customer.view", capability: "SALES_MODULE", section: "section.sales" },
       { label: "Targets", icon: Target, path: "/sales/targets", permission: "sales.target.view", capability: "SALES_MODULE", section: "section.sales" },
       { label: "Revenue", icon: TrendingUp, path: "/sales/revenue", permission: "sales.revenue.view", capability: "SALES_MODULE", section: "section.sales" },
+      { label: "Country sales & map", icon: MapPinned, path: "/sales/geography", permissions: ["sales.map.self", "sales.map.team", "sales.map.all"], capability: "SALES_MODULE", section: "section.sales" },
+      { label: "Territories (ownership)", icon: Route, path: "/sales/territories", permission: "sales.territory.view", capability: "SALES_MODULE", section: "section.sales" },
       { label: "Channel partners", icon: Building2, path: "/sales/channel-partners", permission: "sales.channel_partner.view", capability: "SALES_MODULE", section: "section.sales" },
+      { label: "Sales employees", icon: Users, path: "/sales/employees", permissions: ["sales.view.team", "sales.view.all"], capability: "SALES_MODULE", section: "section.sales" },
     ],
   },
   {
-    label: "Capability", items: [
-      { label: "Skills", icon: Award, path: "/skills", section: "section.skills" },
-      { label: "AI Skill Builder", icon: Sparkles, path: "/skills/builder", section: "section.skills" },
-      { label: "Skill matrix", icon: BarChart3, path: "/skill-matrix", section: "section.skill_matrix" },
-      { label: "Assessments", icon: ShieldCheck, path: "/assessments", section: "section.assessments" },
-    ],
-  },
-  { label: "Work", items: [
-    { label: "Tasks & projects", icon: BriefcaseBusiness, path: "/work", section: "section.work" },
-    { label: "Task tracker", icon: ListTodo, path: "/task-tracker", section: "section.task_tracker" },
-  ] },
-  {
-    label: "Performance", items: [
-      { label: "Goals & performance", icon: Target, path: "/performance", section: "section.performance" },
-      { label: "Contribution & support", icon: TrendingUp, path: "/contribution", section: "section.contribution" },
-    ],
-  },
-  { label: "Development", items: [{ label: "Learning & training", icon: GraduationCap, path: "/development", section: "section.development" }] },
-  {
-    label: "Records", items: [
-      { label: "Resume library", icon: FileText, path: "/resumes", section: "section.resumes" },
-      { label: "Applicants", icon: Users, path: "/applicants", section: "section.applicants" },
-      { label: "Resume screener", icon: BrainCircuit, path: "/resume-screener", section: "section.resume_screener" },
-      { label: "Documents & reports", icon: FileText, path: "/governance", section: "section.governance" },
-    ],
-  },
-  {
-    label: "Administration", items: [
+    label: "Administration",
+    items: [
       { label: "Administrators", icon: UserCog, path: "/administrators", roles: superAdminRole },
+      { label: "Documents & reports", icon: FileText, path: "/governance", section: "section.governance" },
+      { label: "Access & audit", icon: ShieldCheck, path: "/governance", permission: "audit.view", section: "section.governance" },
       { label: "Email automation", icon: MailPlus, path: "/email-automation", section: "section.email_automation" },
       { label: "Vendor organizations", icon: Building2, path: "/platform/tenants", platformOnly: true },
-      { label: "Access & audit", icon: ShieldCheck, path: "/governance", permission: "audit.view", section: "section.governance" },
     ],
   },
 ];
@@ -141,6 +138,24 @@ export const AppLayout = () => {
     }))
     .filter((group) => group.items.length);
 
+  const allVisiblePaths = visibleGroups.flatMap((g) => g.items.map((i) => i.path));
+
+  const isItemActive = (itemPath: string) => {
+    if (itemPath === "/") {
+      return location.pathname === "/";
+    }
+    if (location.pathname === itemPath) {
+      return true;
+    }
+    if (location.pathname.startsWith(`${itemPath}/`)) {
+      const hasMoreSpecific = allVisiblePaths.some(
+        (p) => p !== itemPath && p.startsWith(itemPath) && (location.pathname === p || location.pathname.startsWith(`${p}/`))
+      );
+      return !hasMoreSpecific;
+    }
+    return false;
+  };
+
   const sidebar = (
     <aside
       className={cn(
@@ -180,33 +195,40 @@ export const AppLayout = () => {
       </div>
 
       {/* Nav links */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="Primary navigation">
-        {visibleGroups.map((group) => (
-          <div className="mb-5" key={group.label}>
+      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-4" aria-label="Primary navigation">
+        {visibleGroups.map((group, groupIdx) => (
+          <div key={group.label} className={groupIdx > 0 ? "pt-1" : ""}>
             {!collapsed && (
-              <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-[.14em] text-slate-400">
+              <p className="mb-1.5 px-3 text-[10px] font-bold uppercase tracking-[.14em] text-slate-400">
                 {group.label}
               </p>
             )}
-            {group.items.map((item) => {
-              const Icon = item.icon;
-              const active = item.path === location.pathname;
-              return (
-                <button
-                  key={`${item.label}-${item.path}`}
-                  onClick={() => { navigate(item.path); setMobileOpen(false); }}
-                  title={item.label}
-                  className={cn(
-                    "mb-1 flex h-10 w-full items-center rounded-xl px-3 text-sm transition",
-                    active ? "bg-brand-50 font-medium text-brand-700" : "text-slate-600 hover:bg-slate-50",
-                    collapsed && "justify-center px-0"
-                  )}
-                >
-                  <Icon size={17} />
-                  {!collapsed && <span className="ml-3 truncate">{item.label}</span>}
-                </button>
-              );
-            })}
+            {collapsed && groupIdx > 0 && (
+              <div className="mx-auto my-2 h-px w-8 bg-slate-200" />
+            )}
+            <div className="space-y-0.5">
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                const active = isItemActive(item.path);
+                return (
+                  <button
+                    key={`${item.label}-${item.path}`}
+                    onClick={() => { navigate(item.path); setMobileOpen(false); }}
+                    title={item.label}
+                    className={cn(
+                      "flex h-9 w-full items-center rounded-xl px-3 text-xs font-medium transition",
+                      active
+                        ? "bg-brand-50 font-semibold text-brand-700 shadow-2xs"
+                        : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
+                      collapsed && "justify-center px-0"
+                    )}
+                  >
+                    <Icon size={16} className={cn("shrink-0", active ? "text-brand-600" : "text-slate-500")} />
+                    {!collapsed && <span className="ml-3 truncate">{item.label}</span>}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         ))}
       </nav>
