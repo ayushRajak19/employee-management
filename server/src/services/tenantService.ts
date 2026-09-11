@@ -4,7 +4,7 @@ import { Role } from "../models/Role.js";
 import { User } from "../models/User.js";
 import { AppError } from "../utils/AppError.js";
 import { runWithTenant } from "../tenancy/tenantContext.js";
-import { seedTenantOrganizationPresets, seedTenantRoles } from "../jobs/seedSuperAdmin.js";
+import { seedTenantRoles } from "../jobs/seedSuperAdmin.js";
 
 interface CreateTenantInput {
   name: string;
@@ -25,7 +25,6 @@ export const createTenant = async (input: CreateTenantInput, actorId?: string) =
 
   await runWithTenant(tenant._id, async () => {
     await seedTenantRoles();
-    await seedTenantOrganizationPresets();
     const role = await Role.findOne({ name: "SUPER_ADMIN" }).orFail();
     const existingAdmin = await User.findOne({ email: input.adminEmail }).select("+passwordHash");
     if (existingAdmin) {

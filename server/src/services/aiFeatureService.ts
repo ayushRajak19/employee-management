@@ -15,7 +15,7 @@ import { aiConfiguration, complete } from "./llmService.js";
 
 type Viewer = { id: string; name: string; role: RoleName };
 type SummaryKind = "CONTRIBUTION" | "PERFORMANCE";
-const managementRoles: RoleName[] = ["SUPER_ADMIN", "HR_ADMIN", "DEPARTMENT_HEAD", "MANAGER"];
+const managementRoles: RoleName[] = ["SUPER_ADMIN", "HR_ADMIN", "DEPARTMENT_HEAD", "MANAGER", "TEAM_LEAD"];
 const safeJson = (value: unknown) => JSON.stringify(value, null, 2).slice(0, 24_000);
 const month = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit" }).format(new Date());
 const indiaDate = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());

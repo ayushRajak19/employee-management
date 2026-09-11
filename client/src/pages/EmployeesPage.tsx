@@ -8,7 +8,8 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { employeeApi, type CreateEmployeeInput } from "@/features/employees/employeeApi";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { organizationApi } from "@/features/organization/organizationApi";
-const initial = (): CreateEmployeeInput => ({ firstName: "", lastName: "", officialEmail: "", phone: "", department: "", designation: "", dateOfJoining: new Date().toISOString().slice(0, 10), employmentType: "FULL_TIME", officeLocation: "", role: "EMPLOYEE", status: "ONBOARDING" });
+import { ROLES } from "@mobius-ems/shared";
+const initial = (): CreateEmployeeInput => ({ firstName: "", lastName: "", officialEmail: "", phone: "", department: "", team: "", designation: "", reportingManager: "", dateOfJoining: new Date().toISOString().slice(0, 10), employmentType: "FULL_TIME", officeLocation: "", role: "EMPLOYEE", status: "ONBOARDING" });
 export const EmployeesPage = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
@@ -27,9 +28,28 @@ export const EmployeesPage = () => {
         p.set("department", department); return p; }, [search, department]);
     const employees = useQuery({ queryKey: ["employees", params.toString()], queryFn: () => employeeApi.list(params) });
     const org = useQuery({ queryKey: ["organization"], queryFn: organizationApi.list });
-    const create = useMutation({ mutationFn: employeeApi.create, onSuccess: async (data) => { setCredentials(data.temporaryCredentials); setOpen(false); setForm(initial()); await qc.invalidateQueries({ queryKey: ["employees"] }); } });
+    const managersList = useQuery({
+        queryKey: ["employees-managers-list"],
+        queryFn: () => employeeApi.list(new URLSearchParams({ page: "1", limit: "100" })),
+        enabled: open,
+    });
+    const create = useMutation({
+        mutationFn: (input: CreateEmployeeInput) => {
+            const payload = { ...input };
+            if (!payload.team) delete (payload as Partial<CreateEmployeeInput>).team;
+            if (!payload.reportingManager) delete (payload as Partial<CreateEmployeeInput>).reportingManager;
+            return employeeApi.create(payload);
+        },
+        onSuccess: async (data) => {
+            setCredentials(data.temporaryCredentials);
+            setOpen(false);
+            setForm(initial());
+            await qc.invalidateQueries({ queryKey: ["employees"] });
+        }
+    });
     const deactivate = useMutation({ mutationFn: (id: string) => employeeApi.deactivate(id), onSuccess: async () => { setDeleteTarget(null); await qc.invalidateQueries(); } });
     const designations = org.data?.designations.filter((designation) => designation.department?._id === form.department) ?? [];
+    const teams = org.data?.teams.filter((team) => team.department?._id === form.department) ?? [];
     const canCreate = user?.permissions.includes("employee.create");
     const canDelete = user?.permissions.includes("employee.deactivate");
     const field = (key: keyof CreateEmployeeInput) => ({ value: form[key] ?? "", onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setForm({ ...form, [key]: event.target.value }) });
@@ -43,14 +63,19 @@ export const EmployeesPage = () => {
 
 <label className="text-sm font-medium">Phone<Input className="mt-2" {...field("phone")}/></label>
 
-<label className="text-sm font-medium">Department<select required className="mt-2 h-11 w-full rounded-xl border bg-white px-3 text-sm" value={form.department} onChange={(event) => setForm({ ...form, department: event.target.value, designation: "" })}><option value="">Select department</option>{org.data?.departments.map((d) => <option key={d._id} value={d._id}>{d.name}</option>)}</select></label>
+<label className="text-sm font-medium">Role<select className="mt-2 h-11 w-full rounded-xl border bg-white px-3 text-sm" {...field("role")}>{ROLES.map((r) => <option key={r} value={r}>{r.replaceAll("_", " ")}</option>)}</select></label>
+
+<label className="text-sm font-medium">Department<select required className="mt-2 h-11 w-full rounded-xl border bg-white px-3 text-sm" value={form.department} onChange={(event) => setForm({ ...form, department: event.target.value, designation: "", team: "" })}><option value="">Select department</option>{org.data?.departments.map((d) => <option key={d._id} value={d._id}>{d.name}</option>)}</select></label>
 
 <label className="text-sm font-medium">Designation<select required disabled={!form.department} className="mt-2 h-11 w-full rounded-xl border bg-white px-3 text-sm disabled:bg-slate-50 disabled:text-slate-400" {...field("designation")}><option value="">{form.department ? "Select designation" : "Select department first"}</option>{designations.map((d) => <option key={d._id} value={d._id}>{d.name}</option>)}</select></label>
+
+<label className="text-sm font-medium">Team (optional)<select disabled={!form.department} className="mt-2 h-11 w-full rounded-xl border bg-white px-3 text-sm disabled:bg-slate-50 disabled:text-slate-400" {...field("team")}><option value="">No specific team</option>{teams.map((t) => <option key={t._id} value={t._id}>{t.name}</option>)}</select></label>
+
+<label className="text-sm font-medium sm:col-span-2">Reporting Manager (optional)<span className="block text-xs font-normal text-slate-400 mt-0.5">Leave as &ldquo;None&rdquo; for your top-level leader (e.g. Department Head / CTO). Once created, they will appear here to be selected as the manager for subsequent employees.</span><select className="mt-2 h-11 w-full rounded-xl border bg-white px-3 text-sm" {...field("reportingManager")}><option value="">None (Top-level / Self-managed)</option>{managersList.data?.items.map((m) => <option key={m._id} value={m._id}>{m.firstName} {m.lastName} ({m.employeeId}) — {m.designation?.name || m.department?.name}</option>)}</select></label>
 
 <label className="text-sm font-medium">Date of joining<Input required type="date" className="mt-2" {...field("dateOfJoining")}/></label>
 
 <label className="text-sm font-medium">Employment type<select className="mt-2 h-11 w-full rounded-xl border bg-white px-3 text-sm" {...field("employmentType")}>{["FULL_TIME", "PART_TIME", "CONTRACT", "INTERN", "CONSULTANT"].map((x) => <option key={x} value={x}>{x.replaceAll("_", " ")}</option>)}</select></label>
-
 
 <label className="text-sm font-medium sm:col-span-2">Office location<Input className="mt-2" {...field("officeLocation")}/></label>
 </div>{create.error && <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{create.error.message}</p>}<div className="mt-6 flex justify-end gap-2"><Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancel</Button><Button disabled={create.isPending}>{create.isPending ? "Creating…" : "Create account"}</Button></div></form></div>}

@@ -1,11 +1,51 @@
 import { randomBytes } from "node:crypto"; import { Types, type FilterQuery } from "mongoose"; import { Employee } from "../models/Employee.js"; import { Project, type ProjectDocument } from "../models/Project.js"; import { Task, type TaskDocument } from "../models/Task.js"; import { TaskActivity } from "../models/TaskActivity.js"; import { AppError } from "../utils/AppError.js"; import { writeAudit } from "./auditService.js";
 import { notify } from "./notificationService.js"; import { canTransitionTask } from "./taskTransitions.js";
+import { getViewerHierarchyScope, assertEmployeeInScope } from "./hierarchyService.js";
+import type { RoleName } from "@mobius-ems/shared";
+
 export const createProject = async (input: Omit<ProjectDocument, "isActive" | "progress">, actor: string) => { const project = await Project.create(input); await writeAudit({ user: actor, action: "PROJECT_CREATED", entityType: "Project", entityId: project.id, newValue: { code: project.code, name: project.name } }); return project; };
-export const listProjects = async (viewer: { id: string; role: string }) => { const filter: FilterQuery<ProjectDocument> = { isActive: true }; if (["EMPLOYEE","MANAGER"].includes(viewer.role)) { const employee = await Employee.findOne({ user: viewer.id }).select("_id"); filter.$or = [{ projectManager: employee?._id }, { teamMembers: employee?._id }]; } return Project.find(filter).populate("department", "name code").populate("projectManager teamMembers", "firstName lastName employeeId").sort({ createdAt: -1 }).lean(); };
+export const listProjects = async (viewer: { id: string; role: string }) => {
+  const filter: FilterQuery<ProjectDocument> = { isActive: true };
+  const scope = await getViewerHierarchyScope(viewer as { id: string; role: RoleName });
+  if (scope.scopeType === "SELF") {
+    filter.$or = [{ projectManager: scope.allowedEmployeeIds[0] }, { teamMembers: scope.allowedEmployeeIds[0] }];
+  } else if (scope.scopeType === "DEPARTMENT") {
+    filter.department = scope.departmentId;
+  } else if (scope.scopeType === "SUBTREE") {
+    filter.$or = [
+      { projectManager: { $in: scope.allowedEmployeeIds } },
+      { teamMembers: { $in: scope.allowedEmployeeIds } }
+    ];
+  }
+  return Project.find(filter).populate("department", "name code").populate("projectManager teamMembers", "firstName lastName employeeId").sort({ createdAt: -1 }).lean();
+};
 export const createTask = async (input: { name: string; description?: string; project: string; assignedEmployee: string; priority: TaskDocument["priority"]; complexity: TaskDocument["complexity"]; estimatedHours: number; startDate?: Date; deadline: Date; reviewer?: string }, actor: string) => { const project = await Project.findOne({ _id: input.project, isActive: true }); if (!project) throw new AppError("Project not found", 404); const assignee = await Employee.findOne({ _id: input.assignedEmployee, isActive: true }); if (!assignee) throw new AppError("Assignee not found", 404); const task = await Task.create({ ...input, taskId: `TASK-${randomBytes(4).toString("hex").toUpperCase()}`, department: project.department, assignedBy: actor }); await TaskActivity.create({ task: task._id, action: "TASK_CREATED", newValue: { status: task.status, assignee: input.assignedEmployee }, performedBy: actor }); await notify({ recipient: assignee.user.toString(), type: "TASK_ASSIGNED", title: "New task assigned", body: `${task.name} is due ${task.deadline.toLocaleDateString()}.`, entityType: "Task", entityId: task.id }); return task; };
 export const createManualTask = async (input: { name: string; description?: string; project: string; verbalAssigner: string; priority: TaskDocument["priority"]; complexity: TaskDocument["complexity"]; estimatedHours: number; deadline: Date }, actor: { id: string; role: string }) => { if (actor.role !== "EMPLOYEE") throw new AppError("Only employees can add verbally assigned tasks", 403); const employee = await Employee.findOne({ user: actor.id, isActive: true }); if (!employee) throw new AppError("Employee profile not found", 404); const project = await Project.findOne({ _id: input.project, isActive: true, $or: [{ projectManager: employee._id }, { teamMembers: employee._id }] }); if (!project) throw new AppError("Select a project you are assigned to", 403); const task = await Task.create({ ...input, taskId: `TASK-${randomBytes(4).toString("hex").toUpperCase()}`, department: project.department, assignedEmployee: employee._id, assignedBy: actor.id, reviewer: project.projectManager, assignmentSource: "SELF_REPORTED" }); await TaskActivity.create({ task: task._id, action: "SELF_REPORTED_TASK_CREATED", newValue: { status: task.status, verbalAssigner: input.verbalAssigner }, performedBy: actor.id }); await writeAudit({ user: actor.id, action: "SELF_REPORTED_TASK_CREATED", entityType: "Task", entityId: task.id, newValue: { name: task.name, project: project.id, verbalAssigner: input.verbalAssigner } }); return task; };
-export const listTasks = async (query: { status?: string; project?: string; priority?: string }, viewer: { id: string; role: string }) => { const filter: FilterQuery<TaskDocument> = { isActive: true }; if (query.status) filter.status = query.status; if (query.project) filter.project = query.project; if (query.priority) filter.priority = query.priority; if (["EMPLOYEE","MANAGER"].includes(viewer.role)) { const employee = await Employee.findOne({ user: viewer.id }).select("_id"); if (viewer.role === "EMPLOYEE") filter.assignedEmployee = employee?._id; else filter.$or = [{ assignedEmployee: employee?._id }, { assignedEmployee: { $in: await Employee.find({ reportingManager: employee?._id }).distinct("_id") } }]; } return Task.find(filter).populate("project", "name code").populate("assignedEmployee reviewer", "firstName lastName employeeId").sort({ deadline: 1 }).lean(); };
-const assertTaskAccess = async (task: TaskDocument, actor: { id: string; role: string }, review = false) => { if (!["EMPLOYEE","MANAGER"].includes(actor.role)) return; const employee = await Employee.findOne({ user: actor.id }).select("_id"); const own = task.assignedEmployee.toString() === employee?._id.toString(); const direct = actor.role === "MANAGER" && !!await Employee.exists({ _id: task.assignedEmployee, reportingManager: employee?._id }); const reviewer = review && task.reviewer?.toString() === employee?._id.toString(); if (!own && !direct && !reviewer) throw new AppError("Task is outside your permitted scope", 403, "FORBIDDEN"); };
+export const listTasks = async (query: { status?: string; project?: string; priority?: string }, viewer: { id: string; role: string }) => {
+  const filter: FilterQuery<TaskDocument> = { isActive: true };
+  if (query.status) filter.status = query.status;
+  if (query.project) filter.project = query.project;
+  if (query.priority) filter.priority = query.priority;
+  const scope = await getViewerHierarchyScope(viewer as { id: string; role: RoleName });
+  if (scope.scopeType === "SELF") {
+    filter.assignedEmployee = scope.allowedEmployeeIds[0];
+  } else if (scope.scopeType === "DEPARTMENT") {
+    filter.department = scope.departmentId;
+  } else if (scope.scopeType === "SUBTREE") {
+    filter.assignedEmployee = { $in: scope.allowedEmployeeIds };
+  }
+  return Task.find(filter).populate("project", "name code").populate("assignedEmployee reviewer", "firstName lastName employeeId").sort({ deadline: 1 }).lean();
+};
+const assertTaskAccess = async (task: TaskDocument, actor: { id: string; role: string }, review = false) => {
+  if (actor.role === "SUPER_ADMIN" || actor.role === "HR_ADMIN") return;
+  const scope = await getViewerHierarchyScope(actor as { id: string; role: RoleName });
+  const ownId = scope.ownEmployeeId?.toString();
+  const own = task.assignedEmployee.toString() === ownId;
+  const reviewer = review && task.reviewer?.toString() === ownId;
+  const inScope = scope.allowedEmployeeIds.some((id) => id.toString() === task.assignedEmployee.toString());
+  const inDept = scope.scopeType === "DEPARTMENT" && task.department?.toString() === scope.departmentId?.toString();
+  if (!own && !reviewer && !inScope && !inDept) throw new AppError("Task is outside your permitted scope", 403, "FORBIDDEN");
+};
 export const reassignTask = async (id: string, assignedEmployee: string, actor: { id: string; role: string }) => {
   const task = await Task.findOne({ _id: id, isActive: true });
   if (!task) throw new AppError("Task not found", 404);
@@ -17,11 +57,8 @@ export const reassignTask = async (id: string, assignedEmployee: string, actor: 
     Employee.findOne({ _id: task.assignedEmployee, isActive: true }).select("user firstName lastName")
   ]);
   if (!nextAssignee) throw new AppError("Assignee not found", 404);
-  if (actor.role === "MANAGER") {
-    const manager = await Employee.findOne({ user: actor.id, isActive: true }).select("_id");
-    const inScope = nextAssignee._id.toString() === manager?._id.toString() || nextAssignee.reportingManager?.toString() === manager?._id.toString();
-    if (!inScope) throw new AppError("Employee is outside your permitted scope", 403, "FORBIDDEN");
-  }
+  const scope = await getViewerHierarchyScope(actor as { id: string; role: RoleName });
+  assertEmployeeInScope(scope, nextAssignee._id, "Employee is outside your permitted scope");
 
   const oldAssigneeId = task.assignedEmployee.toString();
   task.assignedEmployee = nextAssignee._id;

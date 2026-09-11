@@ -1,9 +1,73 @@
-import { Department } from "../models/Department.js"; import { Team } from "../models/Team.js"; import { Designation } from "../models/Designation.js"; import { AppError } from "../utils/AppError.js"; import { roleSkillCatalog } from "../data/roleSkillCatalog.js";
-type DepartmentInput = { name: string; code: string; description?: string; capabilities?: ("SALES_MODULE")[] }; type TeamInput = Omit<DepartmentInput, "capabilities"> & { department: string }; type DesignationInput = Omit<DepartmentInput, "capabilities"> & { department?: string; level?: string; catalogRole: string };
-export const listOrganization = async () => { const [departments, teams, designations] = await Promise.all([Department.find({ isActive: true }).sort("name").lean(), Team.find({ isActive: true }).populate("department", "name code").sort("name").lean(), Designation.find({ isActive: true }).populate("department", "name code").sort("name").lean()]); const skillCatalogRoles = [...new Set(roleSkillCatalog.map((item) => item.role))].map((role) => ({ role, skillCount: roleSkillCatalog.filter((item) => item.role === role).length })); return { departments, teams, designations, skillCatalogRoles }; };
+import { Department } from "../models/Department.js";
+import { Team } from "../models/Team.js";
+import { Designation, type DesignationSkillItem } from "../models/Designation.js";
+import { AppError } from "../utils/AppError.js";
+import { roleSkillCatalog } from "../data/roleSkillCatalog.js";
+
+type DepartmentInput = { name: string; code: string; description?: string; capabilities?: ("SALES_MODULE")[] };
+type TeamInput = Omit<DepartmentInput, "capabilities"> & { department: string };
+type DesignationInput = Omit<DepartmentInput, "capabilities"> & { department?: string; level?: string; catalogRole?: string; customSkills?: DesignationSkillItem[] };
+
+export const listOrganization = async () => {
+  const [departments, teams, designations] = await Promise.all([
+    Department.find({ isActive: true }).sort("name").lean(),
+    Team.find({ isActive: true }).populate("department", "name code").sort("name").lean(),
+    Designation.find({ isActive: true }).populate("department", "name code").sort("name").lean(),
+  ]);
+  const skillCatalogRoles = [...new Set(roleSkillCatalog.map((item) => item.role))].map((role) => ({
+    role,
+    skillCount: roleSkillCatalog.filter((item) => item.role === role).length,
+  }));
+  return { departments, teams, designations, skillCatalogRoles };
+};
+
 export const createDepartment = async (input: DepartmentInput) => Department.create(input);
-export const createTeam = async (input: TeamInput) => { if (!await Department.exists({ _id: input.department, isActive: true })) throw new AppError("Department not found", 404, "DEPARTMENT_NOT_FOUND"); return Team.create(input); };
-export const createDesignation = async (input: DesignationInput) => { if (input.department && !await Department.exists({ _id: input.department, isActive: true })) throw new AppError("Department not found", 404, "DEPARTMENT_NOT_FOUND"); if (!roleSkillCatalog.some((item) => item.role === input.catalogRole)) throw new AppError("Select a valid skill catalogue for this designation", 422, "INVALID_SKILL_CATALOG"); return Designation.create(input); };
-export const updateDepartment = async (id: string, input: Partial<DepartmentInput>) => { const item = await Department.findOneAndUpdate({ _id: id, isActive: true }, { $set: input }, { new: true, runValidators: true }); if (!item) throw new AppError("Department not found", 404, "DEPARTMENT_NOT_FOUND"); return item; };
-export const updateTeam = async (id: string, input: Partial<TeamInput>) => { if (input.department && !await Department.exists({ _id: input.department, isActive: true })) throw new AppError("Department not found", 404, "DEPARTMENT_NOT_FOUND"); const item = await Team.findOneAndUpdate({ _id: id, isActive: true }, { $set: input }, { new: true, runValidators: true }).populate("department", "name code"); if (!item) throw new AppError("Team not found", 404, "TEAM_NOT_FOUND"); return item; };
-export const updateDesignation = async (id: string, input: Partial<DesignationInput>) => { if (input.department && !await Department.exists({ _id: input.department, isActive: true })) throw new AppError("Department not found", 404, "DEPARTMENT_NOT_FOUND"); if (input.catalogRole && !roleSkillCatalog.some((item) => item.role === input.catalogRole)) throw new AppError("Select a valid skill catalogue for this designation", 422, "INVALID_SKILL_CATALOG"); const item = await Designation.findOneAndUpdate({ _id: id, isActive: true }, { $set: input }, { new: true, runValidators: true }).populate("department", "name code"); if (!item) throw new AppError("Designation not found", 404, "DESIGNATION_NOT_FOUND"); return item; };
+
+export const createTeam = async (input: TeamInput) => {
+  if (!await Department.exists({ _id: input.department, isActive: true })) throw new AppError("Department not found", 404, "DEPARTMENT_NOT_FOUND");
+  return Team.create(input);
+};
+
+export const createDesignation = async (input: DesignationInput) => {
+  if (input.department && !await Department.exists({ _id: input.department, isActive: true })) throw new AppError("Department not found", 404, "DEPARTMENT_NOT_FOUND");
+  if (input.catalogRole && !roleSkillCatalog.some((item) => item.role === input.catalogRole)) throw new AppError("Select a valid skill catalogue for this designation", 422, "INVALID_SKILL_CATALOG");
+  return Designation.create(input);
+};
+
+export const updateDepartment = async (id: string, input: Partial<DepartmentInput>) => {
+  const item = await Department.findOneAndUpdate({ _id: id, isActive: true }, { $set: input }, { new: true, runValidators: true });
+  if (!item) throw new AppError("Department not found", 404, "DEPARTMENT_NOT_FOUND");
+  return item;
+};
+
+export const updateTeam = async (id: string, input: Partial<TeamInput>) => {
+  if (input.department && !await Department.exists({ _id: input.department, isActive: true })) throw new AppError("Department not found", 404, "DEPARTMENT_NOT_FOUND");
+  const item = await Team.findOneAndUpdate({ _id: id, isActive: true }, { $set: input }, { new: true, runValidators: true }).populate("department", "name code");
+  if (!item) throw new AppError("Team not found", 404, "TEAM_NOT_FOUND");
+  return item;
+};
+
+export const updateDesignation = async (id: string, input: Partial<DesignationInput>) => {
+  if (input.department && !await Department.exists({ _id: input.department, isActive: true })) throw new AppError("Department not found", 404, "DEPARTMENT_NOT_FOUND");
+  if (input.catalogRole && !roleSkillCatalog.some((item) => item.role === input.catalogRole)) throw new AppError("Select a valid skill catalogue for this designation", 422, "INVALID_SKILL_CATALOG");
+  const item = await Designation.findOneAndUpdate({ _id: id, isActive: true }, { $set: input }, { new: true, runValidators: true }).populate("department", "name code");
+  if (!item) throw new AppError("Designation not found", 404, "DESIGNATION_NOT_FOUND");
+  return item;
+};
+
+export const setDesignationAssessmentSkills = async (id: string, skills: DesignationSkillItem[], catalogRole?: string) => {
+  const updateData: Record<string, unknown> = { customSkills: skills };
+  if (catalogRole !== undefined) updateData.catalogRole = catalogRole;
+  const item = await Designation.findOneAndUpdate(
+    { _id: id, isActive: true },
+    { $set: updateData },
+    { new: true, runValidators: true }
+  ).populate("department", "name code");
+  if (!item) throw new AppError("Designation not found", 404, "DESIGNATION_NOT_FOUND");
+  return item;
+};
+
+export const getRoleCatalogSkills = (role: string) => {
+  return roleSkillCatalog.filter((item) => item.role.toLowerCase() === role.toLowerCase());
+};
+

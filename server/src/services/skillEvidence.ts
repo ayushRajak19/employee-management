@@ -14,7 +14,7 @@ export interface SkillEvidenceScore {
   skillId: string;
   name: string;
   category: string;
-  tools: string;
+  tools?: string;
   description: string;
   rating: number;
 }
@@ -23,7 +23,7 @@ const ignored = new Set(["and", "the", "for", "with", "from", "into", "using", "
 const tokens = (value: string) => new Set(value.toLowerCase().match(/[a-z0-9+#.]{3,}/g)?.filter((word) => !ignored.has(word)) ?? []);
 
 export const buildSkillEvidence = (skill: SkillEvidenceScore, tasks: SkillEvidenceTask[], now = new Date()) => {
-  const skillTokens = tokens(`${skill.name} ${skill.category} ${skill.tools}`);
+  const skillTokens = tokens(`${skill.name} ${skill.category} ${skill.tools ?? ""}`);
   const matched = tasks.filter((task) => {
     const taskTokens = tokens(`${task.name} ${task.description ?? ""} ${task.completionNote ?? ""}`);
     return [...skillTokens].some((word) => taskTokens.has(word));

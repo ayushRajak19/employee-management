@@ -1,4 +1,4 @@
-import { Employee } from "../models/Employee.js"; import { EmployeeSkill, type EmployeeSkillDocument } from "../models/EmployeeSkill.js"; import { Skill } from "../models/Skill.js"; import { SkillVerification, type SkillVerificationDocument } from "../models/SkillVerification.js"; import { Designation } from "../models/Designation.js"; import { AppError } from "../utils/AppError.js"; import { writeAudit } from "./auditService.js";
+import { Employee } from "../models/Employee.js"; import { EmployeeSkill, type EmployeeSkillDocument } from "../models/EmployeeSkill.js"; import { Skill } from "../models/Skill.js"; import { SkillVerification, type SkillVerificationDocument } from "../models/SkillVerification.js"; import { Designation, type DesignationSkillItem } from "../models/Designation.js"; import { AppError } from "../utils/AppError.js"; import { writeAudit } from "./auditService.js";
 import { Assessment, type AssessmentDocument } from "../models/Assessment.js"; import { AssessmentResult } from "../models/AssessmentResult.js";
 import { recalculateProfileCompletion } from "./profileCompletionService.js";
 import { roleSkillCatalog } from "../data/roleSkillCatalog.js";
@@ -13,26 +13,103 @@ export const listSkills = async () => Skill.find({ isActive: true }).sort({ cate
 export const createSkill = async (input: { name: string; category: string; description?: string }) => Skill.create(input);
 export const claimSkill = async (userId: string, input: { skill: string; selfRating: number; yearsOfExperience: number; lastUsed?: Date; description?: string; evidence: EmployeeSkillDocument["evidence"] }) => { const employee = await Employee.findOne({ user: userId, isActive: true }); if (!employee) throw new AppError("Employee profile not found", 404); if (!await Skill.exists({ _id: input.skill, isActive: true })) throw new AppError("Skill not found", 404); const claim = await EmployeeSkill.findOneAndUpdate({ employee: employee._id, skill: input.skill }, { $set: { ...input, verificationStatus: "PENDING", verifiedRating: undefined, latestVerification: undefined, isActive: true } }, { upsert: true, new: true, runValidators: true }).populate("skill", "name category"); await recalculateProfileCompletion(employee.id); return claim; };
 export const mySkills = async (userId: string) => { const employee = await Employee.findOne({ user: userId }).select("_id designation"); if (!employee) throw new AppError("Employee profile not found", 404); const items = await EmployeeSkill.find({ employee: employee._id, isActive: true }).populate("skill", "name category").sort({ updatedAt: -1 }).lean(); return { items, gap: await roleGap(employee._id.toString(), employee.designation.toString()) }; };
+
+type PopulatedDesignation = { _id?: unknown; name: string; code: string; catalogRole?: string; customSkills?: DesignationSkillItem[] };
+
 export const roleCatalogAssessment = async (userId: string) => {
-  const employee = await Employee.findOne({ user: userId, isActive: true }).select("_id designation").populate<{ designation: { _id?: unknown; name: string; code: string; catalogRole?: string } }>("designation", "name code catalogRole");
+  const employee = await Employee.findOne({ user: userId, isActive: true })
+    .select("_id designation")
+    .populate<{ designation: PopulatedDesignation }>("designation", "name code catalogRole customSkills")
+    .lean();
   if (!employee) throw new AppError("Employee profile not found", 404);
+  if (!employee.designation) throw new AppError("No designation assigned to your profile. Please contact your administrator.", 422, "NO_DESIGNATION_ASSIGNED");
+
   const assessment = await RoleSkillAssessment.findOne({ employee: employee._id }).lean();
-  const assignedRole = await assignedCatalogRole(employee.designation);
+  let catalogItems: (DesignationSkillItem & { role?: string })[] = [];
+  let assignedRole = employee.designation.name;
+
+  if (employee.designation.customSkills && employee.designation.customSkills.length > 0) {
+    catalogItems = employee.designation.customSkills.map((skill: any) => ({
+      ...(typeof skill.toObject === "function" ? skill.toObject() : skill),
+      role: employee.designation.name,
+    }));
+    assignedRole = employee.designation.catalogRole || employee.designation.name;
+  } else {
+    const role = employee.designation.catalogRole ?? legacyDesignationRole(employee.designation.name, employee.designation.code);
+    if (role && catalogRoles.includes(role)) {
+      catalogItems = roleSkillCatalog.filter((item) => item.role === role);
+      assignedRole = role;
+      if (!employee.designation.catalogRole && employee.designation._id) {
+        await Designation.updateOne({ _id: employee.designation._id }, { $set: { catalogRole: role } });
+      }
+    }
+  }
+
   const taskEvidence = assessment ? await Task.find({ assignedEmployee: employee._id, isActive: true }).select("taskId name description completionNote status deadline completionDate qualityRating").sort({ updatedAt: -1 }).lean() : [];
   const assessmentWithEvidence = assessment ? { ...assessment, evidenceAnalytics: assessment.scores.map((score) => ({ skillId: score.skillId, ...buildSkillEvidence(score, taskEvidence) })) } : null;
-  return { catalog: assessment ? [] : roleSkillCatalog.filter((item) => item.role === assignedRole), assessment: assessmentWithEvidence, designation: employee.designation, assignedRole };
+  return {
+    catalog: assessment ? [] : catalogItems,
+    assessment: assessmentWithEvidence,
+    designation: employee.designation,
+    assignedRole,
+    pendingConfiguration: catalogItems.length === 0 && !assessment
+  };
 };
+
 export const submitRoleCatalogAssessment = async (userId: string, input: { ratings: { skillId: string; rating: number; implementationNote: string }[] }, meta: { ip?: string; userAgent?: string }) => {
-  const employee = await Employee.findOne({ user: userId, isActive: true }).select("_id designation").populate<{ designation: { _id?: unknown; name: string; code: string; catalogRole?: string } }>("designation", "name code catalogRole");
+  const employee = await Employee.findOne({ user: userId, isActive: true })
+    .select("_id designation")
+    .populate<{ designation: PopulatedDesignation }>("designation", "name code catalogRole customSkills")
+    .lean();
   if (!employee) throw new AppError("Employee profile not found", 404);
+  if (!employee.designation) throw new AppError("No designation assigned to your profile.", 422);
   if (await RoleSkillAssessment.exists({ employee: employee._id })) throw new AppError("This one-time skill assessment has already been submitted and cannot be edited", 409, "ASSESSMENT_LOCKED");
-  const role = await assignedCatalogRole(employee.designation); const expected = roleSkillCatalog.filter((item) => item.role === role);
+
+  let expected: (DesignationSkillItem & { role?: string })[] = [];
+  let roleName = employee.designation.name;
+
+  if (employee.designation.customSkills && employee.designation.customSkills.length > 0) {
+    expected = employee.designation.customSkills.map((skill: any) => ({
+      ...(typeof skill.toObject === "function" ? skill.toObject() : skill),
+      role: employee.designation.name,
+    }));
+    roleName = employee.designation.catalogRole || employee.designation.name;
+  } else {
+    const role = employee.designation.catalogRole ?? legacyDesignationRole(employee.designation.name, employee.designation.code);
+    if (!role || !catalogRoles.includes(role)) {
+      throw new AppError(`No skill assessment is configured for designation ${employee.designation.name}. Ask administrator to configure it.`, 422, "DESIGNATION_SKILL_CATALOG_MISSING");
+    }
+    expected = roleSkillCatalog.filter((item) => item.role === role);
+    roleName = role;
+  }
+
+  if (expected.length === 0) {
+    throw new AppError(`No skills are configured for designation ${employee.designation.name}. Ask administrator to configure it.`, 422, "NO_SKILLS_CONFIGURED");
+  }
+
   const ratingMap = new Map(input.ratings.map((item) => [item.skillId, item]));
-  if (ratingMap.size !== input.ratings.length || ratingMap.size !== expected.length || expected.some((item) => !ratingMap.has(item.id))) throw new AppError(`Rate all ${expected.length} skills for ${role} before submitting`, 422, "INCOMPLETE_ROLE_ASSESSMENT");
-  const scores = expected.map((item) => { const response = ratingMap.get(item.id)!; return { skillId: item.id, level: item.level, category: item.category, name: item.name, tools: item.tools, description: item.description, assessmentQuestion: "assessmentQuestion" in item ? item.assessmentQuestion : undefined, rating: response.rating, implementationNote: response.implementationNote }; });
+  if (ratingMap.size !== input.ratings.length || ratingMap.size !== expected.length || expected.some((item) => !ratingMap.has(item.id))) {
+    throw new AppError(`Rate all ${expected.length} skills for ${roleName} before submitting`, 422, "INCOMPLETE_ROLE_ASSESSMENT");
+  }
+
+  const scores = expected.map((item) => {
+    const response = ratingMap.get(item.id)!;
+    return {
+      skillId: item.id,
+      level: item.level,
+      category: item.category,
+      name: item.name,
+      tools: item.tools ?? "",
+      description: item.description,
+      assessmentQuestion: item.assessmentQuestion,
+      rating: response.rating,
+      implementationNote: response.implementationNote
+    };
+  });
+
   const averageRating = Math.round(scores.reduce((sum, item) => sum + item.rating, 0) / scores.length * 10) / 10;
-  const assessment = await RoleSkillAssessment.create({ employee: employee._id, role, designation: employee.designation.name, scores, averageRating, submittedAt: new Date() });
-  await writeAudit({ user: userId, action: "ROLE_SKILL_ASSESSMENT_SUBMITTED", entityType: "RoleSkillAssessment", entityId: assessment.id, newValue: { role, skillCount: scores.length, averageRating }, ipAddress: meta.ip, userAgent: meta.userAgent });
+  const assessment = await RoleSkillAssessment.create({ employee: employee._id, role: roleName, designation: employee.designation.name, scores, averageRating, submittedAt: new Date() });
+  await writeAudit({ user: userId, action: "ROLE_SKILL_ASSESSMENT_SUBMITTED", entityType: "RoleSkillAssessment", entityId: assessment.id, newValue: { role: roleName, skillCount: scores.length, averageRating }, ipAddress: meta.ip, userAgent: meta.userAgent });
   return assessment;
 };
 export const pendingVerifications = async () => EmployeeSkill.find({ verificationStatus: { $in: ["PENDING","REVIEW_REQUIRED"] }, isActive: true }).populate("skill", "name category").populate("employee", "firstName lastName employeeId department").sort({ updatedAt: 1 }).lean();

@@ -49,8 +49,44 @@ export const RoleSkillsAssessment = () => {
   const confirmSubmit = () => { if (completed === roleSkills.length && window.confirm(`Submit all ${roleSkills.length} completed skill blocks for ${query.data?.designation.name}? This is a one-time form and cannot be edited after submission.`)) submit.mutate(); };
 
   if (query.isLoading) return <main className="flex-1 px-5 py-8 sm:px-8"><Skeleton className="h-72"/></main>;
-  if (query.isError || !query.data) return <main className="grid min-h-96 flex-1 place-items-center text-sm text-red-600">Unable to load the role skill catalog.</main>;
+  if (query.isError) {
+    const message = (query.error as Error)?.message || "Unable to load the role skill catalog.";
+    return (
+      <main className="grid min-h-96 flex-1 place-items-center p-6 text-center">
+        <div className="max-w-md rounded-2xl border bg-white p-6 shadow-soft">
+          <AlertTriangle className="mx-auto text-amber-500" size={32} />
+          <h2 className="mt-3 text-lg font-semibold text-slate-800">Skill Assessment Unavailable</h2>
+          <p className="mt-2 text-sm text-slate-500">{message}</p>
+        </div>
+      </main>
+    );
+  }
+  if (!query.data) return null;
   if (query.data.assessment) return <main className="flex-1 px-5 py-8 sm:px-8"><Results assessment={query.data.assessment}/></main>;
+
+  if (roleSkills.length === 0) {
+    return (
+      <main className="flex-1 px-5 py-8 sm:px-8">
+        <div className="mx-auto max-w-xl text-center py-16 px-6 bg-white rounded-3xl border shadow-soft">
+          <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-amber-50 text-amber-600 mb-4">
+            <Sparkles size={28} />
+          </div>
+          <h2 className="text-xl font-semibold text-slate-800">Skills Assessment Pending Setup</h2>
+          <p className="mt-2 text-sm text-slate-600 leading-relaxed">
+            Your designation is <strong>{query.data.designation?.name || "Assigned"}</strong>. Your administrator has not yet configured the assessment skills and questions for this designation.
+          </p>
+          <div className="mt-6 inline-flex items-center gap-2 rounded-xl bg-slate-50 px-4 py-2 text-xs font-medium text-slate-600 border">
+            <span>Designation Code:</span>
+            <span className="font-semibold text-slate-900">{query.data.designation?.code || "N/A"}</span>
+          </div>
+          <p className="mt-4 text-xs text-slate-400">
+            Once configured, you will be able to complete your one-time self-assessment here.
+          </p>
+        </div>
+      </main>
+    );
+  }
+
 
   return <main className="flex-1 px-5 py-8 sm:px-8"><div className="mx-auto max-w-[1440px]">
     <div><p className="text-sm font-medium text-brand-700">One-time employee form</p><h1 className="mt-1 text-3xl font-semibold">Designation skill self-assessment</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">Your designation was assigned by Super Admin. Complete every corresponding skill block with a 1–10 rating and an implementation explanation; your response cannot be edited after submission.</p></div>
