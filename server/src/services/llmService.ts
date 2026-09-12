@@ -29,6 +29,7 @@ const requestJson = async (url: string, init: RequestInit): Promise<Record<strin
   const payload = await response.json().catch(() => ({})) as Record<string, unknown>;
   if (!response.ok) {
     const detail = typeof payload.error === "object" && payload.error && "message" in payload.error ? String(payload.error.message) : `Provider returned ${response.status}`;
+    if (/request too large|tokens per minute|rate limit/i.test(detail)) throw new AppError("AI provider limit reached. Please retry in a minute with a shorter question.", 429, "AI_RATE_LIMIT");
     throw new AppError(`AI provider request failed: ${detail}`, 502, "AI_PROVIDER_ERROR");
   }
   return payload;
