@@ -78,16 +78,28 @@ export const GeographicSalesPage = () => {
     },
   });
 
-  const currentNode = intelligenceQuery.data?.node;
-  const childrenNodes = useMemo(() => intelligenceQuery.data?.children ?? [], [intelligenceQuery.data?.children]);
+  const rawCurrentNode = intelligenceQuery.data?.node;
+  const countryTotals = useMemo(() => (countryPinsQuery.data?.items ?? []).reduce((totals, item) => ({
+    revenue: totals.revenue + Object.values(item.revenue).reduce((sum, value) => sum + value, 0),
+    leads: totals.leads + item.leads,
+    customers: totals.customers + item.customers,
+  }), { revenue: 0, leads: 0, customers: 0 }), [countryPinsQuery.data?.items]);
+  const currentNode = useMemo(() => {
+    if (!rawCurrentNode || (rawCurrentNode._id !== "global" && rawCurrentNode.type !== "GLOBAL")) return rawCurrentNode;
+    return {
+      ...rawCurrentNode,
+      actualRevenue: Math.max(rawCurrentNode.actualRevenue, countryTotals.revenue),
+      leadCount: Math.max(rawCurrentNode.leadCount, countryTotals.leads),
+      customerCount: Math.max(rawCurrentNode.customerCount, countryTotals.customers),
+    };
+  }, [rawCurrentNode, countryTotals]);
+  const hierarchyChildren = useMemo(() => (intelligenceQuery.data?.children ?? []).filter((node) => node.type !== "GLOBAL"), [intelligenceQuery.data?.children]);
   const ancestors = useMemo(() => intelligenceQuery.data?.ancestors ?? [], [intelligenceQuery.data?.ancestors]);
 
-  // Combine current node and children for map display
-  const mapNodes = useMemo(() => {
-    if (!currentNode) return [];
-    if (currentNode._id === "global" || currentNode.type === "GLOBAL") {
-      const existingNames = new Set(childrenNodes.map((node) => node.name.trim().toLowerCase()));
-      const fallbackCountries = (countryPinsQuery.data?.items ?? []).flatMap((summary) => {
+  const childrenNodes = useMemo(() => {
+    if (!currentNode || (currentNode._id !== "global" && currentNode.type !== "GLOBAL")) return hierarchyChildren;
+      const existingNames = new Set(hierarchyChildren.map((node) => node.name.trim().toLowerCase()));
+      const fallbackCountries: GeographicRollupNode[] = (countryPinsQuery.data?.items ?? []).flatMap((summary) => {
         const lookup = summary.country.trim().toLowerCase();
         if (lookup === "country not set" || existingNames.has(lookup)) return [];
         const country = countryMaster.find((item) => [item.name.common, item.name.official, item.cca2, item.cca3, ...item.altSpellings].some((alias) => alias.toLowerCase() === lookup));
@@ -103,12 +115,16 @@ export const GeographicSalesPage = () => {
           leadCount: summary.leads,
           customerCount: summary.customers,
           actualRevenue: Object.values(summary.revenue).reduce((total, value) => total + value, 0),
-        }];
+        } as unknown as GeographicRollupNode];
       });
-      return [...childrenNodes, ...fallbackCountries];
-    }
+      return [...hierarchyChildren, ...fallbackCountries];
+  }, [currentNode, hierarchyChildren, countryPinsQuery.data?.items]);
+
+  const mapNodes = useMemo(() => {
+    if (!currentNode) return [];
+    if (currentNode._id === "global" || currentNode.type === "GLOBAL") return childrenNodes;
     return [currentNode, ...childrenNodes];
-  }, [currentNode, childrenNodes, countryPinsQuery.data?.items]);
+  }, [currentNode, childrenNodes]);
 
   // Handle drilldown into a child node
   const handleDrillDown = (nodeId: string) => {

@@ -92,6 +92,14 @@ test("Hierarchy Aggregation Test: Country (India) -> State (Maharashtra) -> Dist
   assert.equal(indiaResult.children[0]!.leadCount, 120);
 });
 
+test("global rollup never returns the stored GLOBAL root as its own child", () => {
+  const result = rollupHierarchyMetrics([
+    { _id: "world", name: "World", code: "WORLD", type: "GLOBAL", ancestors: [], depth: 0 },
+    { _id: "india", name: "India", code: "IN", type: "COUNTRY", parent: "world", ancestors: ["world"], depth: 1 },
+  ], {}, "global");
+  assert.deepEqual(result.children.map((node) => node.name), ["India"]);
+});
+
 test("Capacity Bottleneck & Opportunity Lost Test: 1000 leads, 1 rep, 100 capacity, ₹50k deal, 10% conversion", () => {
   const result = calculateCapacityBottlenecks(1000, 1, 100, 50000, 10);
 

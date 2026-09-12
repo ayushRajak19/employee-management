@@ -261,7 +261,7 @@ export const rollupHierarchyMetrics = (
   // Determine immediate children
   const immediateChildrenNodes = nodes.filter((n) => {
     if (targetNode._id === "global" || targetNode.type === "GLOBAL") {
-      return n.type === "COUNTRY" || n.depth === 1 || n.parent === "global" || !n.parent;
+      return n.type !== "GLOBAL" && (n.type === "COUNTRY" || n.depth === 1 || n.parent === "global");
     }
     return n.parent === targetNode._id;
   });
