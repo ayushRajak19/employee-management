@@ -32,10 +32,10 @@ export const AssessmentsPage = () => {
   const qc = useQueryClient();
 
   const canManage =
-    user?.role !== "EMPLOYEE" ||
+    !["EMPLOYEE", "APPLICANT"].includes(user?.role ?? "") && (
     user?.permissions.some((p) =>
       ["skill.verify", "skill.create", "employee.update", "department.view"].includes(p)
-    );
+    ) ?? false);
 
   const [activeTab, setActiveTab] = useState<"my" | "all">(canManage ? "all" : "my");
   const [makerOpen, setMakerOpen] = useState(false);
@@ -52,7 +52,7 @@ export const AssessmentsPage = () => {
 
   const employeesQuery = useQuery({
     queryKey: ["employees", "assessment-selector"],
-    queryFn: () => employeeApi.list(new URLSearchParams({ limit: "200", page: "1" })),
+    queryFn: () => employeeApi.list(new URLSearchParams({ limit: "100", page: "1" })),
     enabled: canManage,
   });
 
@@ -71,7 +71,7 @@ export const AssessmentsPage = () => {
       const assignedUser = (item.assignedEmployee as any)?.user;
       const assignedUserId = assignedUser?._id || assignedUser || "";
       // If backend filtered for employee, all returned items belong to them
-      if (user?.role === "EMPLOYEE") return true;
+      if (["EMPLOYEE", "APPLICANT"].includes(user?.role ?? "")) return true;
       return assignedUserId === user?.id;
     });
   }, [allAssessments, user]);
@@ -80,7 +80,7 @@ export const AssessmentsPage = () => {
   const filteredAllAssessments = useMemo(() => {
     return allAssessments.filter((item) => {
       const q = searchQuery.toLowerCase();
-      const empName = `${item.assignedEmployee?.firstName || ""} ${item.assignedEmployee?.lastName || ""}`.toLowerCase();
+      const empName = `${item.assignedEmployee?.firstName || item.assignedCandidate?.name || ""} ${item.assignedEmployee?.lastName || ""}`.toLowerCase();
       const empId = (item.assignedEmployee?.employeeId || "").toLowerCase();
       const title = (item.name || "").toLowerCase();
 
@@ -167,7 +167,7 @@ export const AssessmentsPage = () => {
               </div>
             </div>
             <p className="mt-2 text-3xl font-black text-amber-600">{stats.pending}</p>
-            <p className="mt-1 text-[11px] text-slate-400">Awaiting employee submission</p>
+            <p className="mt-1 text-[11px] text-slate-400">Awaiting submission</p>
           </div>
 
           <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-soft">
@@ -427,11 +427,11 @@ export const AssessmentsPage = () => {
                       {/* Middle: Assigned Employee */}
                       <div className="sm:text-right shrink-0">
                         <p className="text-xs font-bold text-slate-800">
-                          {item.assignedEmployee?.firstName} {item.assignedEmployee?.lastName}
+                          {item.assignedEmployee ? `${item.assignedEmployee.firstName} ${item.assignedEmployee.lastName}` : item.assignedCandidate?.name}
                         </p>
                         <p className="text-[11px] text-slate-400">
-                          {item.assignedEmployee?.employeeId} ·{" "}
-                          {item.assignedEmployee?.designation?.name || "Employee"}
+                          {item.assignedEmployee?.employeeId || item.assignedCandidate?.email} ·{" "}
+                          {item.assignedEmployee?.designation?.name || item.assignedCandidate?.position || "Interview applicant"}
                         </p>
                       </div>
 
@@ -481,7 +481,7 @@ export const AssessmentsPage = () => {
                             onClick={() => {
                               if (
                                 window.confirm(
-                                  `Delete assessment "${item.name}" for ${item.assignedEmployee?.firstName}?`
+                                  `Delete assessment "${item.name}" for ${item.assignedEmployee?.firstName || item.assignedCandidate?.name}?`
                                 )
                               ) {
                                 deleteMutation.mutate(item._id);
@@ -509,6 +509,7 @@ export const AssessmentsPage = () => {
           isOpen={makerOpen}
           onClose={() => setMakerOpen(false)}
           employees={employeesQuery.data?.items ?? []}
+          employeeLoadError={employeesQuery.error?.message}
           onCreated={async () => {
             await qc.invalidateQueries({ queryKey: ["assessments"] });
           }}

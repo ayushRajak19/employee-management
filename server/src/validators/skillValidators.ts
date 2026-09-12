@@ -17,6 +17,7 @@ export const assessmentSchema = z.object({
     timeLimitMinutes: z.number().int().min(1).max(1440).default(30),
     assignedEmployee: objectId.optional(),
     assignedEmployees: z.array(objectId).min(1).optional(),
+    assignedCandidates: z.array(objectId).min(1).optional(),
     questions: z.array(z.object({
       id: z.string().optional(),
       question: z.string().trim().min(3).max(2000),
@@ -26,9 +27,9 @@ export const assessmentSchema = z.object({
       explanation: z.string().trim().max(2000).optional(),
       points: z.number().min(1).max(1000).default(10)
     })).optional()
-  }).refine((value) => value.assignedEmployee || (value.assignedEmployees && value.assignedEmployees.length > 0), {
+  }).refine((value) => value.assignedEmployee || value.assignedEmployees?.length || value.assignedCandidates?.length, {
     path: ["assignedEmployee"],
-    message: "At least one assigned employee is required"
+    message: "At least one employee or applicant is required"
   }).refine((value) => {
     if (value.maximumScore !== undefined && value.passingScore !== undefined) {
       return value.passingScore <= value.maximumScore;
@@ -63,4 +64,4 @@ export const assessmentIdParamSchema = z.object({
 });
 
 export const assessmentResultSchema = z.object({ params: z.object({ id: objectId }), body: z.object({ attemptDate: z.coerce.date().default(() => new Date()), score: z.number().min(0), notes: z.string().trim().max(2000).optional() }) });
-
+export const assessmentCandidateSchema = z.object({ body: z.object({ name: z.string().trim().min(2).max(120), email: z.string().trim().email().max(254), position: z.string().trim().max(160).optional(), password: z.string().min(8).max(128).optional() }) });

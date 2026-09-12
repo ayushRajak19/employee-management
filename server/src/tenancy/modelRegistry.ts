@@ -6,6 +6,7 @@ import "../models/AiEmployeeSummary.js";
 import "../models/Applicant.js";
 import "../models/Assessment.js";
 import "../models/AssessmentResult.js";
+import "../models/AssessmentCandidate.js";
 import "../models/Attendance.js";
 import "../models/AttendanceOffice.js";
 import "../models/AuditLog.js";

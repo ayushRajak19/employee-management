@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { skillApi, type AssessmentQuestion } from "@/features/skills/skillApi";
 import type { EmployeeRow } from "@/features/organization/types";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface AssessmentMakerModalProps {
   isOpen: boolean;
   onClose: () => void;
   employees: EmployeeRow[];
   onCreated: () => void;
+  employeeLoadError?: string;
 }
 
 export const AssessmentMakerModal = ({
@@ -17,6 +19,7 @@ export const AssessmentMakerModal = ({
   onClose,
   employees,
   onCreated,
+  employeeLoadError,
 }: AssessmentMakerModalProps) => {
   const [title, setTitle] = useState("");
   const [jobDescription, setJobDescription] = useState("");
@@ -25,12 +28,21 @@ export const AssessmentMakerModal = ({
   const [timeLimitMinutes, setTimeLimitMinutes] = useState<number>(30);
   const [passingScore, setPassingScore] = useState<number>(70);
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
+  const [selectedCandidateIds, setSelectedCandidateIds] = useState<string[]>([]);
+  const [candidateForm, setCandidateForm] = useState({ name: "", email: "", position: "", password: "" });
+  const [createdCredentials, setCreatedCredentials] = useState<{ email: string; password: string } | null>(null);
   const [employeeSearch, setEmployeeSearch] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [questions, setQuestions] = useState<AssessmentQuestion[]>([]);
   const [expandedQuestionIdx, setExpandedQuestionIdx] = useState<number | null>(0);
+  const queryClient = useQueryClient();
+  const candidatesQuery = useQuery({ queryKey: ["assessment-candidates"], queryFn: skillApi.assessmentCandidates, enabled: isOpen });
+  const createCandidate = useMutation({
+    mutationFn: () => skillApi.createAssessmentCandidate({ name: candidateForm.name, email: candidateForm.email, position: candidateForm.position || undefined, password: candidateForm.password || undefined }),
+    onSuccess: async (data) => { setCreatedCredentials(data.temporaryCredentials); setSelectedCandidateIds((current) => [...current, data.candidate._id]); setCandidateForm({ name: "", email: "", position: "", password: "" }); await queryClient.invalidateQueries({ queryKey: ["assessment-candidates"] }); },
+  });
 
   if (!isOpen) return null;
 
@@ -131,8 +143,8 @@ export const AssessmentMakerModal = ({
       setFeedback({ type: "error", text: "Please specify an assessment title." });
       return;
     }
-    if (selectedEmployeeIds.length === 0) {
-      setFeedback({ type: "error", text: "Please select at least one employee to assign." });
+    if (selectedEmployeeIds.length === 0 && selectedCandidateIds.length === 0) {
+      setFeedback({ type: "error", text: "Please select at least one employee or interview applicant." });
       return;
     }
     if (questions.length === 0) {
@@ -153,6 +165,7 @@ export const AssessmentMakerModal = ({
         passingScore: passingScore,
         timeLimitMinutes,
         assignedEmployees: selectedEmployeeIds,
+        assignedCandidates: selectedCandidateIds,
         questions,
       });
 
@@ -367,6 +380,7 @@ export const AssessmentMakerModal = ({
 
               {/* Scrollable Employee List */}
               <div className="mt-2 flex-1 max-h-56 space-y-1.5 overflow-y-auto rounded-xl border border-slate-200 bg-white p-2">
+                {employeeLoadError && <p className="rounded-lg bg-red-50 p-2 text-xs text-red-700">Could not load employees: {employeeLoadError}</p>}
                 {filteredEmployees.length === 0 ? (
                   <p className="py-6 text-center text-xs text-slate-400">No matching employees found</p>
                 ) : (
@@ -400,6 +414,17 @@ export const AssessmentMakerModal = ({
                     );
                   })
                 )}
+              </div>
+
+              <div className="mt-4 border-t pt-4">
+                <div className="flex items-center justify-between"><p className="text-xs font-bold uppercase tracking-wider text-slate-700">Interview applicants</p><span className="text-[10px] font-bold text-brand-700">{selectedCandidateIds.length} selected</span></div>
+                <div className="mt-2 max-h-28 space-y-1 overflow-y-auto">
+                  {candidatesQuery.data?.items.map((candidate) => <label key={candidate._id} className="flex cursor-pointer items-center justify-between rounded-lg bg-white p-2 text-xs"><span><strong>{candidate.name}</strong><span className="block text-[10px] text-slate-400">{candidate.email} · {candidate.position || "Applicant"}</span></span><input type="checkbox" checked={selectedCandidateIds.includes(candidate._id)} onChange={() => setSelectedCandidateIds((current) => current.includes(candidate._id) ? current.filter((id) => id !== candidate._id) : [...current, candidate._id])}/></label>)}
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-2"><Input className="h-8 text-xs" placeholder="Applicant name" value={candidateForm.name} onChange={(e) => setCandidateForm({ ...candidateForm, name: e.target.value })}/><Input className="h-8 text-xs" type="email" placeholder="Login email" value={candidateForm.email} onChange={(e) => setCandidateForm({ ...candidateForm, email: e.target.value })}/><Input className="h-8 text-xs" placeholder="Interview role" value={candidateForm.position} onChange={(e) => setCandidateForm({ ...candidateForm, position: e.target.value })}/><Input className="h-8 text-xs" type="password" placeholder="Password (auto if blank)" value={candidateForm.password} onChange={(e) => setCandidateForm({ ...candidateForm, password: e.target.value })}/></div>
+                <Button type="button" variant="secondary" className="mt-2 h-8 w-full text-xs" disabled={!candidateForm.name.trim() || !candidateForm.email.trim() || createCandidate.isPending} onClick={() => createCandidate.mutate()}>{createCandidate.isPending ? "Creating login…" : "Create applicant login & select"}</Button>
+                {createCandidate.error && <p className="mt-2 text-xs text-red-600">{createCandidate.error.message}</p>}
+                {createdCredentials && <div className="mt-2 rounded-lg bg-amber-50 p-2 text-xs text-amber-900"><strong>Copy credentials now:</strong><br/>{createdCredentials.email}<br/>{createdCredentials.password}</div>}
               </div>
             </div>
           </div>
@@ -559,13 +584,13 @@ export const AssessmentMakerModal = ({
         {/* Modal Footer */}
         <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/60 px-6 py-4 rounded-b-3xl">
           <div className="text-xs text-slate-500">
-            {selectedEmployeeIds.length > 0 ? (
+            {selectedEmployeeIds.length + selectedCandidateIds.length > 0 ? (
               <span>
-                Assigning to <strong className="text-slate-800">{selectedEmployeeIds.length}</strong>{" "}
-                employee(s) with <strong className="text-slate-800">{questions.length}</strong> questions
+                Assigning to <strong className="text-slate-800">{selectedEmployeeIds.length + selectedCandidateIds.length}</strong>{" "}
+                person(s) with <strong className="text-slate-800">{questions.length}</strong> questions
               </span>
             ) : (
-              <span className="text-amber-600">Select at least one employee to assign</span>
+              <span className="text-amber-600">Select an employee or interview applicant</span>
             )}
           </div>
 
@@ -577,13 +602,13 @@ export const AssessmentMakerModal = ({
               onClick={handleAssign}
               disabled={
                 isSubmitting ||
-                selectedEmployeeIds.length === 0 ||
+                selectedEmployeeIds.length + selectedCandidateIds.length === 0 ||
                 questions.length === 0 ||
                 !title.trim()
               }
               className="bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-600/20"
             >
-              {isSubmitting ? "Assigning..." : `Assign Assessment (${selectedEmployeeIds.length})`}
+              {isSubmitting ? "Assigning..." : `Assign Assessment (${selectedEmployeeIds.length + selectedCandidateIds.length})`}
             </Button>
           </div>
         </div>

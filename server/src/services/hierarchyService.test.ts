@@ -30,6 +30,10 @@ test("TEAM_LEAD has team surveillance and work oversight permissions", () => {
   assert.ok(!perms.includes("department.create"));
 });
 
+test("APPLICANT can access assessments only", () => {
+  assert.deepEqual(ROLE_PERMISSIONS.APPLICANT, ["section.assessments"]);
+});
+
 test("SUPER_ADMIN / HR_ADMIN scope permits any target employee", () => {
   const superAdminScope: ViewerHierarchyScope = {
     scopeType: "ALL",
@@ -234,4 +238,3 @@ test("calculateSeniorityRank assigns correct industry-standard executive tiers",
   assert.ok(ceo.rank < cto.rank, "CEO (Tier 1) must be strictly higher seniority than CTO (Tier 2)");
   assert.ok(cto.rank < aimlEngineer.rank, "CTO (Tier 2) must be strictly higher seniority than AI/ML Engineer (Tier 5)");
 });
-

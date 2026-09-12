@@ -1,4 +1,10 @@
-import type { GeoNodeDto, SalesAnalytics, SalesEmployeeDto } from "@mobius-ems/shared";
+import type {
+  GeoNodeDto,
+  GeographicAnalyticsResponse,
+  HeatmapPointsResponse,
+  SalesAnalytics,
+  SalesEmployeeDto,
+} from "@mobius-ems/shared";
 import { api } from "@/api/client";
 
 export interface SalesRecord {
@@ -209,6 +215,9 @@ export const salesApi = {
   geography: () => api.get<{ items: GeoNodeDto[] }>("/api/v1/sales/geography/tree"),
   createGeography: (body: Record<string, unknown>) => api.post<{ item: GeoNodeDto }>("/api/v1/sales/geography", body),
   geoAnalytics: (id: string) => api.get<SalesAnalytics>(`/api/v1/sales/geography/${id}/analytics`),
+  geoIntelligence: (id: string = "global") => api.get<GeographicAnalyticsResponse>(`/api/v1/sales/geography/${id}/analytics`),
+  heatmapPoints: (type: "leads" | "customers" = "leads", geoId?: string) =>
+    api.get<HeatmapPointsResponse>(`/api/v1/sales/geography/heatmap-points?type=${type}${geoId ? `&geoId=${geoId}` : ""}`),
   territories: () => api.get<{ items: SalesTerritory[] }>("/api/v1/sales/territories"),
   territoryAnalytics: (id: string) => api.get<SalesAnalytics>(`/api/v1/sales/territories/${id}/analytics`),
   records: (path: string) => api.get<{ items: SalesRecord[] }>(`/api/v1/sales/${path}`),

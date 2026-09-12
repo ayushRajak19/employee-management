@@ -29,7 +29,7 @@ export interface Assessment {
   maximumScore: number;
   passingScore: number;
   timeLimitMinutes: number;
-  assignedEmployee: {
+  assignedEmployee?: {
     _id: string;
     firstName: string;
     lastName: string;
@@ -37,6 +37,7 @@ export interface Assessment {
     department?: { name: string };
     designation?: { name: string };
   };
+  assignedCandidate?: { _id: string; name: string; email: string; position?: string; user?: string };
   assignedBy?: { _id: string; name: string };
   status: "PENDING" | "IN_PROGRESS" | "COMPLETED";
   questions?: AssessmentQuestion[];
@@ -75,6 +76,7 @@ export interface AssignAssessmentInput {
   timeLimitMinutes?: number;
   assignedEmployee?: string;
   assignedEmployees?: string[];
+  assignedCandidates?: string[];
   questions?: AssessmentQuestion[];
 }
 
@@ -103,6 +105,8 @@ export const skillApi = {
   verify: (id: string, body: { status: string; verifiedRating?: number; method: string; justification: string }) => api.patch(`/api/v1/skills/verifications/${id}`, body),
   heatmap: () => api.get<{ items: SkillClaim[] }>("/api/v1/skills/heatmap"),
   assessments: () => api.get<{ items: Assessment[] }>("/api/v1/skills/assessments"),
+  assessmentCandidates: () => api.get<{ items: AssessmentCandidate[] }>("/api/v1/skills/assessment-candidates"),
+  createAssessmentCandidate: (body: { name: string; email: string; position?: string; password?: string }) => api.post<{ candidate: AssessmentCandidate; temporaryCredentials: { email: string; password: string } }>("/api/v1/skills/assessment-candidates", body),
   generateAssessment: (body: GenerateAssessmentInput) => api.post<GenerateAssessmentResponse>("/api/v1/skills/assessments/generate", body),
   getAssessment: (id: string) => api.get<{ item: Assessment }>(`/api/v1/skills/assessments/${id}`),
   assignAssessment: (body: AssignAssessmentInput) => api.post("/api/v1/skills/assessments", body),
@@ -111,4 +115,4 @@ export const skillApi = {
   deleteAssessment: (id: string) => api.delete<{ message: string }>(`/api/v1/skills/assessments/${id}`),
   recordResult: (id: string, body: unknown) => api.patch(`/api/v1/skills/assessments/${id}/result`, body)
 };
-
+export interface AssessmentCandidate { _id: string; name: string; email: string; position?: string }

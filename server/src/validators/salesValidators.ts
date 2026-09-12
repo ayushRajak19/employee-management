@@ -17,7 +17,14 @@ const validEffectiveRange = (value: { effectiveFrom?: Date; effectiveTo?: Date }
 const idParams = z.object({ params: z.object({ id: objectId }) });
 export const salesIdSchema = idParams;
 export const employeeAnalyticsSchema = z.object({ params: z.object({ employeeId: objectId }) });
-export const geoIdSchema = z.object({ params: z.object({ geoId: objectId }) });
+const geoIdParam = z.union([objectId, z.string().regex(/^global$/i, "Invalid identifier")]);
+export const geoIdSchema = z.object({ params: z.object({ geoId: geoIdParam }) });
+export const heatmapPointsSchema = z.object({
+  query: z.object({
+    type: z.enum(["leads", "customers"]).default("leads"),
+    geoId: geoIdParam.optional(),
+  }),
+});
 export const territoryIdSchema = z.object({ params: z.object({ territoryId: objectId }) });
 
 const geoBody = z.object({

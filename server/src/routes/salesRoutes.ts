@@ -15,6 +15,7 @@ import {
   createTerritorySchema,
   employeeAnalyticsSchema,
   geoIdSchema,
+  heatmapPointsSchema,
   salesIdSchema,
   territoryIdSchema,
   updateChannelPartnerSchema,
@@ -60,6 +61,7 @@ salesRouter.get("/employees/:employeeId/analytics", salesAnalytics, validate(emp
 
 salesRouter.get("/geography/tree", salesMap, asyncHandler(controller.geographyTree));
 salesRouter.post("/geography", requirePermission("sales.configuration.manage"), validate(createGeoSchema), asyncHandler(controller.createGeography));
+salesRouter.get("/geography/heatmap-points", salesMap, validate(heatmapPointsSchema), asyncHandler(controller.geographyHeatmapPoints));
 salesRouter.get("/geography/:geoId", salesMap, validate(geoIdSchema), asyncHandler(controller.geographyDetail));
 salesRouter.get("/geography/:geoId/children", salesMap, validate(geoIdSchema), asyncHandler(controller.geographyChildren));
 salesRouter.get("/geography/:geoId/analytics", salesMap, validate(geoIdSchema), asyncHandler(controller.geographyAnalytics));

@@ -5,6 +5,11 @@ import { roleSkillCatalog } from "../data/roleSkillCatalog.js";
 import { RoleSkillAssessment } from "../models/RoleSkillAssessment.js";
 import { Task } from "../models/Task.js";
 import { buildSkillEvidence } from "./skillEvidence.js";
+import bcrypt from "bcrypt";
+import { randomBytes } from "node:crypto";
+import { AssessmentCandidate } from "../models/AssessmentCandidate.js";
+import { User } from "../models/User.js";
+import { Role } from "../models/Role.js";
 const catalogRoles: string[] = [...new Set(roleSkillCatalog.map((item) => item.role))];
 const normalized = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, "");
 const legacyDesignationRole = (name: string, code: string) => { const exact = catalogRoles.find((role) => normalized(role) === normalized(name)); if (exact) return exact; const combined = `${name} ${code}`.toLowerCase(); if (combined.includes("data") && combined.includes("analyst")) return "Data Analyst"; if (/(software|engineer|developer|ai|ml)/.test(combined)) return "AI/ML Developer"; if (combined.includes("field") && combined.includes("sales")) return "Field Sales Executive"; if (combined.includes("sales")) return "SaaS Sales (AE)"; if (combined.includes("bde")) return "BDE"; if (combined.includes("bdm")) return "BDM"; if (combined.includes("sdr")) return "SDR"; if (combined.includes("executive assistant") || normalized(code) === "ea") return "EA"; if (combined.includes("hr")) return "HR"; if (combined.includes("admin") || combined.includes("operation")) return "Admin"; return undefined; };
@@ -131,6 +136,7 @@ export interface AssignAssessmentInput {
   timeLimitMinutes?: number;
   assignedEmployee?: string;
   assignedEmployees?: string[];
+  assignedCandidates?: string[];
   questions?: AssessmentDocument["questions"];
 }
 
@@ -139,8 +145,9 @@ export const assignAssessment = async (input: AssignAssessmentInput, assignedBy:
     ? input.assignedEmployees
     : input.assignedEmployee ? [input.assignedEmployee] : [];
 
-  if (employeeIds.length === 0) {
-    throw new AppError("At least one employee must be selected for assignment", 400);
+  const candidateIds = input.assignedCandidates ?? [];
+  if (employeeIds.length === 0 && candidateIds.length === 0) {
+    throw new AppError("At least one employee or applicant must be selected for assignment", 400);
   }
 
   if (input.skill && !await Skill.exists({ _id: input.skill, isActive: true })) {
@@ -167,28 +174,22 @@ export const assignAssessment = async (input: AssignAssessmentInput, assignedBy:
 
   const timeLimitMinutes = Number(input.timeLimitMinutes) || 30;
 
-  const createdDocs = await Promise.all(
-    employeeIds.map(async (empId) => {
+  const createFor = async (assignment: { employee?: string; candidate?: string }) => Assessment.create({
+    name: input.name, skill: input.skill || undefined, skillName: input.skillName || undefined,
+    jobDescription: input.jobDescription || undefined, difficulty: input.difficulty || "INTERMEDIATE",
+    maximumScore: calcMaxScore, passingScore, timeLimitMinutes, assignedEmployee: assignment.employee,
+    assignedCandidate: assignment.candidate, assignedBy, status: "PENDING", questions, result: "PENDING"
+  });
+  const employeeDocs = await Promise.all(employeeIds.map(async (empId) => {
       const exists = await Employee.exists({ _id: empId, isActive: true });
       if (!exists) throw new AppError(`Employee ${empId} not found`, 404);
-
-      return Assessment.create({
-        name: input.name,
-        skill: input.skill || undefined,
-        skillName: input.skillName || undefined,
-        jobDescription: input.jobDescription || undefined,
-        difficulty: input.difficulty || "INTERMEDIATE",
-        maximumScore: calcMaxScore,
-        passingScore,
-        timeLimitMinutes,
-        assignedEmployee: empId,
-        assignedBy,
-        status: "PENDING",
-        questions,
-        result: "PENDING"
-      });
-    })
-  );
+      return createFor({ employee: empId });
+    }));
+  const candidateDocs = await Promise.all(candidateIds.map(async (candidateId) => {
+    if (!await AssessmentCandidate.exists({ _id: candidateId, isActive: true })) throw new AppError(`Applicant ${candidateId} not found`, 404);
+    return createFor({ candidate: candidateId });
+  }));
+  const createdDocs = [...employeeDocs, ...candidateDocs];
 
   return createdDocs.length === 1 ? createdDocs[0] : createdDocs;
 };
@@ -196,11 +197,13 @@ export const assignAssessment = async (input: AssignAssessmentInput, assignedBy:
 export const listAssessments = async (viewer: { id: string; role: string }) => {
   const filter: Record<string, unknown> = {};
   const isEmployee = viewer.role === "EMPLOYEE";
+  const isApplicant = viewer.role === "APPLICANT";
 
   if (isEmployee) {
     const employee = await Employee.findOne({ user: viewer.id }).select("_id");
     filter.assignedEmployee = employee?._id;
   }
+  if (isApplicant) filter.assignedCandidate = (await AssessmentCandidate.findOne({ user: viewer.id, isActive: true }).select("_id"))?._id;
 
   const items = await Assessment.find(filter)
     .populate("skill", "name category")
@@ -212,12 +215,13 @@ export const listAssessments = async (viewer: { id: string; role: string }) => {
         { path: "designation", select: "name" }
       ]
     })
+    .populate("assignedCandidate", "name email position user")
     .sort({ createdAt: -1 })
     .lean();
 
   return items.map((item) => {
     const isCompleted = item.status === "COMPLETED";
-    if (isEmployee && !isCompleted && item.questions) {
+    if ((isEmployee || isApplicant) && !isCompleted && item.questions) {
       return {
         ...item,
         questions: item.questions.map((q: any) => ({
@@ -244,18 +248,20 @@ export const getAssessmentById = async (id: string, viewer: { id: string; role: 
         { path: "designation", select: "name" }
       ]
     })
+    .populate("assignedCandidate", "name email position user")
     .lean();
 
   if (!assessment) throw new AppError("Assessment not found", 404);
 
   const assignedEmp = assessment.assignedEmployee as any;
-  const isOwner = assignedEmp?.user?.toString() === viewer.id;
+  const assignedCandidate = assessment.assignedCandidate as any;
+  const isOwner = assignedEmp?.user?.toString() === viewer.id || assignedCandidate?.user?.toString() === viewer.id;
 
-  if (viewer.role === "EMPLOYEE" && !isOwner) {
+  if (["EMPLOYEE", "APPLICANT"].includes(viewer.role) && !isOwner) {
     throw new AppError("Access denied to this assessment", 403);
   }
 
-  if (viewer.role === "EMPLOYEE" && assessment.status !== "COMPLETED" && assessment.questions) {
+  if (["EMPLOYEE", "APPLICANT"].includes(viewer.role) && assessment.status !== "COMPLETED" && assessment.questions) {
     return {
       ...assessment,
       questions: assessment.questions.map((q: any) => ({
@@ -272,11 +278,12 @@ export const getAssessmentById = async (id: string, viewer: { id: string; role: 
 };
 
 export const startAssessment = async (id: string, viewer: { id: string; role: string }) => {
-  const assessment = await Assessment.findById(id).populate("assignedEmployee", "user");
+  const assessment = await Assessment.findById(id).populate("assignedEmployee", "user").populate("assignedCandidate", "user");
   if (!assessment) throw new AppError("Assessment not found", 404);
 
   const assignedEmp = assessment.assignedEmployee as any;
-  if (viewer.role === "EMPLOYEE" && assignedEmp?.user?.toString() !== viewer.id) {
+  const assignedCandidate = assessment.assignedCandidate as any;
+  if (["EMPLOYEE", "APPLICANT"].includes(viewer.role) && assignedEmp?.user?.toString() !== viewer.id && assignedCandidate?.user?.toString() !== viewer.id) {
     throw new AppError("Access denied to this assessment", 403);
   }
 
@@ -298,11 +305,12 @@ export const submitAssessment = async (
   viewer: { id: string; role: string },
   input: { answers: { questionId: string; selectedOption?: number; textAnswer?: string }[] }
 ) => {
-  const assessment = await Assessment.findById(id).populate("assignedEmployee", "user");
+  const assessment = await Assessment.findById(id).populate("assignedEmployee", "user").populate("assignedCandidate", "user");
   if (!assessment) throw new AppError("Assessment not found", 404);
 
   const assignedEmp = assessment.assignedEmployee as any;
-  if (viewer.role === "EMPLOYEE" && assignedEmp?.user?.toString() !== viewer.id) {
+  const assignedCandidate = assessment.assignedCandidate as any;
+  if (["EMPLOYEE", "APPLICANT"].includes(viewer.role) && assignedEmp?.user?.toString() !== viewer.id && assignedCandidate?.user?.toString() !== viewer.id) {
     throw new AppError("Access denied to this assessment", 403);
   }
 
@@ -351,7 +359,8 @@ export const submitAssessment = async (
 
   await AssessmentResult.create({
     assessment: assessment._id,
-    employee: (assignedEmp?._id || assessment.assignedEmployee) as any,
+    employee: assessment.assignedEmployee,
+    candidate: assessment.assignedCandidate,
     attemptDate: new Date(),
     score: totalEarnedPoints,
     result,
@@ -360,6 +369,21 @@ export const submitAssessment = async (
   });
 
   return getAssessmentById(id, viewer);
+};
+
+export const listAssessmentCandidates = async () => AssessmentCandidate.find({ isActive: true }).select("name email position createdAt").sort({ createdAt: -1 }).lean();
+
+export const createAssessmentCandidate = async (input: { name: string; email: string; position?: string; password?: string }, actorId: string) => {
+  const email = input.email.trim().toLowerCase();
+  if (await User.exists({ email })) throw new AppError("This email already has an account", 409, "EMAIL_EXISTS");
+  const role = await Role.findOne({ name: "APPLICANT" });
+  if (!role) throw new AppError("Applicant role is not initialized; restart the service and try again", 503);
+  const password = input.password?.trim() || `Candidate-${randomBytes(6).toString("base64url")}!9`;
+  const user = await User.create({ name: input.name, email, passwordHash: await bcrypt.hash(password, 12), role: role._id, isActive: true, forcePasswordChange: false, onboardingComplete: true });
+  try {
+    const candidate = await AssessmentCandidate.create({ name: input.name, email, position: input.position, user: user._id, createdBy: actorId });
+    return { candidate, temporaryCredentials: { email, password } };
+  } catch (error) { await User.deleteOne({ _id: user._id }); throw error; }
 };
 
 export const deleteAssessment = async (id: string, viewer: { id: string; role: string }) => {

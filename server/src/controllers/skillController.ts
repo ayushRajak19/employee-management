@@ -15,6 +15,8 @@ export const designationSkills = async (request: Request, response: Response): P
 export const heatmap = async (_request: Request, response: Response): Promise<void> => { response.json({ success: true, message: "Skill heatmap retrieved", data: { items: await service.heatmap() } }); };
 
 export const assessments = async (request: Request, response: Response): Promise<void> => { response.json({ success: true, message: "Assessments retrieved", data: { items: await service.listAssessments({ id: request.user!.id, role: request.user!.role }) } }); };
+export const assessmentCandidates = async (_request: Request, response: Response): Promise<void> => { response.json({ success: true, message: "Assessment applicants retrieved", data: { items: await service.listAssessmentCandidates() } }); };
+export const createAssessmentCandidate = async (request: Request, response: Response): Promise<void> => { response.status(201).json({ success: true, message: "Applicant login created", data: await service.createAssessmentCandidate(request.body, request.user!.id) }); };
 export const assignAssessment = async (request: Request, response: Response): Promise<void> => { response.status(201).json({ success: true, message: "Assessment assigned", data: { item: await service.assignAssessment(request.body, request.user!.id) } }); };
 export const recordAssessmentResult = async (request: Request, response: Response): Promise<void> => { response.json({ success: true, message: "Assessment result recorded", data: { item: await service.recordAssessmentResult(String(request.params.id), request.body, request.user!.id) } }); };
 
@@ -73,4 +75,3 @@ export const deleteAssessment = async (request: Request, response: Response): Pr
     message: result.message
   });
 };
-

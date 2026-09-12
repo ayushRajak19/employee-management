@@ -1,3 +1,525 @@
+import { useState, useMemo } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { GeographicRollupNode } from "@mobius-ems/shared";
+import {
+  AlertTriangle,
+  ArrowRight,
+  Briefcase,
+  Building2,
+  ChevronRight,
+  Eye,
+  Flame,
+  Globe2,
+  Plus,
+  RotateCcw,
+  TrendingUp,
+  Users,
+} from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { useAuth } from "@/features/auth/AuthProvider";
+import { salesApi } from "../salesApi";
+import { GeoSalesMap } from "../components/GeoSalesMap";
+import { GeoIntelligencePanel } from "../components/GeoIntelligencePanel";
 import { CountrySales } from "../components/CountrySales";
+import { GeographyCreateDialog, type CreateGeographyInput } from "../components/GeographyCreateDialog";
 
-export const GeographicSalesPage = () => <main className="flex-1 px-5 py-8 sm:px-8"><div className="mx-auto max-w-[1440px]"><p className="text-sm font-medium text-brand-700">Sales Intelligence</p><h1 className="mt-1 text-3xl font-semibold">Country sales &amp; map</h1><p className="mt-2 text-sm text-slate-500">See where your leads and customers are located. Country is selected while creating a lead or customer.</p><CountrySales/></div></main>;
+type HierarchyFilter = "ALL" | "COUNTRIES" | "STATES" | "DISTRICTS" | "TERRITORIES";
+
+export const GeographicSalesPage = () => {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const canManageGeo = user?.permissions.includes("sales.configuration.manage") ?? false;
+
+  // Navigation / Drilldown State
+  const [currentGeoId, setCurrentGeoId] = useState<string>("global");
+  const [selectedNode, setSelectedNode] = useState<GeographicRollupNode | null>(null);
+  const [hierarchyFilter, setHierarchyFilter] = useState<HierarchyFilter>("ALL");
+
+  // Layer Controls State
+  const [heatmapMode, setHeatmapMode] = useState<"off" | "leads" | "customers">("leads");
+  const [showCoverageOverlay, setShowCoverageOverlay] = useState(true);
+  const [activeTab, setActiveTab] = useState<"map" | "table">("map");
+
+  // Dialog State
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+
+  // 1. Fetch Geographic Intelligence Data for current node
+  const intelligenceQuery = useQuery({
+    queryKey: ["sales", "geo-intelligence", currentGeoId],
+    queryFn: () => salesApi.geoIntelligence(currentGeoId),
+  });
+
+  // 2. Fetch Heatmap Points when enabled
+  const heatmapQuery = useQuery({
+    queryKey: ["sales", "heatmap-points", heatmapMode, currentGeoId],
+    queryFn: () => salesApi.heatmapPoints(heatmapMode === "off" ? "leads" : heatmapMode, currentGeoId === "global" ? undefined : currentGeoId),
+    enabled: heatmapMode !== "off",
+  });
+
+  // 3. Fetch Country / Location pins for precise coordinates
+  const countryPinsQuery = useQuery({
+    queryKey: ["sales", "countries"],
+    queryFn: salesApi.countries,
+  });
+
+  // 4. Fetch Geo tree for Create dialog
+  const geoTreeQuery = useQuery({
+    queryKey: ["sales", "geography", "tree"],
+    queryFn: salesApi.geography,
+  });
+
+  // 5. Create Geography Mutation
+  const createGeoMutation = useMutation({
+    mutationFn: (input: CreateGeographyInput) => salesApi.createGeography(input as unknown as Record<string, unknown>),
+    onSuccess: async () => {
+      setCreateDialogOpen(false);
+      await queryClient.invalidateQueries({ queryKey: ["sales"] });
+    },
+  });
+
+  const currentNode = intelligenceQuery.data?.node;
+  const childrenNodes = useMemo(() => intelligenceQuery.data?.children ?? [], [intelligenceQuery.data?.children]);
+  const ancestors = useMemo(() => intelligenceQuery.data?.ancestors ?? [], [intelligenceQuery.data?.ancestors]);
+
+  // Combine current node and children for map display
+  const mapNodes = useMemo(() => {
+    if (!currentNode) return [];
+    // If at global level, display children (countries)
+    if (currentNode._id === "global" || currentNode.type === "GLOBAL") {
+      return childrenNodes;
+    }
+    // Otherwise, display the current node plus its immediate children
+    return [currentNode, ...childrenNodes];
+  }, [currentNode, childrenNodes]);
+
+  // Handle drilldown into a child node
+  const handleDrillDown = (nodeId: string) => {
+    setCurrentGeoId(nodeId);
+    setSelectedNode(null);
+  };
+
+  // Handle navigating up to any ancestor in the breadcrumb
+  const handleBreadcrumbClick = (geoId: string) => {
+    setCurrentGeoId(geoId);
+    setSelectedNode(null);
+  };
+
+  const formatCurrency = (val?: number) => "₹" + Math.round(val ?? 0).toLocaleString("en-IN");
+
+  return (
+    <main className="flex-1 px-5 py-8 sm:px-8">
+      <div className="mx-auto max-w-[1440px] space-y-6">
+        {/* Header with Title and Mode Switcher */}
+        <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-semibold text-teal-700 border border-teal-200/60">
+                <Globe2 size={13} className="text-teal-600" />
+                PRD Sections 2, 8 &amp; 20
+              </span>
+              <span className="text-xs font-medium text-slate-400">· 7-Level Geographic Sales Engine</span>
+            </div>
+            <h1 className="mt-1.5 text-3xl font-bold tracking-tight text-slate-900">
+              Geographic Revenue Intelligence &amp; Map
+            </h1>
+            <p className="mt-1 text-sm text-slate-500">
+              Multi-level drilldown from Global down to District, City, and Sales Territory. Visualizes density heatmaps, capacity gaps, and white-space opportunity losses.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* View Tab Switcher */}
+            <div className="flex rounded-xl bg-slate-100 p-1 border border-slate-200/80">
+              <button
+                onClick={() => setActiveTab("map")}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                  activeTab === "map"
+                    ? "bg-white text-slate-900 shadow-xs"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                7-Level Map &amp; Decision Engine
+              </button>
+              <button
+                onClick={() => setActiveTab("table")}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                  activeTab === "table"
+                    ? "bg-white text-slate-900 shadow-xs"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Country Master Table
+              </button>
+            </div>
+
+            {canManageGeo && (
+              <Button
+                onClick={() => setCreateDialogOpen(true)}
+                className="gap-1.5 text-xs bg-teal-700 hover:bg-teal-800 text-white"
+              >
+                <Plus size={15} />
+                Add Geography
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {activeTab === "table" ? (
+          <CountrySales />
+        ) : (
+          <div className="space-y-6">
+            {/* 1. Interactive Breadcrumb Navigation Header */}
+            <nav
+              aria-label="Geographic Hierarchy Breadcrumb"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/90 bg-white px-5 py-3.5 shadow-2xs"
+            >
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider mr-1">
+                  Scope:
+                </span>
+
+                {/* Global Root Breadcrumb */}
+                <button
+                  onClick={() => handleBreadcrumbClick("global")}
+                  className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 font-medium transition ${
+                    currentGeoId === "global"
+                      ? "bg-teal-50 text-teal-800 font-bold border border-teal-200"
+                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                  }`}
+                >
+                  <Globe2 size={14} className="text-teal-600" />
+                  <span>Global</span>
+                </button>
+
+                {/* Ancestors Trail */}
+                {ancestors
+                  .filter((anc) => anc._id !== "global")
+                  .map((anc) => (
+                    <div key={anc._id} className="flex items-center gap-2">
+                      <ChevronRight size={14} className="text-slate-300 shrink-0" />
+                      <button
+                        onClick={() => handleBreadcrumbClick(anc._id)}
+                        className="rounded-lg px-2.5 py-1 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition font-medium"
+                      >
+                        {anc.name}
+                      </button>
+                    </div>
+                  ))}
+
+                {/* Current Drilled Node */}
+                {currentNode && currentNode._id !== "global" && (
+                  <div className="flex items-center gap-2">
+                    <ChevronRight size={14} className="text-slate-300 shrink-0" />
+                    <span className="flex items-center gap-1.5 rounded-lg bg-teal-50 px-2.5 py-1 font-bold text-teal-900 border border-teal-200">
+                      <span>{currentNode.name}</span>
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-teal-700 bg-teal-100/80 px-1.5 py-0.2 rounded">
+                        {currentNode.type}
+                      </span>
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Reset to Global Button */}
+              {currentGeoId !== "global" && (
+                <button
+                  onClick={() => handleBreadcrumbClick("global")}
+                  className="flex items-center gap-1 text-xs font-semibold text-teal-700 hover:text-teal-900 hover:underline"
+                >
+                  <RotateCcw size={13} />
+                  Reset to Global View
+                </button>
+              )}
+            </nav>
+
+            {/* 2. Controls Bar: Hierarchy Pills & Layer Toggles */}
+            <div className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4 sm:flex-row sm:items-center">
+              {/* Hierarchy Filter Switcher */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider mr-2">
+                  Levels:
+                </span>
+                {(["ALL", "COUNTRIES", "STATES", "DISTRICTS", "TERRITORIES"] as HierarchyFilter[]).map((level) => (
+                  <button
+                    key={level}
+                    onClick={() => setHierarchyFilter(level)}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                      hierarchyFilter === level
+                        ? "bg-slate-900 text-white shadow-xs"
+                        : "bg-white text-slate-600 hover:bg-slate-200/70 border border-slate-200/70"
+                    }`}
+                  >
+                    {level === "ALL" ? "All Levels" : level.charAt(0) + level.slice(1).toLowerCase()}
+                  </button>
+                ))}
+              </div>
+
+              {/* Layer Controls */}
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Density Heatmap Toggle */}
+                <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white p-1 text-xs font-medium">
+                  <Flame size={14} className={heatmapMode !== "off" ? "text-rose-500" : "text-slate-400"} />
+                  <span className="text-slate-500 pr-1">Heatmap:</span>
+                  <button
+                    onClick={() => setHeatmapMode("off")}
+                    className={`rounded-md px-2 py-1 transition ${
+                      heatmapMode === "off" ? "bg-slate-100 font-bold text-slate-900" : "text-slate-500 hover:text-slate-900"
+                    }`}
+                  >
+                    Off
+                  </button>
+                  <button
+                    onClick={() => setHeatmapMode("leads")}
+                    className={`rounded-md px-2 py-1 transition ${
+                      heatmapMode === "leads" ? "bg-rose-50 font-bold text-rose-700" : "text-slate-500 hover:text-slate-900"
+                    }`}
+                  >
+                    Lead Density
+                  </button>
+                  <button
+                    onClick={() => setHeatmapMode("customers")}
+                    className={`rounded-md px-2 py-1 transition ${
+                      heatmapMode === "customers" ? "bg-emerald-50 font-bold text-emerald-700" : "text-slate-500 hover:text-slate-900"
+                    }`}
+                  >
+                    Customer Revenue
+                  </button>
+                </div>
+
+                {/* Partner Coverage Toggle */}
+                <button
+                  onClick={() => setShowCoverageOverlay(!showCoverageOverlay)}
+                  className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold transition ${
+                    showCoverageOverlay
+                      ? "border-blue-300 bg-blue-50 text-blue-800"
+                      : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  <Building2 size={14} className={showCoverageOverlay ? "text-blue-600" : "text-slate-400"} />
+                  <span>25km Partner Zones</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 3. The Map Canvas */}
+            {intelligenceQuery.isLoading ? (
+              <Skeleton className="h-[520px] w-full rounded-2xl" />
+            ) : intelligenceQuery.isError ? (
+              <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-rose-800">
+                <p className="font-semibold">Failed to load geographic intelligence data</p>
+                <p className="text-sm mt-1">{intelligenceQuery.error.message}</p>
+              </div>
+            ) : (
+              <GeoSalesMap
+                nodes={mapNodes}
+                locations={countryPinsQuery.data?.locations}
+                heatmapPoints={heatmapQuery.data?.points}
+                showHeatmap={heatmapMode !== "off"}
+                heatmapType={heatmapMode === "off" ? "leads" : heatmapMode}
+                showCoverageOverlay={showCoverageOverlay}
+                selectedId={selectedNode?._id}
+                onSelectNode={(node) => setSelectedNode(node)}
+                onDrillDown={handleDrillDown}
+                hierarchyFilter={hierarchyFilter}
+              />
+            )}
+
+            {/* 4. Rollup Metrics Summary Cards for Selected Scope */}
+            {currentNode && (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {/* Revenue Achievement Card */}
+                <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-soft">
+                  <div className="flex items-center justify-between text-xs font-medium text-slate-500">
+                    <span>Revenue Target Pacing</span>
+                    <TrendingUp size={15} className="text-teal-600" />
+                  </div>
+                  <p className="mt-2 text-2xl font-bold text-slate-900">
+                    {formatCurrency(currentNode.actualRevenue)}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Target: {formatCurrency(currentNode.assignedTarget)} ·{" "}
+                    <strong className="text-teal-700">{currentNode.targetPacingPercentage}% paced</strong>
+                  </p>
+                </div>
+
+                {/* Lead Volume & Conversion */}
+                <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-soft">
+                  <div className="flex items-center justify-between text-xs font-medium text-slate-500">
+                    <span>Active Lead Load</span>
+                    <Briefcase size={15} className="text-blue-600" />
+                  </div>
+                  <p className="mt-2 text-2xl font-bold text-slate-900">
+                    {currentNode.leadCount.toLocaleString("en-IN")} leads
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {currentNode.leadConversionRate}% win rate · {currentNode.customerCount} customers
+                  </p>
+                </div>
+
+                {/* Capacity Bottleneck Status */}
+                <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-soft">
+                  <div className="flex items-center justify-between text-xs font-medium text-slate-500">
+                    <span>Sales Rep Bandwidth</span>
+                    <Users size={15} className="text-indigo-600" />
+                  </div>
+                  <p className="mt-2 text-2xl font-bold text-slate-900">
+                    {currentNode.activeHeadcount} Rep{currentNode.activeHeadcount === 1 ? "" : "s"}
+                  </p>
+                  <p className="mt-1 text-xs">
+                    {currentNode.headcountGap > 0 ? (
+                      <span className="font-semibold text-rose-600">
+                        ⚠️ Deficit of {currentNode.headcountGap} rep{currentNode.headcountGap === 1 ? "" : "s"}
+                      </span>
+                    ) : (
+                      <span className="font-medium text-emerald-600">
+                        ✓ Optimal capacity utilization ({currentNode.capacityUtilization}%)
+                      </span>
+                    )}
+                  </p>
+                </div>
+
+                {/* Opportunity Lost / White-Space */}
+                <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-soft">
+                  <div className="flex items-center justify-between text-xs font-medium text-slate-500">
+                    <span>Est. Opportunity Lost</span>
+                    <AlertTriangle size={15} className="text-rose-600" />
+                  </div>
+                  <p className="mt-2 text-2xl font-bold text-rose-600">
+                    {formatCurrency(currentNode.estimatedOpportunityLost)}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {currentNode.channelPartnerCount} Channel Partner{currentNode.channelPartnerCount === 1 ? "" : "s"} active
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* 5. Child Regions & Territories Drilldown Section */}
+            <section className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-soft space-y-4">
+              <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center border-b border-slate-100 pb-4">
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">
+                    {currentNode?.name} Child Regions &amp; Operating Units
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    {childrenNodes.length} direct descendant nodes under this geographic scope. Click &quot;Inspect&quot; to review the decision engine or &quot;Drill Down&quot; to zoom in.
+                  </p>
+                </div>
+                <div className="text-xs font-semibold text-slate-500">
+                  Total Revenue: <strong className="text-slate-900">{formatCurrency(currentNode?.actualRevenue)}</strong>
+                </div>
+              </div>
+
+              {childrenNodes.length === 0 ? (
+                <div className="py-8 text-center text-sm text-slate-400">
+                  No further child levels defined under this node. This territory is at the lowest registered operational level.
+                </div>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {childrenNodes.map((child) => {
+                    const isBottleneck = child.isCapacityBottleneck || child.headcountGap > 0;
+                    const isWhite = child.whiteSpaceRecommendation.includes("APPOINT_CHANNEL_PARTNER");
+
+                    return (
+                      <div
+                        key={child._id}
+                        className="flex flex-col justify-between rounded-xl border border-slate-200/90 bg-slate-50/40 p-4 hover:border-teal-600 hover:bg-white transition shadow-2xs"
+                      >
+                        <div className="space-y-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <h3 className="font-bold text-slate-900">{child.name}</h3>
+                              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                                {child.type} · {child.code}
+                              </span>
+                            </div>
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                                isBottleneck
+                                  ? "bg-rose-100 text-rose-800"
+                                  : child.capacityStatus === "APPROACHING"
+                                    ? "bg-amber-100 text-amber-800"
+                                    : "bg-emerald-100 text-emerald-800"
+                              }`}
+                            >
+                              {child.capacityStatus}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2 border-t border-slate-200/60 pt-2 text-xs">
+                            <div>
+                              <p className="text-slate-400 text-[11px]">Won Revenue</p>
+                              <p className="font-bold text-slate-900">{formatCurrency(child.actualRevenue)}</p>
+                            </div>
+                            <div>
+                              <p className="text-slate-400 text-[11px]">Lead Load</p>
+                              <p className="font-bold text-slate-900">{child.leadCount} leads</p>
+                            </div>
+                            <div>
+                              <p className="text-slate-400 text-[11px]">Sales Reps</p>
+                              <p className="font-bold text-slate-900">{child.activeHeadcount} reps</p>
+                            </div>
+                            <div>
+                              <p className="text-slate-400 text-[11px]">Partners</p>
+                              <p className="font-bold text-slate-900">{child.channelPartnerCount} active</p>
+                            </div>
+                          </div>
+
+                          {isWhite && (
+                            <div className="rounded-md bg-indigo-50 p-2 text-[11px] font-medium text-indigo-800">
+                              ⚡ White-space opportunity: Zero rep / partner presence
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                          <button
+                            onClick={() => setSelectedNode(child)}
+                            className="flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-slate-900"
+                          >
+                            <Eye size={13} />
+                            <span>Inspect</span>
+                          </button>
+                          <Button
+                            variant="secondary"
+                            onClick={() => handleDrillDown(child._id)}
+                            className="gap-1 text-xs"
+                          >
+                            <span>Drill Down</span>
+                            <ArrowRight size={13} />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+
+            {/* 6. Slide-Over Geographic Intelligence Panel */}
+            <GeoIntelligencePanel
+              node={selectedNode}
+              ancestors={ancestors}
+              onClose={() => setSelectedNode(null)}
+              onDrillDown={handleDrillDown}
+              canDrillDown={Boolean(selectedNode && childrenNodes.some((c) => c._id === selectedNode._id))}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Create Geography Dialog */}
+      {canManageGeo && (
+        <GeographyCreateDialog
+          open={createDialogOpen}
+          nodes={geoTreeQuery.data?.items ?? []}
+          pending={createGeoMutation.isPending}
+          error={createGeoMutation.error?.message}
+          onClose={() => setCreateDialogOpen(false)}
+          onSubmit={(input) => createGeoMutation.mutate(input)}
+        />
+      )}
+    </main>
+  );
+};

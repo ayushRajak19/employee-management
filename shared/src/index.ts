@@ -1,4 +1,4 @@
-export const ROLES = ["SUPER_ADMIN", "HR_ADMIN", "DEPARTMENT_HEAD", "MANAGER", "TEAM_LEAD", "EMPLOYEE"] as const;
+export const ROLES = ["SUPER_ADMIN", "HR_ADMIN", "DEPARTMENT_HEAD", "MANAGER", "TEAM_LEAD", "EMPLOYEE", "APPLICANT"] as const;
 export type RoleName = (typeof ROLES)[number];
 
 export const SECTION_ACCESS = [
@@ -76,7 +76,8 @@ export const ROLE_PERMISSIONS: Record<RoleName, readonly PermissionName[]> = {
   DEPARTMENT_HEAD: ["employee.view", "department.view", "skill.verify", "task.create", "task.assign", "task.update", "task.review", "performance.view", "performance.review", "goal.create", "goal.update", "kpi.evaluate", "document.view", "report.view", ...TEAM_SALES_PERMISSIONS, ...SECTION_PERMISSIONS.filter((permission) => !["section.attendance", "section.profile", "section.task_tracker", "section.resumes", "section.applicants", "section.resume_screener", "section.email_automation"].includes(permission))],
   MANAGER: ["employee.view", "department.view", "task.create", "task.assign", "task.update", "task.review", "performance.view", "performance.review", "goal.create", "goal.update", "kpi.evaluate", "document.view", "report.view", ...TEAM_SALES_PERMISSIONS, ...SECTION_PERMISSIONS.filter((permission) => !["section.attendance", "section.profile", "section.task_tracker", "section.resumes", "section.applicants", "section.resume_screener", "section.email_automation"].includes(permission))],
   TEAM_LEAD: ["employee.view", "department.view", "task.create", "task.assign", "task.update", "task.review", "performance.view", "performance.review", "goal.create", "goal.update", "document.view", "report.view", ...TEAM_SALES_PERMISSIONS, ...SECTION_PERMISSIONS.filter((permission) => !["section.attendance", "section.profile", "section.task_tracker", "section.resumes", "section.applicants", "section.resume_screener", "section.email_automation"].includes(permission))],
-  EMPLOYEE: ["employee.view", "department.view", "task.update", "performance.view", "goal.update", "document.view", "document.upload", ...SELF_SALES_PERMISSIONS, ...SECTION_PERMISSIONS.filter((permission) => !["section.employees", "section.organization", "section.skill_matrix", "section.applicants", "section.resume_screener", "section.email_automation"].includes(permission))]
+  EMPLOYEE: ["employee.view", "department.view", "task.update", "performance.view", "goal.update", "document.view", "document.upload", ...SELF_SALES_PERMISSIONS, ...SECTION_PERMISSIONS.filter((permission) => !["section.employees", "section.organization", "section.skill_matrix", "section.applicants", "section.resume_screener", "section.email_automation"].includes(permission))],
+  APPLICANT: ["section.assessments"]
 };
 
 export interface SessionUser {
@@ -162,4 +163,51 @@ export interface SalesEmployeeDto {
   designation?: { _id: string; name: string; code: string };
   reportingManager?: { _id: string; firstName: string; lastName: string; employeeId: string };
   workLocation?: { geoNode?: string; coordinates?: { type: "Point"; coordinates: [number, number] } };
+}
+
+export type CapacityStatus = "HEALTHY" | "APPROACHING" | "CRITICAL";
+
+export interface GeographicRollupNode {
+  _id: string;
+  name: string;
+  code: string;
+  type: "GLOBAL" | "COUNTRY" | "STATE" | "DISTRICT" | "CITY" | "AREA" | "PINCODE" | "TERRITORY";
+  depth: number;
+  parent?: string;
+  ancestors: string[];
+  location?: { type: "Point"; coordinates: [number, number] };
+  assignedTarget: number;
+  actualRevenue: number;
+  targetPacingPercentage: number;
+  pipelineValue: number;
+  leadCount: number;
+  leadConversionRate: number;
+  customerCount: number;
+  activeHeadcount: number;
+  channelPartnerCount: number;
+  configuredCapacityPerRep: number;
+  requiredHeadcount: number;
+  headcountGap: number;
+  isCapacityBottleneck: boolean;
+  estimatedOpportunityLost: number;
+  whiteSpaceRecommendation: string;
+  capacityUtilization: number;
+  capacityStatus: CapacityStatus;
+  managerName?: string;
+  territoryCount?: number;
+}
+
+export interface GeographicAnalyticsResponse extends SalesAnalytics {
+  node: GeographicRollupNode;
+  children: GeographicRollupNode[];
+  ancestors: Array<{ _id: string; name: string; code: string; type: string }>;
+  hierarchyLevel: "GLOBAL" | "COUNTRY" | "STATE" | "DISTRICT" | "CITY" | "AREA" | "PINCODE" | "TERRITORY";
+  territories?: Array<{ _id: string; name: string; code: string; managerName?: string; activeHeadcount: number }>;
+}
+
+export type HeatmapPointTuple = [number, number, number]; // [lat, lng, intensity]
+
+export interface HeatmapPointsResponse {
+  type: "leads" | "customers";
+  points: HeatmapPointTuple[];
 }

@@ -4,6 +4,7 @@ import * as configuration from "../services/salesConfigurationService.js";
 import * as data from "../services/salesDataService.js";
 import { employeeMap as getEmployeeMap } from "../services/employeeMapService.js";
 import * as geography from "../services/geoService.js";
+import * as geographicSales from "../services/geographicSalesService.js";
 import * as territories from "../services/salesTerritoryService.js";
 import * as targetPerformance from "../services/targetPerformanceService.js";
 import * as reminderService from "../services/targetReminderService.js";
@@ -25,7 +26,8 @@ export const salesEmployees = async (request: Request, response: Response) => se
 export const geographyTree = async (request: Request, response: Response) => send(response, "Sales geography retrieved", { items: await geography.geographyTree(request.user!) });
 export const geographyDetail = async (request: Request, response: Response) => send(response, "Geography retrieved", { item: await geography.getGeoNode(request.user!, String(request.params.geoId)) });
 export const geographyChildren = async (request: Request, response: Response) => send(response, "Geography children retrieved", { items: await geography.geoChildren(request.user!, String(request.params.geoId)) });
-export const geographyAnalytics = async (request: Request, response: Response) => send(response, "Geographic sales analytics retrieved", await analytics.geoAnalytics(request.user!, String(request.params.geoId)));
+export const geographyAnalytics = async (request: Request, response: Response) => send(response, "Geographic sales analytics retrieved", await geographicSales.getGeographicAnalytics(request.user!, String(request.params.geoId)));
+export const geographyHeatmapPoints = async (request: Request, response: Response) => send(response, "Geographic heatmap points retrieved", await geographicSales.getGeographicHeatmapPoints(request.user!, (request.query.type as "leads" | "customers") || "leads", request.query.geoId ? String(request.query.geoId) : undefined));
 export const createGeography = async (request: Request, response: Response) => send(response, "Geography created", { item: await geography.createGeoNode(request.user!, request.body) }, 201);
 export const updateGeography = async (request: Request, response: Response) => send(response, "Geography updated", { item: await geography.updateGeoNode(request.user!, String(request.params.geoId), request.body) });
 

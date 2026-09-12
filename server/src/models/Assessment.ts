@@ -34,7 +34,8 @@ export interface AssessmentDocument {
   maximumScore: number;
   passingScore: number;
   timeLimitMinutes: number;
-  assignedEmployee: Types.ObjectId;
+  assignedEmployee?: Types.ObjectId;
+  assignedCandidate?: Types.ObjectId;
   assignedBy: Types.ObjectId;
   status: AssessmentStatus;
   questions: AssessmentQuestion[];
@@ -74,7 +75,8 @@ const schema = new Schema<AssessmentDocument>({
   maximumScore: { type: Number, required: true, min: 1 },
   passingScore: { type: Number, required: true, min: 0 },
   timeLimitMinutes: { type: Number, required: true, min: 1, max: 1440, default: 30 },
-  assignedEmployee: { type: Schema.Types.ObjectId, ref: "Employee", required: true, index: true },
+  assignedEmployee: { type: Schema.Types.ObjectId, ref: "Employee", index: true },
+  assignedCandidate: { type: Schema.Types.ObjectId, ref: "AssessmentCandidate", index: true },
   assignedBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
   status: { type: String, enum: ASSESSMENT_STATUSES, default: "PENDING", index: true },
   questions: { type: [questionSchema], default: [] },
@@ -88,5 +90,7 @@ const schema = new Schema<AssessmentDocument>({
 }, { timestamps: true });
 
 schema.index({ assignedEmployee: 1, status: 1, createdAt: -1 });
+schema.index({ assignedCandidate: 1, status: 1, createdAt: -1 });
+schema.pre("validate", function () { if (Boolean(this.assignedEmployee) === Boolean(this.assignedCandidate)) this.invalidate("assignedEmployee", "Assign exactly one employee or applicant"); });
 
 export const Assessment = tenantModel<AssessmentDocument>("Assessment", schema);
