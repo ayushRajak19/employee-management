@@ -6,7 +6,7 @@ import { governanceApi } from "@/features/governance/governanceApi";
 
 const routes: Record<string, string> = {
   employees: "/employees",
-  skills: "/skills",
+  skills: "/skills/builder",
   departments: "/organization",
   projects: "/work",
   tasks: "/work",
