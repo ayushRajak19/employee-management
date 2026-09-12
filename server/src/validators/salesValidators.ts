@@ -21,7 +21,7 @@ const geoIdParam = z.union([objectId, z.string().regex(/^global$/i, "Invalid ide
 export const geoIdSchema = z.object({ params: z.object({ geoId: geoIdParam }) });
 export const heatmapPointsSchema = z.object({
   query: z.object({
-    type: z.enum(["leads", "customers"]).default("leads"),
+      type: z.enum(["leads", "customers", "revenue", "quantity"]).default("leads"),
     geoId: geoIdParam.optional(),
   }),
 });
@@ -161,7 +161,7 @@ export const targetBody = targetBase.refine((body) => body.employee || body.terr
   .refine(validEffectiveRange, { message: "Effective end must be after start", path: ["effectiveTo"] });
 export const revenueBody = z.object({
   customer: objectId.optional(), employee: objectId.optional(), territory: objectId.optional(), geoNode: objectId.optional(),
-  amount: nonNegative, currency, transactionDate: z.coerce.date(), source: z.string().trim().min(1).max(80),
+  amount: nonNegative, quantity: z.number().int().min(1).default(1), currency, transactionDate: z.coerce.date(), source: z.string().trim().min(1).max(80),
   reference: z.string().trim().max(160).optional(), productId: z.string().trim().max(120).optional(), channelPartner: objectId.optional(),
 });
 const channelPartnerBase = z.object({

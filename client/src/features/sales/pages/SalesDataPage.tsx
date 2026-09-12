@@ -102,8 +102,8 @@ const countryOptions = countryMaster.map((country) => country.name.common).sort(
 const today = () => new Date().toISOString().slice(0, 10);
 const monthEnd = () => { const now = new Date(); return new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10); };
 const initialForm = () => ({
-  name: "", companyName: "", contactName: "", email: "", phone: "", notes: "", market: "", country: "", state: "", code: "", employee: "", territory: "", customer: "", channelPartner: "",
-  value: "0", probability: "20", source: "REFERRAL", date: today(), endDate: monthEnd(),
+  name: "", companyName: "", contactName: "", email: "", phone: "", notes: "", market: "", country: "", state: "", code: "", employee: "", territory: "", geoNode: "", customer: "", channelPartner: "",
+  value: "0", quantity: "1", probability: "20", source: "REFERRAL", date: today(), endDate: monthEnd(),
   stage: "DISCOVERY", type: "OTHER", customerType: "BUSINESS", reference: "",
   leadTarget: "0", conversionTarget: "0", periodType: "MONTHLY", targetScope: "EMPLOYEE", currency: "INR", justification: "",
   commissionRate: "5", bonusRate: "2",
@@ -296,6 +296,7 @@ const columnsFor = (path: SalesDataPath, onSelectRecord?: (item: SalesRecord) =>
     { label: "Reference", render: (item) => item.reference ?? "—" },
     { label: "Employee", render: (item) => labelOf(item.employee) },
     { label: "Territory", render: (item) => labelOf(item.territory) },
+    { label: "Quantity", align: "right", render: (item) => (item.quantity ?? 1).toLocaleString("en-IN") },
     { label: "Amount", align: "right", render: (item) => money(item.currency, item.amount) },
   ];
   return [
@@ -324,6 +325,7 @@ export const SalesDataPage = ({ path, title }: { path: SalesDataPath; title: str
   const query = useQuery({ queryKey: ["sales", path], queryFn: () => salesApi.records(path) });
   const employees = useQuery({ queryKey: ["sales", "employees", "form"], queryFn: salesApi.employees, enabled: open && hasTeamScope });
   const territories = useQuery({ queryKey: ["sales", "territories", "form"], queryFn: salesApi.territories, enabled: open && hasTeamScope });
+  const geographies = useQuery({ queryKey: ["sales", "geography", "form"], queryFn: salesApi.geography, enabled: open && path !== "targets" });
   const customers = useQuery({ queryKey: ["sales", "customers", "form"], queryFn: () => salesApi.records("customers"), enabled: open && ["pipeline", "revenue"].includes(path) });
   const partners = useQuery({ queryKey: ["sales", "channel-partners", "form"], queryFn: () => salesApi.records("channel-partners"), enabled: open && path === "revenue" });
   const columns = columnsFor(path, (record) => setSelectedRecordForDrawer(record));
@@ -384,6 +386,7 @@ export const SalesDataPage = ({ path, title }: { path: SalesDataPath; title: str
       const common = {
         ownerEmployee: form.employee || undefined,
         ...(form.territory ? { territory: form.territory } : {}),
+        ...(form.geoNode ? { geoNode: form.geoNode } : {}),
         currency: form.currency,
         market: marketVal,
         ...(coords ? { coordinates: coords } : {}),
@@ -412,8 +415,8 @@ export const SalesDataPage = ({ path, title }: { path: SalesDataPath; title: str
           ...(form.acceleratorMultiplier !== "" ? { accelerators: [{ thresholdPercentage: 100, multiplier: Number(form.acceleratorMultiplier) }] } : {}),
         },
       });
-      if (path === "revenue") return salesApi.createRecord(path, { customer: form.customer, employee: form.employee || undefined, ...(form.territory ? { territory: form.territory } : {}), amount: value, currency: form.currency, transactionDate: form.date, source: form.source, reference: form.reference || undefined, channelPartner: form.channelPartner || undefined });
-      return salesApi.createRecord(path, { name: form.name, code: form.code, type: form.type, contactName: form.contactName || undefined, email: form.email || undefined, phone: form.phone || undefined, market: form.market || undefined, ...(form.territory ? { territory: form.territory } : {}), ownerEmployee: form.employee || undefined, status: "ACTIVE", effectiveFrom: form.date });
+      if (path === "revenue") return salesApi.createRecord(path, { customer: form.customer, employee: form.employee || undefined, ...(form.territory ? { territory: form.territory } : {}), ...(form.geoNode ? { geoNode: form.geoNode } : {}), amount: value, quantity: Number(form.quantity), currency: form.currency, transactionDate: form.date, source: form.source, reference: form.reference || undefined, channelPartner: form.channelPartner || undefined });
+      return salesApi.createRecord(path, { name: form.name, code: form.code, type: form.type, contactName: form.contactName || undefined, email: form.email || undefined, phone: form.phone || undefined, market: form.market || undefined, ...(form.territory ? { territory: form.territory } : {}), ...(form.geoNode ? { geoNode: form.geoNode } : {}), ownerEmployee: form.employee || undefined, status: "ACTIVE", effectiveFrom: form.date });
     },
     onSuccess: async () => {
       setOpen(false);
@@ -460,6 +463,7 @@ export const SalesDataPage = ({ path, title }: { path: SalesDataPath; title: str
   const addLabel = title === "Pipeline" ? "opportunity" : title.toLowerCase().replace(/s$/, "");
   const employeeField = hasTeamScope && <label className="text-sm font-medium">{path === "targets" ? "Target employee" : "Owner employee"}<select required={path !== "channel-partners"} className="mt-2 h-11 w-full rounded-xl border bg-white px-3" value={form.employee} onChange={(event) => setForm({ ...form, employee: event.target.value })}><option value="">Select employee</option>{employees.data?.items.map((employee) => <option key={employee._id} value={employee._id}>{employee.firstName} {employee.lastName}</option>)}</select></label>;
   const territoryField = <label className="text-sm font-medium">Territory (optional)<select required={path === "targets" && form.targetScope === "TERRITORY"} className="mt-2 h-11 w-full rounded-xl border bg-white px-3" value={form.territory} onChange={(event) => setForm({ ...form, territory: event.target.value })}><option value="">Leave unassigned</option>{territories.data?.items.map((territory) => <option key={territory._id} value={territory._id}>{territory.name}</option>)}</select><span className="mt-1 block text-xs font-normal text-slate-400">Use a territory only when your manager has defined one.</span></label>;
+  const geographyField = <label className="text-sm font-medium">Geographic node<select className="mt-2 h-11 w-full rounded-xl border bg-white px-3" value={form.geoNode} onChange={(event) => setForm({ ...form, geoNode: event.target.value })}><option value="">Select country/state/district/city</option>{geographies.data?.items.map((geo) => <option key={geo._id} value={geo._id}>{`${"— ".repeat(Math.max(0, geo.depth - 1))}${geo.name} (${geo.type})`}</option>)}</select><span className="mt-1 block text-xs font-normal text-slate-400">Required for detailed map and geographic rollups.</span></label>;
 
   const handleCountryChange = (countryName: string) => {
     const cObj = countryMaster.find((c) => c.name.common === countryName);
@@ -668,7 +672,8 @@ export const SalesDataPage = ({ path, title }: { path: SalesDataPath; title: str
         {form.ruleType === "COMMISSION_SLABS" && <div className="mt-4 space-y-2"><p className="text-sm font-semibold">Marginal tiers</p>{form.slabs.map((slab, index) => <div key={index} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2"><Input aria-label={`Tier ${index + 1} from percentage`} type="number" min="0" placeholder="From %" value={slab.fromPercentage} onChange={(event) => setForm({ ...form, slabs: form.slabs.map((item, itemIndex) => itemIndex === index ? { ...item, fromPercentage: event.target.value } : item) })}/><Input aria-label={`Tier ${index + 1} to percentage`} type="number" min="0" placeholder="To % (blank = ∞)" value={slab.toPercentage} onChange={(event) => setForm({ ...form, slabs: form.slabs.map((item, itemIndex) => itemIndex === index ? { ...item, toPercentage: event.target.value } : item) })}/><Input aria-label={`Tier ${index + 1} rate percentage`} type="number" min="0" step="0.01" placeholder="Rate %" value={slab.rate} onChange={(event) => setForm({ ...form, slabs: form.slabs.map((item, itemIndex) => itemIndex === index ? { ...item, rate: event.target.value } : item) })}/><Button type="button" variant="ghost" onClick={() => setForm({ ...form, slabs: form.slabs.filter((_, itemIndex) => itemIndex !== index) })}>×</Button></div>)}<Button type="button" variant="secondary" onClick={() => setForm({ ...form, slabs: [...form.slabs, { fromPercentage: "100", toPercentage: "", rate: "10" }] })}>Add tier</Button></div>}
         <div className="mt-4 rounded-xl bg-white p-3"><div className="flex items-center justify-between"><div><p className="text-sm font-semibold">Test Formula / What-If</p><p className="text-xs text-slate-500">Preview at 50%, 80%, 100%, and 150% achievement.</p></div><Button type="button" variant="secondary" disabled={simulation.isPending || Number(form.value) <= 0} onClick={() => simulation.mutate(compensationSignature)}>{simulation.isPending ? "Testing…" : "Test formula"}</Button></div>{simulation.data && simulation.variables === compensationSignature && <div className="mt-3 grid grid-cols-4 gap-2">{simulation.data.scenarios.map((scenario) => <div key={scenario.achievementPercentage} className="rounded-lg bg-slate-50 p-2 text-center"><p className="text-xs text-slate-500">{scenario.achievementPercentage}%</p><p className="font-semibold text-emerald-700">{money(form.currency, scenario.payout)}</p></div>)}</div>}{simulation.data && simulation.variables !== compensationSignature && <p className="mt-3 text-xs font-medium text-amber-700">Formula changed. Click Test formula to calculate a fresh preview.</p>}{simulation.error && <p className="mt-2 text-xs text-red-600">{simulation.error.message}</p>}</div>
       </section>}
-      {path === "revenue" && <><label className="text-sm font-medium">Amount<Input required type="number" min="0" className="mt-2" value={form.value} onChange={(event) => setForm({ ...form, value: event.target.value })}/></label><label className="text-sm font-medium">Transaction date<Input required type="date" max={today()} className="mt-2" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })}/></label><label className="text-sm font-medium">Revenue source<select className="mt-2 h-11 w-full rounded-xl border bg-white px-3" value={form.source} onChange={(event) => setForm({ ...form, source: event.target.value })}>{["INVOICE", "RECEIPT", "ADJUSTMENT", "OTHER"].map((source) => <option key={source}>{source}</option>)}</select></label><label className="text-sm font-medium">Invoice/reference<Input required className="mt-2" value={form.reference} onChange={(event) => setForm({ ...form, reference: event.target.value })}/></label></>}
+      {path !== "targets" && geographyField}
+      {path === "revenue" && <><label className="text-sm font-medium">Amount<Input required type="number" min="0" className="mt-2" value={form.value} onChange={(event) => setForm({ ...form, value: event.target.value })}/></label><label className="text-sm font-medium">Sales quantity<Input required type="number" min="1" step="1" className="mt-2" value={form.quantity} onChange={(event) => setForm({ ...form, quantity: event.target.value })}/></label><label className="text-sm font-medium">Transaction date<Input required type="date" max={today()} className="mt-2" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })}/></label><label className="text-sm font-medium">Revenue source<select className="mt-2 h-11 w-full rounded-xl border bg-white px-3" value={form.source} onChange={(event) => setForm({ ...form, source: event.target.value })}>{["INVOICE", "RECEIPT", "ADJUSTMENT", "OTHER"].map((source) => <option key={source}>{source}</option>)}</select></label><label className="text-sm font-medium">Invoice/reference<Input required className="mt-2" value={form.reference} onChange={(event) => setForm({ ...form, reference: event.target.value })}/></label></>}
       {path === "channel-partners" && <label className="text-sm font-medium">Effective from<Input required type="date" className="mt-2" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })}/></label>}
     </div>
     {!hasTeamScope && path !== "targets" && <p className="mt-4 text-xs text-slate-400">Owner is set to your employee profile automatically. Geography and territory are optional.</p>}

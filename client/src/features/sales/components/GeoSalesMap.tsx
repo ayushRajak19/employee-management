@@ -11,7 +11,7 @@ interface GeoSalesMapProps {
   locations?: SalesLocationPin[];
   heatmapPoints?: HeatmapPointTuple[];
   showHeatmap?: boolean;
-  heatmapType?: "leads" | "customers";
+  heatmapType?: "leads" | "customers" | "revenue" | "quantity";
   showCoverageOverlay?: boolean;
   selectedId?: string;
   onSelectNode?: (node: GeographicRollupNode) => void;
@@ -157,6 +157,8 @@ export const GeoSalesMap = ({
     location: n.location,
     assignedTarget: (n as GeographicRollupNode).assignedTarget ?? 0,
     actualRevenue: (n as GeographicRollupNode).actualRevenue ?? 0,
+    salesQuantity: (n as GeographicRollupNode).salesQuantity ?? 0,
+    salesTransactionCount: (n as GeographicRollupNode).salesTransactionCount ?? 0,
     targetPacingPercentage: (n as GeographicRollupNode).targetPacingPercentage ?? 0,
     pipelineValue: (n as GeographicRollupNode).pipelineValue ?? 0,
     leadCount: (n as GeographicRollupNode).leadCount ?? 0,
@@ -182,7 +184,9 @@ export const GeoSalesMap = ({
     if (hierarchyFilter === "COUNTRIES" && n.type === "COUNTRY") return true;
     if (hierarchyFilter === "STATES" && n.type === "STATE") return true;
     if (hierarchyFilter === "DISTRICTS" && n.type === "DISTRICT") return true;
-    if (hierarchyFilter === "TERRITORIES" && (n.type === "CITY" || n.type === "AREA" || n.type === "TERRITORY")) return true;
+    if (hierarchyFilter === "CITIES" && n.type === "CITY") return true;
+    if (hierarchyFilter === "AREAS" && n.type === "AREA") return true;
+    if (hierarchyFilter === "PINCODES" && n.type === "PINCODE") return true;
     return false;
   });
 
@@ -335,6 +339,8 @@ export const GeoSalesMap = ({
                       <span>Won Revenue:</span>
                       <strong className="text-emerald-700">₹{Math.round(node.actualRevenue).toLocaleString("en-IN")}</strong>
                     </p>
+                    <p className="flex justify-between"><span>Sales Quantity:</span><strong>{node.salesQuantity.toLocaleString("en-IN")} units</strong></p>
+                    <p className="flex justify-between"><span>Transactions:</span><strong>{node.salesTransactionCount}</strong></p>
                     <p className="flex justify-between">
                       <span>Capacity:</span>
                       <strong className={node.headcountGap > 0 ? "text-rose-600" : "text-emerald-600"}>

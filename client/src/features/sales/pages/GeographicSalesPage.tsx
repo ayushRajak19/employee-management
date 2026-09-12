@@ -24,7 +24,7 @@ import { GeoIntelligencePanel } from "../components/GeoIntelligencePanel";
 import { CountrySales } from "../components/CountrySales";
 import { GeographyCreateDialog, type CreateGeographyInput } from "../components/GeographyCreateDialog";
 
-type HierarchyFilter = "ALL" | "COUNTRIES" | "STATES" | "DISTRICTS" | "TERRITORIES";
+type HierarchyFilter = "ALL" | "COUNTRIES" | "STATES" | "DISTRICTS" | "CITIES" | "AREAS" | "PINCODES";
 
 export const GeographicSalesPage = () => {
   const { user } = useAuth();
@@ -37,7 +37,7 @@ export const GeographicSalesPage = () => {
   const [hierarchyFilter, setHierarchyFilter] = useState<HierarchyFilter>("ALL");
 
   // Layer Controls State
-  const [heatmapMode, setHeatmapMode] = useState<"off" | "leads" | "customers">("leads");
+  const [heatmapMode, setHeatmapMode] = useState<"off" | "leads" | "customers" | "revenue" | "quantity">("leads");
   const [showCoverageOverlay, setShowCoverageOverlay] = useState(true);
   const [activeTab, setActiveTab] = useState<"map" | "table">("map");
 
@@ -124,7 +124,7 @@ export const GeographicSalesPage = () => {
               Geographic Revenue Intelligence &amp; Map
             </h1>
             <p className="mt-1 text-sm text-slate-500">
-              Multi-level drilldown from Global down to District, City, and Sales Territory. Visualizes density heatmaps, capacity gaps, and white-space opportunity losses.
+              Strict drilldown: Global → Country → State → District → City → Area → Pincode. Territories remain ownership overlays. View revenue and sales quantity at every level.
             </p>
           </div>
 
@@ -240,7 +240,7 @@ export const GeographicSalesPage = () => {
                 <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider mr-2">
                   Levels:
                 </span>
-                {(["ALL", "COUNTRIES", "STATES", "DISTRICTS", "TERRITORIES"] as HierarchyFilter[]).map((level) => (
+                {(["ALL", "COUNTRIES", "STATES", "DISTRICTS", "CITIES", "AREAS", "PINCODES"] as HierarchyFilter[]).map((level) => (
                   <button
                     key={level}
                     onClick={() => setHierarchyFilter(level)}
@@ -285,6 +285,8 @@ export const GeographicSalesPage = () => {
                   >
                     Customer Revenue
                   </button>
+                  <button onClick={() => setHeatmapMode("revenue")} className={`rounded-md px-2 py-1 transition ${heatmapMode === "revenue" ? "bg-amber-50 font-bold text-amber-700" : "text-slate-500 hover:text-slate-900"}`}>Revenue</button>
+                  <button onClick={() => setHeatmapMode("quantity")} className={`rounded-md px-2 py-1 transition ${heatmapMode === "quantity" ? "bg-violet-50 font-bold text-violet-700" : "text-slate-500 hover:text-slate-900"}`}>Quantity</button>
                 </div>
 
                 {/* Partner Coverage Toggle */}
@@ -327,7 +329,8 @@ export const GeographicSalesPage = () => {
 
             {/* 4. Rollup Metrics Summary Cards for Selected Scope */}
             {currentNode && (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-soft"><p className="text-xs font-medium text-slate-500">Sales Quantity</p><p className="mt-2 text-2xl font-bold text-slate-900">{currentNode.salesQuantity.toLocaleString("en-IN")}</p><p className="mt-1 text-xs text-slate-500">Across {currentNode.salesTransactionCount} transactions</p></div>
                 {/* Revenue Achievement Card */}
                 <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-soft">
                   <div className="flex items-center justify-between text-xs font-medium text-slate-500">
@@ -451,6 +454,7 @@ export const GeographicSalesPage = () => {
                             <div>
                               <p className="text-slate-400 text-[11px]">Won Revenue</p>
                               <p className="font-bold text-slate-900">{formatCurrency(child.actualRevenue)}</p>
+                              <p className="text-[11px] text-slate-500">{child.salesQuantity} units · {child.salesTransactionCount} sales</p>
                             </div>
                             <div>
                               <p className="text-slate-400 text-[11px]">Lead Load</p>

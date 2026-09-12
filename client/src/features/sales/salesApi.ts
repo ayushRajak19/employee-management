@@ -25,6 +25,8 @@ export interface SalesRecord {
   confirmedSaleAmount?: number;
   lifetimeRevenue?: number;
   amount?: number;
+  quantity?: number;
+  geoNode?: string | GeoNodeDto;
   revenueTarget?: number;
   leadTarget?: number;
   conversionTarget?: number;
@@ -242,7 +244,7 @@ export const salesApi = {
   createGeography: (body: Record<string, unknown>) => api.post<{ item: GeoNodeDto }>("/api/v1/sales/geography", body),
   geoAnalytics: (id: string) => api.get<SalesAnalytics>(`/api/v1/sales/geography/${id}/analytics`),
   geoIntelligence: (id: string = "global") => api.get<GeographicAnalyticsResponse>(`/api/v1/sales/geography/${id}/analytics`),
-  heatmapPoints: (type: "leads" | "customers" = "leads", geoId?: string) =>
+  heatmapPoints: (type: "leads" | "customers" | "revenue" | "quantity" = "leads", geoId?: string) =>
     api.get<HeatmapPointsResponse>(`/api/v1/sales/geography/heatmap-points?type=${type}${geoId ? `&geoId=${geoId}` : ""}`),
   territories: () => api.get<{ items: SalesTerritory[] }>("/api/v1/sales/territories"),
   territoryAnalytics: (id: string) => api.get<SalesAnalytics>(`/api/v1/sales/territories/${id}/analytics`),

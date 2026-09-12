@@ -175,6 +175,7 @@ const createWonRevenue = async (viewer: SessionUser, opportunity: SalesRecordDoc
       geoNode: opportunity.get("geoNode"),
       market: opportunity.get("market"),
       amount,
+      quantity: 1,
       currency: opportunity.get("currency") ?? "INR",
       transactionDate,
       source: "OPPORTUNITY_WON",
@@ -551,7 +552,7 @@ export const updateSalesData = async (viewer: SessionUser, entity: SalesEntityNa
       { sourceLead: item._id },
       { $setOnInsert: {
         sourceLead: item._id, customer: item.get("customer"), employee: item.get("ownerEmployee"),
-        territory: item.get("territory"), geoNode: item.get("geoNode"), amount: Number(raw.saleAmount),
+        territory: item.get("territory"), geoNode: item.get("geoNode"), amount: Number(raw.saleAmount), quantity: 1,
         currency: item.get("currency") ?? "INR", transactionDate: new Date(), source: "LEAD_CONVERSION",
         reference: "LEAD-" + item.id,
       } },

@@ -116,6 +116,8 @@ export interface HierarchyNodeRecord {
 export interface NodeDataRecord {
   assignedTarget?: number;
   actualRevenue?: number;
+  salesQuantity?: number;
+  salesTransactionCount?: number;
   pipelineValue?: number;
   leadCount?: number;
   convertedLeadCount?: number;
@@ -169,6 +171,8 @@ export const rollupHierarchyMetrics = (
     const descendantIds = getDescendantIds(node._id);
     let assignedTarget = 0;
     let actualRevenue = 0;
+    let salesQuantity = 0;
+    let salesTransactionCount = 0;
     let pipelineValue = 0;
     let leadCount = 0;
     let convertedLeadCount = 0;
@@ -184,6 +188,8 @@ export const rollupHierarchyMetrics = (
       if (!data) continue;
       assignedTarget += data.assignedTarget ?? 0;
       actualRevenue += data.actualRevenue ?? 0;
+      salesQuantity += data.salesQuantity ?? 0;
+      salesTransactionCount += data.salesTransactionCount ?? 0;
       pipelineValue += data.pipelineValue ?? 0;
       leadCount += data.leadCount ?? 0;
       convertedLeadCount += data.convertedLeadCount ?? 0;
@@ -237,6 +243,8 @@ export const rollupHierarchyMetrics = (
       managerName: node.managerName,
       assignedTarget,
       actualRevenue,
+      salesQuantity,
+      salesTransactionCount,
       targetPacingPercentage,
       pipelineValue,
       leadCount,
@@ -365,7 +373,7 @@ export const getGeographicAnalytics = async (
         { geoNode: { $in: targetDescendantIds } },
         ...(relevantTerritoryIds.length ? [{ territory: { $in: relevantTerritoryIds } }] : []),
       ],
-    }).select("geoNode territory amount currency transactionDate").lean(),
+    }).select("geoNode territory amount quantity currency transactionDate").lean(),
 
     SalesTarget.find({
       status: { $in: ["ACTIVE", "CLOSED"] },
@@ -396,6 +404,8 @@ export const getGeographicAnalytics = async (
       nodeDataMap[id] = {
         assignedTarget: 0,
         actualRevenue: 0,
+        salesQuantity: 0,
+        salesTransactionCount: 0,
         pipelineValue: 0,
         leadCount: 0,
         convertedLeadCount: 0,
@@ -448,6 +458,8 @@ export const getGeographicAnalytics = async (
     if (!gId) continue;
     const data = ensureNodeData(gId);
     data.actualRevenue = (data.actualRevenue ?? 0) + (rev.amount || 0);
+    data.salesQuantity = (data.salesQuantity ?? 0) + (rev.quantity ?? 1);
+    data.salesTransactionCount = (data.salesTransactionCount ?? 0) + 1;
   }
 
   // Aggregate channel partners
@@ -493,12 +505,16 @@ export const getGeographicAnalytics = async (
   const territoryList = relevantTerritories.map((t) => {
     const owner = t.ownerEmployee as { firstName?: string; lastName?: string } | undefined;
     const assignedReps = assignments.filter((a) => String(a.territory) === String(t._id)).length;
+    const territoryRevenue = revenues.filter((r) => String(r.territory) === String(t._id));
     return {
       _id: String(t._id),
       name: t.name,
       code: t.code,
       managerName: owner ? `${owner.firstName || ""} ${owner.lastName || ""}`.trim() : undefined,
       activeHeadcount: assignedReps,
+      actualRevenue: territoryRevenue.reduce((sum, item) => sum + (item.amount || 0), 0),
+      salesQuantity: territoryRevenue.reduce((sum, item) => sum + (item.quantity ?? 1), 0),
+      salesTransactionCount: territoryRevenue.length,
     };
   });
 
@@ -514,6 +530,8 @@ export const getGeographicAnalytics = async (
     currency: "INR",
     targetRevenue: node.assignedTarget,
     actualRevenue: node.actualRevenue,
+    salesQuantity: node.salesQuantity,
+    salesTransactionCount: node.salesTransactionCount,
     targetAchievement: node.targetPacingPercentage,
     leadCount: node.leadCount,
     qualifiedLeadCount: node.leadCount,
@@ -558,7 +576,7 @@ export const getGeographicAnalytics = async (
  */
 export const getGeographicHeatmapPoints = async (
   viewer: SessionUser,
-  type: "leads" | "customers" = "leads",
+  type: "leads" | "customers" | "revenue" | "quantity" = "leads",
   geoId?: string
 ): Promise<HeatmapPointsResponse> => {
   const scope = await resolveSalesScope(viewer);
@@ -577,6 +595,29 @@ export const getGeographicHeatmapPoints = async (
   }
 
   const points: HeatmapPointTuple[] = [];
+
+  if (type === "revenue" || type === "quantity") {
+    const revenueFilter: Record<string, unknown> = {};
+    if (!isGlobal) {
+      const descendants = await descendantGeoIds(geoId!);
+      revenueFilter.geoNode = { $in: descendants };
+    } else if (scope.allowedGeoIds.length) {
+      revenueFilter.geoNode = { $in: scope.allowedGeoIds };
+    }
+    const rows = await SalesRevenueTransaction.find(revenueFilter)
+      .select("geoNode amount quantity")
+      .populate("geoNode", "location")
+      .lean();
+    for (const row of rows) {
+      const geo = row.geoNode as unknown as { location?: { coordinates?: [number, number] } };
+      const coordinates = geo?.location?.coordinates;
+      if (!coordinates) continue;
+      const [lng, lat] = coordinates;
+      const raw = type === "revenue" ? (row.amount || 0) / 200000 : (row.quantity ?? 1) / 100;
+      points.push([lat, lng, Number(Math.min(1, Math.max(0.2, raw)).toFixed(2))]);
+    }
+    return { type, points };
+  }
 
   if (type === "customers") {
     const customers = await SalesCustomer.find(filter)

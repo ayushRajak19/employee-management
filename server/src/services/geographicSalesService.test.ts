@@ -52,6 +52,8 @@ test("Hierarchy Aggregation Test: Country (India) -> State (Maharashtra) -> Dist
       leadCount: 120,
       convertedLeadCount: 18,
       actualRevenue: 6_000_000,
+      salesQuantity: 120,
+      salesTransactionCount: 4,
       pipelineValue: 2_500_000,
       assignedTarget: 5_000_000,
       customerCount: 15,
@@ -67,6 +69,8 @@ test("Hierarchy Aggregation Test: Country (India) -> State (Maharashtra) -> Dist
   assert.equal(mhResult.node._id, maharashtraId);
   assert.equal(mhResult.node.leadCount, 120, "Maharashtra must aggregate Pune's lead count");
   assert.equal(mhResult.node.actualRevenue, 6_000_000, "Maharashtra must aggregate Pune's revenue");
+  assert.equal(mhResult.node.salesQuantity, 120, "Maharashtra must aggregate Pune's sold quantity");
+  assert.equal(mhResult.node.salesTransactionCount, 4);
   assert.equal(mhResult.node.pipelineValue, 2_500_000);
   assert.equal(mhResult.node.customerCount, 15);
   assert.equal(mhResult.node.activeHeadcount, 2);
@@ -80,6 +84,7 @@ test("Hierarchy Aggregation Test: Country (India) -> State (Maharashtra) -> Dist
   assert.equal(indiaResult.node._id, indiaId);
   assert.equal(indiaResult.node.leadCount, 120, "India must aggregate Pune's lead count via Maharashtra");
   assert.equal(indiaResult.node.actualRevenue, 6_000_000, "India must aggregate Pune's revenue via Maharashtra");
+  assert.equal(indiaResult.node.salesQuantity, 120, "India must aggregate quantity through every hierarchy level");
   assert.equal(indiaResult.node.pipelineValue, 2_500_000);
   assert.equal(indiaResult.children.length, 1, "India's immediate child should be Maharashtra");
   assert.equal(indiaResult.children[0]!._id, maharashtraId);

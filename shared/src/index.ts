@@ -178,6 +178,8 @@ export interface GeographicRollupNode {
   location?: { type: "Point"; coordinates: [number, number] };
   assignedTarget: number;
   actualRevenue: number;
+  salesQuantity: number;
+  salesTransactionCount: number;
   targetPacingPercentage: number;
   pipelineValue: number;
   leadCount: number;
@@ -198,16 +200,18 @@ export interface GeographicRollupNode {
 }
 
 export interface GeographicAnalyticsResponse extends SalesAnalytics {
+  salesQuantity: number;
+  salesTransactionCount: number;
   node: GeographicRollupNode;
   children: GeographicRollupNode[];
   ancestors: Array<{ _id: string; name: string; code: string; type: string }>;
   hierarchyLevel: "GLOBAL" | "COUNTRY" | "STATE" | "DISTRICT" | "CITY" | "AREA" | "PINCODE" | "TERRITORY";
-  territories?: Array<{ _id: string; name: string; code: string; managerName?: string; activeHeadcount: number }>;
+    territories?: Array<{ _id: string; name: string; code: string; managerName?: string; activeHeadcount: number; actualRevenue: number; salesQuantity: number; salesTransactionCount: number }>;
 }
 
 export type HeatmapPointTuple = [number, number, number]; // [lat, lng, intensity]
 
 export interface HeatmapPointsResponse {
-  type: "leads" | "customers";
+  type: "leads" | "customers" | "revenue" | "quantity";
   points: HeatmapPointTuple[];
 }
