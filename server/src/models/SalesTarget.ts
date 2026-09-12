@@ -2,7 +2,7 @@ import { Schema, type Types } from "mongoose";
 import { tenantModel } from "../tenancy/tenantModel.js";
 
 export interface TargetCompensationRule {
-  ruleType?: "PROPORTIONAL" | "COMMISSION_SLABS" | "FLAT_COMMISSION" | "HYBRID";
+  ruleType?: "PROPORTIONAL" | "COMMISSION_SLABS" | "FLAT_COMMISSION" | "TARGET_GATE" | "HYBRID";
   commissionRate?: number;
   bonusThresholdPercentage?: number;
   bonusRate?: number;
@@ -47,7 +47,7 @@ export interface SalesTargetDocument {
 
 const compensationRuleSchema = new Schema<TargetCompensationRule>(
   {
-    ruleType: { type: String, enum: ["PROPORTIONAL", "COMMISSION_SLABS", "FLAT_COMMISSION", "HYBRID"], default: "FLAT_COMMISSION" },
+    ruleType: { type: String, enum: ["PROPORTIONAL", "COMMISSION_SLABS", "FLAT_COMMISSION", "TARGET_GATE", "HYBRID"], default: "FLAT_COMMISSION" },
     commissionRate: { type: Number, min: 0, max: 100, default: 0 },
     bonusThresholdPercentage: { type: Number, min: 0, max: 500 },
     bonusRate: { type: Number, min: 0, max: 100 },

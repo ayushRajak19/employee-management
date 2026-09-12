@@ -100,7 +100,7 @@ const compensationSlabSchema = z.object({
   rateType: z.enum(["PERCENTAGE", "FIXED"]).default("PERCENTAGE"),
 }).refine((value) => value.toPercentage == null || value.toPercentage > value.fromPercentage, { message: "Tier end must exceed tier start", path: ["toPercentage"] });
 export const targetCompensationSchema = z.object({
-  ruleType: z.enum(["PROPORTIONAL", "COMMISSION_SLABS", "FLAT_COMMISSION", "HYBRID"]).default("FLAT_COMMISSION"),
+  ruleType: z.enum(["PROPORTIONAL", "COMMISSION_SLABS", "FLAT_COMMISSION", "TARGET_GATE", "HYBRID"]).default("FLAT_COMMISSION"),
   commissionRate: z.coerce.number().min(0).max(100).default(0),
   bonusThresholdPercentage: z.coerce.number().min(0).max(500).optional(),
   bonusRate: z.coerce.number().min(0).max(100).optional(),

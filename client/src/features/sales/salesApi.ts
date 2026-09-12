@@ -85,7 +85,7 @@ export interface TargetPerformanceDto {
     effectiveFrom?: string;
     effectiveTo?: string;
     compensationRule?: {
-      ruleType?: "PROPORTIONAL" | "COMMISSION_SLABS" | "FLAT_COMMISSION" | "HYBRID";
+      ruleType?: "PROPORTIONAL" | "COMMISSION_SLABS" | "FLAT_COMMISSION" | "TARGET_GATE" | "HYBRID";
       commissionRate?: number;
       bonusThresholdPercentage?: number;
       bonusRate?: number;

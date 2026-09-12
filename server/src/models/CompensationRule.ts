@@ -18,7 +18,7 @@ export interface CompensationRuleDocument {
   basePayAllocation?: number;
   currency: string;
   description?: string;
-  ruleType: "PROPORTIONAL" | "COMMISSION_SLABS" | "FLAT_COMMISSION" | "HYBRID";
+  ruleType: "PROPORTIONAL" | "COMMISSION_SLABS" | "FLAT_COMMISSION" | "TARGET_GATE" | "HYBRID";
   proportionalConfig?: { maxPayout: number; baselineTarget?: number };
   slabs?: { fromPercentage: number; toPercentage: number | null; rate: number; rateType: "PERCENTAGE" | "FIXED" }[];
   floorPercentage?: number;
@@ -46,7 +46,7 @@ const schema = new Schema<CompensationRuleDocument>(
     basePayAllocation: { type: Number, min: 0 },
     currency: { type: String, uppercase: true, trim: true, maxlength: 3, default: "INR" },
     description: { type: String, trim: true, maxlength: 2000 },
-    ruleType: { type: String, enum: ["PROPORTIONAL", "COMMISSION_SLABS", "FLAT_COMMISSION", "HYBRID"], default: "FLAT_COMMISSION" },
+    ruleType: { type: String, enum: ["PROPORTIONAL", "COMMISSION_SLABS", "FLAT_COMMISSION", "TARGET_GATE", "HYBRID"], default: "FLAT_COMMISSION" },
     proportionalConfig: { maxPayout: { type: Number, min: 0 }, baselineTarget: { type: Number, min: 0 } },
     slabs: [{ _id: false, fromPercentage: { type: Number, required: true, min: 0 }, toPercentage: { type: Number, min: 0, default: null }, rate: { type: Number, required: true, min: 0 }, rateType: { type: String, enum: ["PERCENTAGE", "FIXED"], default: "PERCENTAGE" } }],
     floorPercentage: { type: Number, min: 0, max: 500 },

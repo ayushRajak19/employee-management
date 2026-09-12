@@ -29,7 +29,7 @@ export const calculateTargetProgress = (target: number, actual: number): TargetP
   };
 };
 
-export type CompensationRuleType = "PROPORTIONAL" | "COMMISSION_SLABS" | "FLAT_COMMISSION" | "HYBRID";
+export type CompensationRuleType = "PROPORTIONAL" | "COMMISSION_SLABS" | "FLAT_COMMISSION" | "TARGET_GATE" | "HYBRID";
 export interface CompensationSlab {
   fromPercentage: number;
   toPercentage: number | null;
@@ -87,7 +87,7 @@ export const calculateCompensationPayout = (
   const achievement = quota > 0 ? revenue / quota * 100 : 0;
   const basePay = money(Math.max(0, safeRule.basePayAllocation ?? 0));
   const explanations: string[] = [`Rule type: ${ruleType}. Achievement: ${money(achievement)}%.`];
-  const floorThreshold = Math.max(0, safeRule.floorPercentage ?? 0);
+  const floorThreshold = Math.max(ruleType === "TARGET_GATE" ? 100 : 0, safeRule.floorPercentage ?? 0);
   if (floorThreshold > 0 && achievement < floorThreshold) {
     explanations.push(`Floor requirement ${floorThreshold}% was not met; variable and base payout are zero.`);
     const breakdown: CalculationAuditBreakdown = { ruleType, basePay: 0, floorApplied: true, floorThreshold, capApplied: false, deductionsOrAdjustments: 0, totalPayout: 0, explanationText: explanations };
