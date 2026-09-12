@@ -43,6 +43,7 @@ const asEntity = (name: SalesEntityName): RequestHandler => (request, _response,
 
 salesRouter.get("/me/analytics", salesAnalytics, asyncHandler(controller.selfAnalytics));
 salesRouter.get("/target-performance/me", requireAnyPermission("sales.analytics.self", "sales.analytics.team", "sales.analytics.all"), asyncHandler(controller.myTargetPerformance));
+salesRouter.get("/daily-cockpit/me", requireAnyPermission("sales.analytics.self", "sales.analytics.team", "sales.analytics.all"), asyncHandler(controller.myDailyCockpit));
 salesRouter.get("/target-performance/team", requireAnyPermission("sales.analytics.team", "sales.analytics.all"), asyncHandler(controller.teamTargetPerformance));
 salesRouter.post("/compensation/simulate", requirePermission("sales.target.manage"), validate(simulateCompensationSchema), asyncHandler(controller.simulateCompensation));
 salesRouter.post("/compensation-periods/close", requirePermission("sales.configuration.manage"), validate(closeCompensationPeriodSchema), asyncHandler(controller.closeCompensationPeriod));

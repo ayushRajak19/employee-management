@@ -8,6 +8,7 @@ import * as geographicSales from "../services/geographicSalesService.js";
 import * as territories from "../services/salesTerritoryService.js";
 import * as targetPerformance from "../services/targetPerformanceService.js";
 import * as reminderService from "../services/targetReminderService.js";
+import { getDailySalesCockpit } from "../services/nextActionService.js";
 import { SalesTarget, type SalesTargetDocument } from "../models/SalesTarget.js";
 import type { Types } from "mongoose";
 import { AppError } from "../utils/AppError.js";
@@ -51,6 +52,7 @@ export const getConfiguration = async (_request: Request, response: Response) =>
 export const updateConfiguration = async (request: Request, response: Response) => send(response, "Sales configuration updated", { configuration: await configuration.updateSalesConfiguration(request.user!, request.body) });
 export const employeeMap = async (request: Request, response: Response) => send(response, "Employee map retrieved", await getEmployeeMap(request.user!));
 export const myTargetPerformance = async (request: Request, response: Response) => send(response, "Target performance retrieved", { items: await targetPerformance.targetPerformance(request.user!) });
+export const myDailyCockpit = async (request: Request, response: Response) => send(response, "Daily sales cockpit retrieved", await getDailySalesCockpit(request.user!));
 export const teamTargetPerformance = async (request: Request, response: Response) => send(response, "Team target performance retrieved", { items: await targetPerformance.targetPerformance(request.user!, true) });
 export const commitTarget = async (request: Request, response: Response) => send(response, "Commitment submitted", { item: await targetPerformance.commitToTarget(request.user!, String(request.params.targetId), request.body) }, 201);
 export const targetVersions = async (request: Request, response: Response) => send(response, "Target versions retrieved", { items: await data.listTargetVersions(request.user!, String(request.params.targetId)) });

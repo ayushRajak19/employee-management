@@ -194,10 +194,36 @@ export interface SalesActivityItem {
   createdAt: string;
 }
 
+export interface NextBestActionDto {
+  id: string;
+  entityType: "lead" | "opportunity" | "customer";
+  entityId: string;
+  title: string;
+  clientName: string;
+  dealValue: number;
+  recommendedAction: string;
+  recommendedChannel: "CALL" | "WHATSAPP" | "EMAIL" | "MEETING";
+  suggestedTiming: string;
+  reasonCodes: string[];
+  confidenceScore: number;
+  draftScriptOrNote?: string;
+  urgency: "CRITICAL" | "HIGH" | "NORMAL";
+}
+
+export interface DailySalesCockpitDto {
+  generatedAt: string;
+  nextBestActions: NextBestActionDto[];
+  highPotentialClients: { id: string; name: string; value: number; probability: number; stage: string; weightedValue: number }[];
+  probabilityBreakdown: { high: number; medium: number; low: number };
+  slaBreaches: number;
+  overdueFollowUps: number;
+}
+
 export const salesApi = {
   simulateCompensation: (body: { ruleConfig: Record<string, unknown>; targetAmount: number; testScenarios: number[] }) => api.post<CompensationSimulation>("/api/v1/sales/compensation/simulate", body),
   myPayouts: () => api.get<{ locked: LockedPayout[]; currentCycleProjection: unknown[] }>("/api/v1/sales/payouts/me"),
   targetPerformance: () => api.get<{ items: TargetPerformanceDto[] }>("/api/v1/sales/target-performance/me"),
+  dailyCockpit: () => api.get<DailySalesCockpitDto>("/api/v1/sales/daily-cockpit/me"),
   teamTargetPerformance: () => api.get<{ items: TargetPerformanceDto[] }>("/api/v1/sales/target-performance/team"),
   targetVersions: (targetId: string) => api.get<{ items: (SalesRecord & { version: number; effectiveFrom: string; effectiveTo?: string })[] }>(`/api/v1/sales/targets/${targetId}/versions`),
   targetReminders: (targetId: string) => api.get<{ totalRemindersSent: number; lastReminderSentAt: string | null; history: unknown[] }>(`/api/v1/sales/targets/${targetId}/reminders`),

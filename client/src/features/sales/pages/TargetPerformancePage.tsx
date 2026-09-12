@@ -5,6 +5,7 @@ import { salesApi, type TargetPerformanceDto } from "../salesApi";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useAuth } from "@/features/auth/AuthProvider";
+import { DailySalesCockpit } from "../components/DailySalesCockpit";
 
 const money = (n?: number, currency = "₹") => `${currency}${Math.round(n ?? 0).toLocaleString("en-IN")}`;
 const formatDate = (dateString?: string) => (dateString ? new Date(dateString).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—");
@@ -67,7 +68,7 @@ export const TargetPerformancePage = () => {
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest text-brand-700">Sales Intelligence</p>
-          <h1 className="mt-1 text-3xl font-semibold text-ink">Target & Compensation</h1>
+          <h1 className="mt-1 text-3xl font-semibold text-ink">Daily Sales Cockpit</h1>
         </div>
         {canViewTeam && (
           <div className="flex rounded-xl bg-slate-100 p-1">
@@ -88,6 +89,8 @@ export const TargetPerformancePage = () => {
           </div>
         )}
       </div>
+
+      {activeTab === "me" && <DailySalesCockpit />}
 
       {activeTab === "team" ? (
         /* =================== TEAM VIEW FOR MANAGERS / ADMINS =================== */
