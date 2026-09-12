@@ -73,12 +73,12 @@ const companyKnowledge = () => ({
   escalation: "When an answer is not contained in the supplied portal data or approved knowledge, say that it is unavailable and direct the employee to HR or their manager."
 });
 
-export const askAssistant = async (question: string, viewer: Viewer) => {
+export const askAssistant = async (question: string, viewer: Viewer, contextEmployeeId?: string) => {
   const dashboard = await dashboardSummary(viewer);
-  const dashboardContext = { metrics: dashboard.metrics, performanceEvidence: dashboard.performanceEvidence, upcomingDeadlines: dashboard.upcomingDeadlines, workloadAttention: dashboard.workloadAttention, needsAttention: dashboard.needsAttention, departments: dashboard.departments };
+  const dashboardContext = { metrics: dashboard.metrics, performanceEvidence: dashboard.performanceEvidence, upcomingDeadlines: dashboard.upcomingDeadlines, workloadAttention: dashboard.workloadAttention, needsAttention: dashboard.needsAttention, departments: dashboard.departments, authorizedEmployees: dashboard.subordinateWork.subordinates.slice(0, 30), authorizedEmployeeTasks: dashboard.subordinateWork.tasks.slice(0, 30).map((item) => ({ taskId: item.taskId, name: item.name, status: item.status, deadline: item.deadline, employee: item.assignedEmployee })) };
   let personal: unknown;
-  if (viewer.role === "EMPLOYEE") {
-    const employee = await Employee.findOne({ user: viewer.id, isActive: true }).select("_id");
+  if (viewer.role === "EMPLOYEE" || contextEmployeeId) {
+    const employee = contextEmployeeId ? { id: contextEmployeeId } : await Employee.findOne({ user: viewer.id, isActive: true }).select("_id");
     if (employee) {
       const profile = await employee360(employee.id, { id: viewer.id, role: viewer.role });
       personal = { employee: { employeeId: profile.employee.employeeId, name: `${profile.employee.firstName} ${profile.employee.lastName}`, designation: profile.employee.designation, department: profile.employee.department, status: profile.employee.status }, tasks: profile.tasks.slice(0, 12).map((item) => ({ taskId: item.taskId, name: item.name, status: item.status, deadline: item.deadline, priority: item.priority })), goals: profile.goals.slice(0, 10), performance: profile.performance.slice(0, 3), training: profile.training.slice(0, 8).map((item) => ({ training: item.training, status: item.status })) };
