@@ -20,6 +20,7 @@ import "../models/EmailDelivery.js";
 import "../models/EmailEnrollment.js";
 import "../models/EmailWorkflow.js";
 import "../models/Employee.js";
+import "../models/EmployeeGamification.js";
 import "../models/EmployeeKPI.js";
 import "../models/EmployeeSkill.js";
 import "../models/EmployeeTimeline.js";

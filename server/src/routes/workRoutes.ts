@@ -10,6 +10,7 @@ import { manualTaskSchema, projectSchema, taskIdSchema, taskReassignSchema, task
 export const workRouter = Router();
 workRouter.use(authenticate);
 workRouter.get("/projects", asyncHandler(controller.projects));
+workRouter.get("/gamification", asyncHandler(controller.gamification));
 workRouter.post("/projects", requirePermission("task.create"), validate(projectSchema), asyncHandler(controller.createProject));
 workRouter.get("/tasks/metrics", asyncHandler(controller.metrics));
 workRouter.get("/tasks", asyncHandler(controller.tasks));

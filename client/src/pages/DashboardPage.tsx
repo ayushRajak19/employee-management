@@ -10,6 +10,7 @@ import { api } from "@/api/client";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { MoodBreakPanel } from "@/features/ai/AiWorkspacePanels";
+import { GamificationHeader } from "@/features/work/GamificationHeader";
 import { cn } from "@/lib/cn";
 import { AdminAnalytics } from "./AdminAnalytics";
 
@@ -230,6 +231,7 @@ export const DashboardPage = () => {
   return (
     <main className="flex-1 overflow-x-clip px-4 py-6 sm:px-8 sm:py-9">
       <div className="mx-auto w-full min-w-0 max-w-[1440px]">
+        {employeeView && <div className="mb-7 animate-fadeInUp"><GamificationHeader/></div>}
 
         {/* ────── Hero greeting ────── */}
         <div className="animate-fadeInUp flex min-w-0 flex-col justify-between gap-4 sm:flex-row sm:items-end sm:gap-5">
