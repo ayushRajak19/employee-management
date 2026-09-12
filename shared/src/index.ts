@@ -9,6 +9,7 @@ export const SECTION_ACCESS = [
   { key: "section.profile", label: "My profile", group: "People operations" },
   { key: "section.employees", label: "Employees", group: "People" },
   { key: "section.organization", label: "Organization", group: "People" },
+  { key: "section.employee_map", label: "Employee map", group: "People" },
   { key: "section.sales", label: "Sales", group: "Sales" },
   { key: "section.skills", label: "Skills", group: "Capability" },
   { key: "section.skill_matrix", label: "Skill matrix", group: "Capability" },

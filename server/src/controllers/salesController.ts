@@ -8,6 +8,7 @@ import * as territories from "../services/salesTerritoryService.js";
 import * as targetPerformance from "../services/targetPerformanceService.js";
 import * as reminderService from "../services/targetReminderService.js";
 import { getDailySalesCockpit } from "../services/nextActionService.js";
+import { employeeMap as getEmployeeMap } from "../services/employeeMapService.js";
 import { SalesTarget, type SalesTargetDocument } from "../models/SalesTarget.js";
 import type { Types } from "mongoose";
 import { AppError } from "../utils/AppError.js";
@@ -16,6 +17,7 @@ const send = (response: Response, message: string, value: unknown, status = 200)
   response.status(status).json({ success: true, message, data: value });
 };
 export const countrySales = async (request: Request, response: Response) => send(response, "Country sales retrieved", await data.countrySales(request.user!));
+export const employeeMap = async (request: Request, response: Response) => send(response, "Employee map retrieved", await getEmployeeMap(request.user!));
 
 export const selfAnalytics = async (request: Request, response: Response) => send(response, "Sales analytics retrieved", await analytics.selfAnalytics(request.user!));
 export const teamAnalytics = async (request: Request, response: Response) => send(response, "Team sales analytics retrieved", await analytics.overviewAnalytics(request.user!));

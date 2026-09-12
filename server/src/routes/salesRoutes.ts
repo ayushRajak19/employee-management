@@ -100,3 +100,7 @@ for (const route of dataRoutes) {
 
 salesRouter.get("/configuration", requirePermission("sales.configuration.manage"), asyncHandler(controller.getConfiguration));
 salesRouter.put("/configuration", requirePermission("sales.configuration.manage"), validate(configurationSchema), asyncHandler(controller.updateConfiguration));
+
+export const employeeMapRouter = Router();
+employeeMapRouter.use(authenticate);
+employeeMapRouter.get("/", requireAnyPermission("employee_map.self", "employee_map.team", "employee_map.all"), asyncHandler(controller.employeeMap));
