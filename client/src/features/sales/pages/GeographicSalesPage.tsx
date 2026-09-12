@@ -8,7 +8,6 @@ import {
   Building2,
   ChevronRight,
   Eye,
-  Flame,
   Globe2,
   Plus,
   RotateCcw,
@@ -113,18 +112,10 @@ export const GeographicSalesPage = () => {
         {/* Header with Title and Mode Switcher */}
         <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-semibold text-teal-700 border border-teal-200/60">
-                <Globe2 size={13} className="text-teal-600" />
-                PRD Sections 2, 8 &amp; 20
-              </span>
-              <span className="text-xs font-medium text-slate-400">· 7-Level Geographic Sales Engine</span>
-            </div>
-            <h1 className="mt-1.5 text-3xl font-bold tracking-tight text-slate-900">
-              Geographic Revenue Intelligence &amp; Map
-            </h1>
+            <p className="text-sm font-medium text-teal-700">Sales geography</p>
+            <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-900">Sales by location</h1>
             <p className="mt-1 text-sm text-slate-500">
-              Strict drilldown: Global → Country → State → District → City → Area → Pincode. Territories remain ownership overlays. View revenue and sales quantity at every level.
+              Explore leads, customers, revenue and sales quantity by location.
             </p>
           </div>
 
@@ -139,7 +130,7 @@ export const GeographicSalesPage = () => {
                     : "text-slate-600 hover:text-slate-900"
                 }`}
               >
-                7-Level Map &amp; Decision Engine
+                Map
               </button>
               <button
                 onClick={() => setActiveTab("table")}
@@ -149,7 +140,7 @@ export const GeographicSalesPage = () => {
                     : "text-slate-600 hover:text-slate-900"
                 }`}
               >
-                Country Master Table
+                Summary table
               </button>
             </div>
 
@@ -233,63 +224,18 @@ export const GeographicSalesPage = () => {
               )}
             </nav>
 
-            {/* 2. Controls Bar: Hierarchy Pills & Layer Toggles */}
-            <div className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4 sm:flex-row sm:items-center">
-              {/* Hierarchy Filter Switcher */}
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider mr-2">
-                  Levels:
-                </span>
-                {(["ALL", "COUNTRIES", "STATES", "DISTRICTS", "CITIES", "AREAS", "PINCODES"] as HierarchyFilter[]).map((level) => (
-                  <button
-                    key={level}
-                    onClick={() => setHierarchyFilter(level)}
-                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                      hierarchyFilter === level
-                        ? "bg-slate-900 text-white shadow-xs"
-                        : "bg-white text-slate-600 hover:bg-slate-200/70 border border-slate-200/70"
-                    }`}
-                  >
-                    {level === "ALL" ? "All Levels" : level.charAt(0) + level.slice(1).toLowerCase()}
-                  </button>
-                ))}
-              </div>
+            <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-slate-200/80 bg-white p-4">
+              <label className="text-xs font-semibold text-slate-600">Show level
+                <select className="mt-1 block h-10 min-w-40 rounded-xl border border-slate-200 bg-white px-3 text-sm" value={hierarchyFilter} onChange={(event) => setHierarchyFilter(event.target.value as HierarchyFilter)}>
+                  <option value="ALL">All levels</option><option value="COUNTRIES">Countries</option><option value="STATES">States</option><option value="DISTRICTS">Districts</option><option value="CITIES">Cities</option><option value="AREAS">Areas</option><option value="PINCODES">Pincodes</option>
+                </select>
+              </label>
+              <label className="text-xs font-semibold text-slate-600">Map layer
+                <select className="mt-1 block h-10 min-w-44 rounded-xl border border-slate-200 bg-white px-3 text-sm" value={heatmapMode} onChange={(event) => setHeatmapMode(event.target.value as typeof heatmapMode)}>
+                  <option value="off">No heatmap</option><option value="leads">Lead density</option><option value="customers">Customer value</option><option value="revenue">Revenue</option><option value="quantity">Sales quantity</option>
+                </select>
+              </label>
 
-              {/* Layer Controls */}
-              <div className="flex flex-wrap items-center gap-3">
-                {/* Density Heatmap Toggle */}
-                <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white p-1 text-xs font-medium">
-                  <Flame size={14} className={heatmapMode !== "off" ? "text-rose-500" : "text-slate-400"} />
-                  <span className="text-slate-500 pr-1">Heatmap:</span>
-                  <button
-                    onClick={() => setHeatmapMode("off")}
-                    className={`rounded-md px-2 py-1 transition ${
-                      heatmapMode === "off" ? "bg-slate-100 font-bold text-slate-900" : "text-slate-500 hover:text-slate-900"
-                    }`}
-                  >
-                    Off
-                  </button>
-                  <button
-                    onClick={() => setHeatmapMode("leads")}
-                    className={`rounded-md px-2 py-1 transition ${
-                      heatmapMode === "leads" ? "bg-rose-50 font-bold text-rose-700" : "text-slate-500 hover:text-slate-900"
-                    }`}
-                  >
-                    Lead Density
-                  </button>
-                  <button
-                    onClick={() => setHeatmapMode("customers")}
-                    className={`rounded-md px-2 py-1 transition ${
-                      heatmapMode === "customers" ? "bg-emerald-50 font-bold text-emerald-700" : "text-slate-500 hover:text-slate-900"
-                    }`}
-                  >
-                    Customer Revenue
-                  </button>
-                  <button onClick={() => setHeatmapMode("revenue")} className={`rounded-md px-2 py-1 transition ${heatmapMode === "revenue" ? "bg-amber-50 font-bold text-amber-700" : "text-slate-500 hover:text-slate-900"}`}>Revenue</button>
-                  <button onClick={() => setHeatmapMode("quantity")} className={`rounded-md px-2 py-1 transition ${heatmapMode === "quantity" ? "bg-violet-50 font-bold text-violet-700" : "text-slate-500 hover:text-slate-900"}`}>Quantity</button>
-                </div>
-
-                {/* Partner Coverage Toggle */}
                 <button
                   onClick={() => setShowCoverageOverlay(!showCoverageOverlay)}
                   className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold transition ${
@@ -299,9 +245,8 @@ export const GeographicSalesPage = () => {
                   }`}
                 >
                   <Building2 size={14} className={showCoverageOverlay ? "text-blue-600" : "text-slate-400"} />
-                  <span>25km Partner Zones</span>
+                  <span>Partner coverage</span>
                 </button>
-              </div>
             </div>
 
             {/* 3. The Map Canvas */}
