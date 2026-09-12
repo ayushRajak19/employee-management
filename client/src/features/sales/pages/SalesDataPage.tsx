@@ -107,6 +107,13 @@ const initialForm = () => ({
   stage: "DISCOVERY", type: "OTHER", customerType: "BUSINESS", reference: "",
   leadTarget: "0", conversionTarget: "0", periodType: "MONTHLY", targetScope: "EMPLOYEE", currency: "INR", justification: "",
   commissionRate: "5", bonusRate: "2",
+  ruleType: "FLAT_COMMISSION", maxPayout: "10000", floorPercentage: "", capAmount: "", acceleratorMultiplier: "1.5",
+  slabs: [
+    { fromPercentage: "0", toPercentage: "50", rate: "2" },
+    { fromPercentage: "50", toPercentage: "80", rate: "5" },
+    { fromPercentage: "80", toPercentage: "100", rate: "8" },
+    { fromPercentage: "100", toPercentage: "", rate: "12" },
+  ],
   latitude: undefined as number | undefined,
   longitude: undefined as number | undefined,
 });
@@ -396,9 +403,13 @@ export const SalesDataPage = ({ path, title }: { path: SalesDataPath; title: str
         currency: form.currency,
         status: "ACTIVE",
         compensationRule: {
+          ruleType: form.ruleType,
           commissionRate: Number(form.commissionRate || 0),
-          bonusRate: Number(form.bonusRate || 0),
-          bonusThresholdPercentage: 100,
+          ...(form.ruleType === "PROPORTIONAL" ? { proportionalConfig: { maxPayout: Number(form.maxPayout || 0) } } : {}),
+          ...(form.ruleType === "COMMISSION_SLABS" ? { slabs: form.slabs.map((slab) => ({ fromPercentage: Number(slab.fromPercentage), toPercentage: slab.toPercentage === "" ? null : Number(slab.toPercentage), rate: Number(slab.rate), rateType: "PERCENTAGE" })) } : {}),
+          ...(form.floorPercentage !== "" ? { floorPercentage: Number(form.floorPercentage) } : {}),
+          ...(form.capAmount !== "" ? { capAmount: Number(form.capAmount) } : {}),
+          ...(form.acceleratorMultiplier !== "" ? { accelerators: [{ thresholdPercentage: 100, multiplier: Number(form.acceleratorMultiplier) }] } : {}),
         },
       });
       if (path === "revenue") return salesApi.createRecord(path, { customer: form.customer, employee: form.employee || undefined, ...(form.territory ? { territory: form.territory } : {}), amount: value, currency: form.currency, transactionDate: form.date, source: form.source, reference: form.reference || undefined, channelPartner: form.channelPartner || undefined });
@@ -411,6 +422,22 @@ export const SalesDataPage = ({ path, title }: { path: SalesDataPath; title: str
       await queryClient.invalidateQueries({ queryKey: ["sales"] });
       await queryClient.invalidateQueries({ queryKey: ["target-performance"] });
       await queryClient.invalidateQueries({ queryKey: ["sales", "analytics"] });
+    },
+  });
+
+  const simulation = useMutation({
+    mutationFn: () => {
+      const targetAmount = Number(form.value || 0);
+      const ruleConfig: Record<string, unknown> = {
+        ruleType: form.ruleType,
+        commissionRate: Number(form.commissionRate || 0),
+        ...(form.ruleType === "PROPORTIONAL" ? { proportionalConfig: { maxPayout: Number(form.maxPayout || 0) } } : {}),
+        ...(form.ruleType === "COMMISSION_SLABS" ? { slabs: form.slabs.map((slab) => ({ fromPercentage: Number(slab.fromPercentage), toPercentage: slab.toPercentage === "" ? null : Number(slab.toPercentage), rate: Number(slab.rate), rateType: "PERCENTAGE" })) } : {}),
+        ...(form.floorPercentage !== "" ? { floorPercentage: Number(form.floorPercentage) } : {}),
+        ...(form.capAmount !== "" ? { capAmount: Number(form.capAmount) } : {}),
+        accelerators: [{ thresholdPercentage: 100, multiplier: Number(form.acceleratorMultiplier || 1) }],
+      };
+      return salesApi.simulateCompensation({ ruleConfig, targetAmount, testScenarios: [0.5, 0.8, 1, 1.5].map((factor) => targetAmount * factor) });
     },
   });
 
@@ -618,6 +645,19 @@ export const SalesDataPage = ({ path, title }: { path: SalesDataPath; title: str
       {path === "customers" && <label className="text-sm font-medium">Customer type<select className="mt-2 h-11 w-full rounded-xl border bg-white px-3" value={form.customerType} onChange={(event) => setForm({ ...form, customerType: event.target.value })}>{["BUSINESS", "INDIVIDUAL", "GOVERNMENT", "NON_PROFIT", "OTHER"].map((type) => <option key={type}>{type.replaceAll("_", " ")}</option>)}</select></label>}
       {path === "pipeline" && <><label className="text-sm font-medium">Stage<select className="mt-2 h-11 w-full rounded-xl border bg-white px-3" value={form.stage} onChange={(event) => { const stage = pipelineStages.find((item) => item.value === event.target.value)!; setForm({ ...form, stage: stage.value, probability: String(stage.probability) }); }}>{pipelineStages.map((stage) => <option key={stage.value} value={stage.value}>{stage.label}</option>)}</select></label><label className="text-sm font-medium">Win probability %<Input required type="number" min="0" max="100" className="mt-2" value={form.probability} onChange={(event) => setForm({ ...form, probability: event.target.value })}/></label><label className="text-sm font-medium">Deal value<Input required type="number" min="0" className="mt-2" value={form.value} onChange={(event) => setForm({ ...form, value: event.target.value })}/></label><label className="text-sm font-medium">Expected close date<Input required type="date" min={today()} className="mt-2" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })}/></label></>}
       {path === "targets" && <><label className="text-sm font-medium">Assign target to<select className="mt-2 h-11 w-full rounded-xl border bg-white px-3" value={form.targetScope} onChange={(event) => setForm({ ...form, targetScope: event.target.value })}><option value="EMPLOYEE">Employee</option><option value="TERRITORY">Territory</option></select></label><label className="text-sm font-medium">Period type<select className="mt-2 h-11 w-full rounded-xl border bg-white px-3" value={form.periodType} onChange={(event) => setForm({ ...form, periodType: event.target.value })}>{["MONTHLY", "QUARTERLY", "YEARLY"].map((type) => <option key={type}>{type}</option>)}</select></label>{form.targetScope === "EMPLOYEE" ? employeeField : territoryField}<label className="text-sm font-medium">Period start<Input required type="date" className="mt-2" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })}/></label><label className="text-sm font-medium">Period end<Input required type="date" min={form.date} className="mt-2" value={form.endDate} onChange={(event) => setForm({ ...form, endDate: event.target.value })}/></label><label className="text-sm font-medium">Revenue target<Input required type="number" min="0" className="mt-2" value={form.value} onChange={(event) => setForm({ ...form, value: event.target.value })}/></label><label className="text-sm font-medium">Lead target<Input required type="number" min="0" className="mt-2" value={form.leadTarget} onChange={(event) => setForm({ ...form, leadTarget: event.target.value })}/></label><label className="text-sm font-medium">Conversion target %<Input required type="number" min="0" max="100" className="mt-2" value={form.conversionTarget} onChange={(event) => setForm({ ...form, conversionTarget: event.target.value })}/></label><label className="text-sm font-medium">Commission % (Compensation)<Input type="number" min="0" max="100" className="mt-2" value={form.commissionRate} onChange={(event) => setForm({ ...form, commissionRate: event.target.value })}/><span className="mt-1 block text-xs font-normal text-slate-400">Commission earned on achieved revenue</span></label><label className="text-sm font-medium">Accelerator bonus %<Input type="number" min="0" max="100" className="mt-2" value={form.bonusRate} onChange={(event) => setForm({ ...form, bonusRate: event.target.value })}/><span className="mt-1 block text-xs font-normal text-slate-400">Bonus rate above 100% quota</span></label></>}
+      {path === "targets" && <section className="sm:col-span-2 rounded-2xl border border-brand-100 bg-brand-50/40 p-4">
+        <h3 className="font-semibold text-ink">Target-based compensation formula</h3>
+        <div className="mt-3 grid gap-4 sm:grid-cols-2">
+          <label className="text-sm font-medium">Rule type<select className="mt-2 h-11 w-full rounded-xl border bg-white px-3" value={form.ruleType} onChange={(event) => setForm({ ...form, ruleType: event.target.value })}><option value="PROPORTIONAL">Proportional</option><option value="COMMISSION_SLABS">Tiered Slabs</option><option value="FLAT_COMMISSION">Flat Commission</option></select></label>
+          {form.ruleType === "PROPORTIONAL" && <label className="text-sm font-medium">Max payout<Input required type="number" min="0" className="mt-2" value={form.maxPayout} onChange={(event) => setForm({ ...form, maxPayout: event.target.value })}/><span className="mt-1 block text-xs font-normal text-slate-500">Target ₹100, max ₹10, achieved ₹80 → payout ₹8</span></label>}
+          {form.ruleType === "FLAT_COMMISSION" && <label className="text-sm font-medium">Commission %<Input type="number" min="0" max="100" className="mt-2" value={form.commissionRate} onChange={(event) => setForm({ ...form, commissionRate: event.target.value })}/></label>}
+          <label className="text-sm font-medium">Floor % (optional)<Input type="number" min="0" className="mt-2" value={form.floorPercentage} onChange={(event) => setForm({ ...form, floorPercentage: event.target.value })}/></label>
+          <label className="text-sm font-medium">Cap amount (optional)<Input type="number" min="0" className="mt-2" value={form.capAmount} onChange={(event) => setForm({ ...form, capAmount: event.target.value })}/></label>
+          <label className="text-sm font-medium">Multiplier above 100%<Input type="number" min="1" step="0.1" className="mt-2" value={form.acceleratorMultiplier} onChange={(event) => setForm({ ...form, acceleratorMultiplier: event.target.value })}/></label>
+        </div>
+        {form.ruleType === "COMMISSION_SLABS" && <div className="mt-4 space-y-2"><p className="text-sm font-semibold">Marginal tiers</p>{form.slabs.map((slab, index) => <div key={index} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2"><Input aria-label={`Tier ${index + 1} from percentage`} type="number" min="0" placeholder="From %" value={slab.fromPercentage} onChange={(event) => setForm({ ...form, slabs: form.slabs.map((item, itemIndex) => itemIndex === index ? { ...item, fromPercentage: event.target.value } : item) })}/><Input aria-label={`Tier ${index + 1} to percentage`} type="number" min="0" placeholder="To % (blank = ∞)" value={slab.toPercentage} onChange={(event) => setForm({ ...form, slabs: form.slabs.map((item, itemIndex) => itemIndex === index ? { ...item, toPercentage: event.target.value } : item) })}/><Input aria-label={`Tier ${index + 1} rate percentage`} type="number" min="0" step="0.01" placeholder="Rate %" value={slab.rate} onChange={(event) => setForm({ ...form, slabs: form.slabs.map((item, itemIndex) => itemIndex === index ? { ...item, rate: event.target.value } : item) })}/><Button type="button" variant="ghost" onClick={() => setForm({ ...form, slabs: form.slabs.filter((_, itemIndex) => itemIndex !== index) })}>×</Button></div>)}<Button type="button" variant="secondary" onClick={() => setForm({ ...form, slabs: [...form.slabs, { fromPercentage: "100", toPercentage: "", rate: "10" }] })}>Add tier</Button></div>}
+        <div className="mt-4 rounded-xl bg-white p-3"><div className="flex items-center justify-between"><div><p className="text-sm font-semibold">Test Formula / What-If</p><p className="text-xs text-slate-500">Preview at 50%, 80%, 100%, and 150% achievement.</p></div><Button type="button" variant="secondary" disabled={simulation.isPending || Number(form.value) <= 0} onClick={() => simulation.mutate()}>{simulation.isPending ? "Testing…" : "Test formula"}</Button></div>{simulation.data && <div className="mt-3 grid grid-cols-4 gap-2">{simulation.data.scenarios.map((scenario) => <div key={scenario.achievementPercentage} className="rounded-lg bg-slate-50 p-2 text-center"><p className="text-xs text-slate-500">{scenario.achievementPercentage}%</p><p className="font-semibold text-emerald-700">{money(form.currency, scenario.payout)}</p></div>)}</div>}{simulation.error && <p className="mt-2 text-xs text-red-600">{simulation.error.message}</p>}</div>
+      </section>}
       {path === "revenue" && <><label className="text-sm font-medium">Amount<Input required type="number" min="0" className="mt-2" value={form.value} onChange={(event) => setForm({ ...form, value: event.target.value })}/></label><label className="text-sm font-medium">Transaction date<Input required type="date" max={today()} className="mt-2" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })}/></label><label className="text-sm font-medium">Revenue source<select className="mt-2 h-11 w-full rounded-xl border bg-white px-3" value={form.source} onChange={(event) => setForm({ ...form, source: event.target.value })}>{["INVOICE", "RECEIPT", "ADJUSTMENT", "OTHER"].map((source) => <option key={source}>{source}</option>)}</select></label><label className="text-sm font-medium">Invoice/reference<Input required className="mt-2" value={form.reference} onChange={(event) => setForm({ ...form, reference: event.target.value })}/></label></>}
       {path === "channel-partners" && <label className="text-sm font-medium">Effective from<Input required type="date" className="mt-2" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })}/></label>}
     </div>

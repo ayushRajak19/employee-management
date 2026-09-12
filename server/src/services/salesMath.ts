@@ -29,41 +29,138 @@ export const calculateTargetProgress = (target: number, actual: number): TargetP
   };
 };
 
+export type CompensationRuleType = "PROPORTIONAL" | "COMMISSION_SLABS" | "FLAT_COMMISSION" | "HYBRID";
+export interface CompensationSlab {
+  fromPercentage: number;
+  toPercentage: number | null;
+  rate: number;
+  rateType: "PERCENTAGE" | "FIXED";
+}
+export interface CompensationAccelerator { thresholdPercentage: number; multiplier: number }
 export interface CompensationRuleConfig {
+  ruleType?: CompensationRuleType;
   commissionRate?: number;
   bonusThresholdPercentage?: number;
   bonusRate?: number;
   basePayAllocation?: number;
+  proportionalConfig?: { maxPayout: number; baselineTarget?: number };
+  slabs?: CompensationSlab[];
+  floorPercentage?: number;
+  capAmount?: number;
+  capPercentage?: number;
+  accelerators?: CompensationAccelerator[];
 }
 
-export interface CompensationPayoutResult {
+export interface CalculationAuditBreakdown {
+  ruleType: CompensationRuleType;
+  basePay: number;
+  proportionalEarnings?: number;
+  slabBreakdown?: { tier: string; achievementInRange: number; rate: number; payout: number }[];
+  acceleratorBonus?: number;
+  floorApplied: boolean;
+  floorThreshold?: number;
+  capApplied: boolean;
+  capLimit?: number;
+  deductionsOrAdjustments: number;
+  totalPayout: number;
+  explanationText: string[];
+}
+export interface CompensationPayoutResult extends CalculationAuditBreakdown {
   commission: number;
   bonus: number;
-  basePay: number;
-  totalPayout: number;
+  breakdown: CalculationAuditBreakdown;
 }
+
+const money = (value: number) => Number(value.toFixed(2));
+const acceleratorFor = (percentageValue: number, accelerators: readonly CompensationAccelerator[]) =>
+  [...accelerators].filter((item) => percentageValue >= item.thresholdPercentage).sort((a, b) => b.thresholdPercentage - a.thresholdPercentage)[0]?.multiplier ?? 1;
 
 export const calculateCompensationPayout = (
   rule: CompensationRuleConfig | undefined,
   achieved: number,
   target: number,
 ): CompensationPayoutResult => {
-  if (!rule) {
-    return { commission: 0, bonus: 0, basePay: 0, totalPayout: 0 };
+  const safeRule = rule ?? {};
+  const ruleType = safeRule.ruleType ?? "FLAT_COMMISSION";
+  const revenue = Math.max(0, achieved);
+  const quota = Math.max(0, target);
+  const achievement = quota > 0 ? revenue / quota * 100 : 0;
+  const basePay = money(Math.max(0, safeRule.basePayAllocation ?? 0));
+  const explanations: string[] = [`Rule type: ${ruleType}. Achievement: ${money(achievement)}%.`];
+  const floorThreshold = Math.max(0, safeRule.floorPercentage ?? 0);
+  if (floorThreshold > 0 && achievement < floorThreshold) {
+    explanations.push(`Floor requirement ${floorThreshold}% was not met; variable and base payout are zero.`);
+    const breakdown: CalculationAuditBreakdown = { ruleType, basePay: 0, floorApplied: true, floorThreshold, capApplied: false, deductionsOrAdjustments: 0, totalPayout: 0, explanationText: explanations };
+    return { ...breakdown, commission: 0, bonus: 0, breakdown };
   }
-  const commissionRate = Math.max(0, rule.commissionRate ?? 0);
-  const commission = Number((achieved * (commissionRate / 100)).toFixed(2));
-  let bonus = 0;
-  if (rule.bonusRate && rule.bonusThresholdPercentage && target > 0) {
-    const thresholdAmount = (target * rule.bonusThresholdPercentage) / 100;
-    if (achieved > thresholdAmount) {
-      const eligibleAmount = achieved - thresholdAmount;
-      bonus = Number((eligibleAmount * (rule.bonusRate / 100)).toFixed(2));
+
+  const accelerators = [...(safeRule.accelerators ?? [])];
+  if (!accelerators.length && safeRule.bonusRate && safeRule.bonusThresholdPercentage) {
+    // Preserve legacy rules as an additive rate above their threshold.
+    accelerators.push({ thresholdPercentage: safeRule.bonusThresholdPercentage, multiplier: 1 });
+  }
+  let regularEarnings = 0;
+  let acceleratorBonus = 0;
+  let proportionalEarnings: number | undefined;
+  let slabBreakdown: CalculationAuditBreakdown["slabBreakdown"];
+
+  if (ruleType === "PROPORTIONAL" || (ruleType === "HYBRID" && safeRule.proportionalConfig)) {
+    const baseline = Math.max(0, safeRule.proportionalConfig?.baselineTarget ?? quota);
+    const maxPayout = Math.max(0, safeRule.proportionalConfig?.maxPayout ?? 0);
+    const baseRevenue = Math.min(revenue, baseline);
+    regularEarnings = baseline > 0 ? baseRevenue / baseline * maxPayout : 0;
+    if (revenue > baseline && baseline > 0) {
+      const excessPct = (revenue - baseline) / baseline * 100;
+      const multiplier = acceleratorFor(100 + excessPct, accelerators);
+      const unaccelerated = (revenue - baseline) / baseline * maxPayout;
+      acceleratorBonus = unaccelerated * multiplier;
+      if (multiplier > 1) explanations.push(`Revenue above quota earned ${multiplier}x (${money(acceleratorBonus)}).`);
     }
+    proportionalEarnings = money(regularEarnings + acceleratorBonus);
+    explanations.push(`Proportional earnings: achieved ${money(revenue)} / baseline ${money(baseline)} × max payout ${money(maxPayout)}.`);
+  } else if (ruleType === "COMMISSION_SLABS" || (ruleType === "HYBRID" && safeRule.slabs?.length)) {
+    slabBreakdown = [];
+    const sorted = [...(safeRule.slabs ?? [])].sort((a, b) => a.fromPercentage - b.fromPercentage);
+    for (const slab of sorted) {
+      const fromAmount = quota * Math.max(0, slab.fromPercentage) / 100;
+      const toAmount = slab.toPercentage == null ? revenue : quota * Math.max(slab.fromPercentage, slab.toPercentage) / 100;
+      const eligible = Math.max(0, Math.min(revenue, toAmount) - fromAmount);
+      if (eligible <= 0) continue;
+      const midpointPct = quota > 0 ? ((fromAmount + eligible / 2) / quota * 100) : 0;
+      const multiplier = acceleratorFor(midpointPct, accelerators);
+      const raw = slab.rateType === "FIXED" ? slab.rate : eligible * slab.rate / 100;
+      const payout = raw * multiplier;
+      regularEarnings += raw;
+      acceleratorBonus += raw * (multiplier - 1);
+      slabBreakdown.push({ tier: `${slab.fromPercentage}%–${slab.toPercentage == null ? "∞" : `${slab.toPercentage}%`}`, achievementInRange: money(eligible), rate: slab.rate, payout: money(payout) });
+    }
+    explanations.push(...slabBreakdown.map((item) => `${item.tier}: ${item.achievementInRange} at ${item.rate}${sorted.find((s) => `${s.fromPercentage}%–${s.toPercentage == null ? "∞" : `${s.toPercentage}%`}` === item.tier)?.rateType === "PERCENTAGE" ? "%" : " fixed"} = ${item.payout}.`));
+  } else {
+    const rate = Math.max(0, safeRule.commissionRate ?? 0);
+    const thresholdAmount = quota;
+    const legacyFlatRule = safeRule.ruleType == null;
+    regularEarnings = (legacyFlatRule ? revenue : Math.min(revenue, thresholdAmount || revenue)) * rate / 100;
+    if (!legacyFlatRule && quota > 0 && revenue > quota) {
+      const excess = revenue - quota;
+      const multiplier = acceleratorFor(achievement, accelerators);
+      acceleratorBonus = excess * rate / 100 * multiplier;
+    }
+    if (safeRule.bonusRate && safeRule.bonusThresholdPercentage && quota > 0) {
+      const legacyEligible = Math.max(0, revenue - quota * safeRule.bonusThresholdPercentage / 100);
+      acceleratorBonus += legacyEligible * safeRule.bonusRate / 100;
+    }
+    explanations.push(`Flat commission: ${money(revenue)} at ${rate}%.`);
   }
-  const basePay = Number((rule.basePayAllocation ?? 0).toFixed(2));
-  const totalPayout = Number((commission + bonus + basePay).toFixed(2));
-  return { commission, bonus, basePay, totalPayout };
+
+  const commission = money(regularEarnings);
+  const bonus = money(acceleratorBonus);
+  let totalPayout = money(basePay + regularEarnings + acceleratorBonus);
+  const capLimits = [safeRule.capAmount, safeRule.capPercentage == null ? undefined : quota * safeRule.capPercentage / 100].filter((value): value is number => value != null && value >= 0);
+  const capLimit = capLimits.length ? Math.min(...capLimits) : undefined;
+  const capApplied = capLimit != null && totalPayout > capLimit;
+  if (capApplied) { totalPayout = money(capLimit!); explanations.push(`Payout capped at ${totalPayout}.`); }
+  const breakdown: CalculationAuditBreakdown = { ruleType, basePay, proportionalEarnings, slabBreakdown, acceleratorBonus: bonus || undefined, floorApplied: false, floorThreshold: floorThreshold || undefined, capApplied, capLimit, deductionsOrAdjustments: 0, totalPayout, explanationText: explanations };
+  return { ...breakdown, commission, bonus, breakdown };
 };
 
 export type TargetRiskStatus = "NOT_STARTED" | "ON_TRACK" | "AT_RISK" | "CRITICAL" | "ACHIEVED" | "EXCEEDED" | "CLOSED";

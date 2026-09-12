@@ -93,14 +93,43 @@ export const opportunityBody = z.object({
   actualCloseDate: z.coerce.date().optional(), status: z.enum(["OPEN", "WON", "LOST"]).default("OPEN"),
   lostReason: z.string().trim().max(500).optional(),
 });
-const targetCompensationSchema = z.object({
+const compensationSlabSchema = z.object({
+  fromPercentage: z.coerce.number().min(0).max(500),
+  toPercentage: z.coerce.number().min(0).max(500).nullable(),
+  rate: nonNegative,
+  rateType: z.enum(["PERCENTAGE", "FIXED"]).default("PERCENTAGE"),
+}).refine((value) => value.toPercentage == null || value.toPercentage > value.fromPercentage, { message: "Tier end must exceed tier start", path: ["toPercentage"] });
+export const targetCompensationSchema = z.object({
+  ruleType: z.enum(["PROPORTIONAL", "COMMISSION_SLABS", "FLAT_COMMISSION", "HYBRID"]).default("FLAT_COMMISSION"),
   commissionRate: z.coerce.number().min(0).max(100).default(0),
   bonusThresholdPercentage: z.coerce.number().min(0).max(500).optional(),
   bonusRate: z.coerce.number().min(0).max(100).optional(),
   basePayAllocation: nonNegative.optional(),
   currency: currency.optional(),
   ruleName: z.string().trim().max(120).optional(),
+  proportionalConfig: z.object({ maxPayout: nonNegative, baselineTarget: nonNegative.optional() }).optional(),
+  slabs: z.array(compensationSlabSchema).max(50).optional(),
+  floorPercentage: z.coerce.number().min(0).max(500).optional(),
+  capAmount: nonNegative.optional(),
+  capPercentage: z.coerce.number().min(0).max(500).optional(),
+  accelerators: z.array(z.object({ thresholdPercentage: z.coerce.number().min(0).max(500), multiplier: z.coerce.number().min(1).max(100) })).max(20).optional(),
+}).superRefine((value, context) => {
+  if ((value.ruleType === "PROPORTIONAL" || value.ruleType === "HYBRID") && !value.proportionalConfig && !value.slabs?.length) context.addIssue({ code: z.ZodIssueCode.custom, path: ["proportionalConfig"], message: "Proportional or slab configuration is required" });
+  if (value.ruleType === "COMMISSION_SLABS" && !value.slabs?.length) context.addIssue({ code: z.ZodIssueCode.custom, path: ["slabs"], message: "At least one slab is required" });
 });
+
+export const simulateCompensationSchema = z.object({ body: z.object({
+  ruleConfig: targetCompensationSchema,
+  targetAmount: nonNegative,
+  testScenarios: z.array(nonNegative).min(1).max(100),
+}) });
+export const closeCompensationPeriodSchema = z.object({ body: z.object({
+  periodId: objectId.optional(),
+  periodType: z.enum(["MONTHLY", "QUARTERLY", "YEARLY"]).optional(),
+  periodStart: z.coerce.date().optional(),
+  periodEnd: z.coerce.date().optional(),
+}).refine((body) => body.periodId || (body.periodType && body.periodStart && body.periodEnd), "Provide periodId or complete period bounds") });
+export const payoutPeriodSchema = z.object({ params: z.object({ periodId: objectId }) });
 
 const targetBase = z.object({
   territory: objectId.optional(),

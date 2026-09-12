@@ -85,12 +85,19 @@ export interface TargetPerformanceDto {
     effectiveFrom?: string;
     effectiveTo?: string;
     compensationRule?: {
-      commissionRate: number;
+      ruleType?: "PROPORTIONAL" | "COMMISSION_SLABS" | "FLAT_COMMISSION" | "HYBRID";
+      commissionRate?: number;
       bonusThresholdPercentage?: number;
       bonusRate?: number;
       basePayAllocation?: number;
       currency?: string;
       ruleName?: string;
+      proportionalConfig?: { maxPayout: number; baselineTarget?: number };
+      slabs?: { fromPercentage: number; toPercentage: number | null; rate: number; rateType: "PERCENTAGE" | "FIXED" }[];
+      floorPercentage?: number;
+      capAmount?: number;
+      capPercentage?: number;
+      accelerators?: { thresholdPercentage: number; multiplier: number }[];
     };
   };
   performance: {
@@ -114,6 +121,15 @@ export interface TargetPerformanceDto {
       bonus: number;
       basePay: number;
       totalPayout: number;
+      proportionalEarnings?: number;
+      slabBreakdown?: { tier: string; achievementInRange: number; rate: number; payout: number }[];
+      acceleratorBonus?: number;
+      floorApplied: boolean;
+      floorThreshold?: number;
+      capApplied: boolean;
+      capLimit?: number;
+      explanationText: string[];
+      breakdown: CalculationAuditBreakdown;
     };
   };
   commitment?: {
@@ -173,6 +189,8 @@ export interface SalesActivityItem {
 }
 
 export const salesApi = {
+  simulateCompensation: (body: { ruleConfig: Record<string, unknown>; targetAmount: number; testScenarios: number[] }) => api.post<CompensationSimulation>("/api/v1/sales/compensation/simulate", body),
+  myPayouts: () => api.get<{ locked: LockedPayout[]; currentCycleProjection: unknown[] }>("/api/v1/sales/payouts/me"),
   targetPerformance: () => api.get<{ items: TargetPerformanceDto[] }>("/api/v1/sales/target-performance/me"),
   teamTargetPerformance: () => api.get<{ items: TargetPerformanceDto[] }>("/api/v1/sales/target-performance/team"),
   targetVersions: (targetId: string) => api.get<{ items: (SalesRecord & { version: number; effectiveFrom: string; effectiveTo?: string })[] }>(`/api/v1/sales/targets/${targetId}/versions`),
@@ -204,3 +222,11 @@ export const salesApi = {
   employeeMap: () => api.get<{ scope: "SELF" | "TEAM" | "ALL"; geography: GeoNodeDto[]; employees: EmployeeMapItem[] }>("/api/v1/employee-map"),
 };
 
+export interface CalculationAuditBreakdown {
+  ruleType: string; basePay: number; proportionalEarnings?: number;
+  slabBreakdown?: { tier: string; achievementInRange: number; rate: number; payout: number }[];
+  acceleratorBonus?: number; floorApplied: boolean; floorThreshold?: number; capApplied: boolean; capLimit?: number;
+  deductionsOrAdjustments: number; totalPayout: number; explanationText: string[];
+}
+export interface CompensationSimulation { targetAmount: number; scenarios: { achievedAmount: number; achievementPercentage: number; payout: number; effectiveCommissionPercentage: number; breakdown: CalculationAuditBreakdown }[]; totalCompanyPayoutExposure: number }
+export interface LockedPayout { _id: string; ruleVersion: number; targetAmount: number; achievedAmount: number; achievementPercentage: number; breakdown: CalculationAuditBreakdown; isLocked: true; createdAt: string; periodId?: { periodStart: string; periodEnd: string; periodType: string } }

@@ -34,6 +34,7 @@ export const TargetPerformancePage = () => {
     queryFn: () => salesApi.targetVersions(selectedTargetForHistory!),
     enabled: Boolean(selectedTargetForHistory),
   });
+  const payoutsQuery = useQuery({ queryKey: ["payouts", "me"], queryFn: salesApi.myPayouts });
 
   const item: TargetPerformanceDto | undefined = myQuery.data?.items?.[0];
 
@@ -359,41 +360,24 @@ export const TargetPerformancePage = () => {
             </section>
           </div>
 
-          {/* Compensation Rule & Historical Payout Breakdown (if rule attached) */}
+          {/* Compensation Rule & Current Itemized Payout Breakdown */}
           {compRule && (
             <section className="rounded-2xl border bg-white p-5 shadow-soft">
-              <div className="flex items-center gap-2 font-semibold text-ink">
-                <ShieldCheck size={18} className="text-emerald-600" /> Active Compensation Rule (v{target?.version ?? 1})
+              <div className="flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-2 font-semibold text-ink"><ShieldCheck size={18} className="text-emerald-600" /> Itemized Payout Breakdown</div><span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-bold text-brand-700">{compRule.ruleType === "PROPORTIONAL" ? `Proportional (${money(compRule.proportionalConfig?.maxPayout)} max)` : compRule.ruleType === "COMMISSION_SLABS" ? `Tiered Slabs (${compRule.slabs?.length ?? 0} Tiers)` : "Flat Commission"}</span></div>
+              <p className="mt-1 text-xs text-slate-500">Live projection under target rule version v{target?.version ?? 1}; closed payroll snapshots below never recalculate.</p>
+              {p.payout?.floorApplied && <div className="mt-3 rounded-full bg-amber-100 px-3 py-2 text-sm font-semibold text-amber-800">Floor requirement {p.payout.floorThreshold}% not met — ₹0 eligible</div>}
+              <div className="mt-4 divide-y rounded-xl border text-sm">
+                <div className="flex justify-between p-3"><span>Base pay allocation</span><strong>{money(p.payout?.basePay)}</strong></div>
+                {p.payout?.proportionalEarnings != null && <div className="flex justify-between p-3"><span>Proportional earnings</span><strong>{money(p.payout.proportionalEarnings)}</strong></div>}
+                {p.payout?.slabBreakdown?.map((slab) => <div key={slab.tier} className="flex justify-between p-3"><span>{slab.tier} · {money(slab.achievementInRange)} @ {slab.rate}%</span><strong>{money(slab.payout)}</strong></div>)}
+                <div className="flex justify-between p-3"><span>Accelerator earnings</span><strong>{money(p.payout?.acceleratorBonus)}</strong></div>
+                <div className="flex justify-between bg-emerald-50 p-3 text-base text-emerald-900"><span>Projected total</span><strong>{money(p.payout?.totalPayout)}</strong></div>
               </div>
-              <p className="mt-1 text-xs text-slate-500">
-                Historical payouts use the exact compensation rules active during this assignment period and remain immutable.
-              </p>
-              <div className="mt-4 grid gap-3 sm:grid-cols-4 text-sm">
-                <div className="rounded-xl bg-slate-50 p-3">
-                  <span className="text-xs text-slate-400">Commission Rate</span>
-                  <p className="mt-1 font-semibold text-ink">{compRule.commissionRate}% of revenue</p>
-                </div>
-                {compRule.bonusThresholdPercentage && (
-                  <div className="rounded-xl bg-slate-50 p-3">
-                    <span className="text-xs text-slate-400">Overachievement Accelerator</span>
-                    <p className="mt-1 font-semibold text-ink">+{compRule.bonusRate}% above {compRule.bonusThresholdPercentage}%</p>
-                  </div>
-                )}
-                {compRule.basePayAllocation && (
-                  <div className="rounded-xl bg-slate-50 p-3">
-                    <span className="text-xs text-slate-400">Base Allocation</span>
-                    <p className="mt-1 font-semibold text-ink">{money(compRule.basePayAllocation)}</p>
-                  </div>
-                )}
-                {p.payout && (
-                  <div className="rounded-xl bg-emerald-50 p-3 text-emerald-900">
-                    <span className="text-xs font-semibold text-emerald-700">Estimated Total Payout</span>
-                    <p className="mt-1 font-bold text-lg text-emerald-800">{money(p.payout.totalPayout)}</p>
-                  </div>
-                )}
-              </div>
+              {p.payout?.capApplied && <p className="mt-3 rounded-lg bg-blue-50 p-2 text-sm font-semibold text-blue-800">Cap reached at {money(p.payout.capLimit)}.</p>}
             </section>
           )}
+
+          <section className="rounded-2xl border bg-white p-5 shadow-soft"><div className="flex items-center gap-2 font-semibold text-ink"><History size={18} className="text-brand-600"/> Past Closed Payouts</div><p className="mt-1 text-xs text-slate-500">Locked, auditable payroll snapshots.</p><div className="mt-4 space-y-3">{payoutsQuery.isLoading ? <p className="text-sm text-slate-500">Loading closed payouts…</p> : !payoutsQuery.data?.locked.length ? <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-500">No compensation period has been closed yet.</p> : payoutsQuery.data.locked.map((payout) => <div key={payout._id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4"><div><p className="font-semibold">{payout.periodId?.periodType ?? "Closed period"} · {formatDate(payout.periodId?.periodStart)} – {formatDate(payout.periodId?.periodEnd)}</p><p className="text-xs text-slate-500">Rule v{payout.ruleVersion} · {payout.achievementPercentage}% achieved · Locked</p></div><strong className="text-lg text-emerald-700">{money(payout.breakdown.totalPayout)}</strong></div>)}</div></section>
 
           {/* Employee Commitment Section */}
           <section className="rounded-2xl border bg-white p-5 shadow-soft">

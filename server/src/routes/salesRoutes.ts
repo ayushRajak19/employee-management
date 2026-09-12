@@ -26,6 +26,9 @@ import {
   updateTargetSchema,
   updateTerritorySchema,
   configurationSchema,
+  simulateCompensationSchema,
+  closeCompensationPeriodSchema,
+  payoutPeriodSchema,
 } from "../validators/salesValidators.js";
 import type { SalesEntityName } from "../services/salesDataService.js";
 
@@ -40,6 +43,10 @@ const asEntity = (name: SalesEntityName): RequestHandler => (request, _response,
 salesRouter.get("/me/analytics", salesAnalytics, asyncHandler(controller.selfAnalytics));
 salesRouter.get("/target-performance/me", requireAnyPermission("sales.analytics.self", "sales.analytics.team", "sales.analytics.all"), asyncHandler(controller.myTargetPerformance));
 salesRouter.get("/target-performance/team", requireAnyPermission("sales.analytics.team", "sales.analytics.all"), asyncHandler(controller.teamTargetPerformance));
+salesRouter.post("/compensation/simulate", requirePermission("sales.target.manage"), validate(simulateCompensationSchema), asyncHandler(controller.simulateCompensation));
+salesRouter.post("/compensation-periods/close", requirePermission("sales.configuration.manage"), validate(closeCompensationPeriodSchema), asyncHandler(controller.closeCompensationPeriod));
+salesRouter.get("/payouts/me", salesAnalytics, asyncHandler(controller.myPayouts));
+salesRouter.get("/payouts/period/:periodId", requireAnyPermission("sales.analytics.team", "sales.analytics.all"), validate(payoutPeriodSchema), asyncHandler(controller.periodPayouts));
 salesRouter.post("/target-performance/:targetId/commitment", requirePermission("sales.target.view"), asyncHandler(controller.commitTarget));
 salesRouter.get("/targets/:targetId/versions", requirePermission("sales.target.view"), asyncHandler(controller.targetVersions));
 salesRouter.get("/targets/:targetId/reminders", requirePermission("sales.target.view"), asyncHandler(controller.targetReminders));

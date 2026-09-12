@@ -63,3 +63,7 @@ export const runReminderCycle = async (_request: Request, response: Response) =>
   await reminderService.runTargetReminderCycle();
   send(response, "Target reminder cycle executed", { success: true });
 };
+export const simulateCompensation = async (request: Request, response: Response) => send(response, "Compensation simulation completed", targetPerformance.simulateCompensationRule(request.body.ruleConfig, request.body.testScenarios, request.body.targetAmount));
+export const closeCompensationPeriod = async (request: Request, response: Response) => send(response, "Compensation period closed and payouts locked", await targetPerformance.closeCompensationPeriod(request.user!, request.body));
+export const myPayouts = async (request: Request, response: Response) => send(response, "Payout history retrieved", await targetPerformance.myPayouts(request.user!));
+export const periodPayouts = async (request: Request, response: Response) => send(response, "Period payouts retrieved", { items: await targetPerformance.payoutsForPeriod(request.user!, String(request.params.periodId)) });

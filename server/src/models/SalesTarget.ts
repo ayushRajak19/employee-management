@@ -2,12 +2,19 @@ import { Schema, type Types } from "mongoose";
 import { tenantModel } from "../tenancy/tenantModel.js";
 
 export interface TargetCompensationRule {
-  commissionRate: number;
+  ruleType?: "PROPORTIONAL" | "COMMISSION_SLABS" | "FLAT_COMMISSION" | "HYBRID";
+  commissionRate?: number;
   bonusThresholdPercentage?: number;
   bonusRate?: number;
   basePayAllocation?: number;
   currency?: string;
   ruleName?: string;
+  proportionalConfig?: { maxPayout: number; baselineTarget?: number };
+  slabs?: { fromPercentage: number; toPercentage: number | null; rate: number; rateType: "PERCENTAGE" | "FIXED" }[];
+  floorPercentage?: number;
+  capAmount?: number;
+  capPercentage?: number;
+  accelerators?: { thresholdPercentage: number; multiplier: number }[];
 }
 
 export type TargetStatus = "DRAFT" | "ACTIVE" | "SUPERSEDED" | "CLOSED";
@@ -40,12 +47,19 @@ export interface SalesTargetDocument {
 
 const compensationRuleSchema = new Schema<TargetCompensationRule>(
   {
+    ruleType: { type: String, enum: ["PROPORTIONAL", "COMMISSION_SLABS", "FLAT_COMMISSION", "HYBRID"], default: "FLAT_COMMISSION" },
     commissionRate: { type: Number, min: 0, max: 100, default: 0 },
     bonusThresholdPercentage: { type: Number, min: 0, max: 500 },
     bonusRate: { type: Number, min: 0, max: 100 },
     basePayAllocation: { type: Number, min: 0 },
     currency: { type: String, uppercase: true, trim: true, maxlength: 3 },
     ruleName: { type: String, trim: true, maxlength: 120 },
+    proportionalConfig: { maxPayout: { type: Number, min: 0 }, baselineTarget: { type: Number, min: 0 } },
+    slabs: [{ _id: false, fromPercentage: { type: Number, required: true, min: 0 }, toPercentage: { type: Number, min: 0, default: null }, rate: { type: Number, required: true, min: 0 }, rateType: { type: String, enum: ["PERCENTAGE", "FIXED"], default: "PERCENTAGE" } }],
+    floorPercentage: { type: Number, min: 0, max: 500 },
+    capAmount: { type: Number, min: 0 },
+    capPercentage: { type: Number, min: 0, max: 500 },
+    accelerators: [{ _id: false, thresholdPercentage: { type: Number, required: true, min: 0, max: 500 }, multiplier: { type: Number, required: true, min: 1 } }],
   },
   { _id: false },
 );
@@ -103,4 +117,3 @@ schema.index({ employee: 1, periodStart: 1, periodEnd: 1 });
 schema.index({ territory: 1, periodStart: 1, periodEnd: 1 });
 
 export const SalesTarget = tenantModel<SalesTargetDocument>("SalesTarget", schema);
-

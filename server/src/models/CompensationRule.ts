@@ -18,6 +18,13 @@ export interface CompensationRuleDocument {
   basePayAllocation?: number;
   currency: string;
   description?: string;
+  ruleType: "PROPORTIONAL" | "COMMISSION_SLABS" | "FLAT_COMMISSION" | "HYBRID";
+  proportionalConfig?: { maxPayout: number; baselineTarget?: number };
+  slabs?: { fromPercentage: number; toPercentage: number | null; rate: number; rateType: "PERCENTAGE" | "FIXED" }[];
+  floorPercentage?: number;
+  capAmount?: number;
+  capPercentage?: number;
+  accelerators?: { thresholdPercentage: number; multiplier: number }[];
   createdBy?: Types.ObjectId;
   approvedBy?: Types.ObjectId;
   approvedAt?: Date;
@@ -39,6 +46,13 @@ const schema = new Schema<CompensationRuleDocument>(
     basePayAllocation: { type: Number, min: 0 },
     currency: { type: String, uppercase: true, trim: true, maxlength: 3, default: "INR" },
     description: { type: String, trim: true, maxlength: 2000 },
+    ruleType: { type: String, enum: ["PROPORTIONAL", "COMMISSION_SLABS", "FLAT_COMMISSION", "HYBRID"], default: "FLAT_COMMISSION" },
+    proportionalConfig: { maxPayout: { type: Number, min: 0 }, baselineTarget: { type: Number, min: 0 } },
+    slabs: [{ _id: false, fromPercentage: { type: Number, required: true, min: 0 }, toPercentage: { type: Number, min: 0, default: null }, rate: { type: Number, required: true, min: 0 }, rateType: { type: String, enum: ["PERCENTAGE", "FIXED"], default: "PERCENTAGE" } }],
+    floorPercentage: { type: Number, min: 0, max: 500 },
+    capAmount: { type: Number, min: 0 },
+    capPercentage: { type: Number, min: 0, max: 500 },
+    accelerators: [{ _id: false, thresholdPercentage: { type: Number, required: true, min: 0, max: 500 }, multiplier: { type: Number, required: true, min: 1 } }],
     createdBy: { type: Schema.Types.ObjectId, ref: "User" },
     approvedBy: { type: Schema.Types.ObjectId, ref: "User" },
     approvedAt: { type: Date },
