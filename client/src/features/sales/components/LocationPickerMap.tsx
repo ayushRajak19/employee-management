@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { CircleMarker, MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
+import { salesMapTiles } from "./mapTiles";
 import { MapPin } from "lucide-react";
 
 interface LocationPickerMapProps {
@@ -82,8 +83,7 @@ export const LocationPickerMap = ({
           scrollWheelZoom={false}
         >
           <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            {...salesMapTiles}
           />
           <MapClickHandler onClick={onChange} />
           {hasCoords && (

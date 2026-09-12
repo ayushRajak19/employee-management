@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import type { GeoNodeDto } from "@mobius-ems/shared";
 import { CircleMarker, MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
+import { salesMapTiles } from "./mapTiles";
 import type { SalesLocationPin } from "../salesApi";
 
 interface GeoSalesMapProps {
@@ -67,8 +68,7 @@ export const GeoSalesMap = ({
         scrollWheelZoom
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          {...salesMapTiles}
         />
         <MapPanToSelected nodes={nodes} selectedId={selectedId} />
 
