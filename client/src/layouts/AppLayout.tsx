@@ -46,7 +46,6 @@ const groups: { label: string; items: NavItem[] }[] = [
       { label: "Organization", icon: Building2, path: "/organization", section: "section.organization" },
       { label: "Attendance", icon: CalendarCheck2, path: "/attendance", section: "section.attendance" },
       { label: "Leave & recognition", icon: Users, path: "/people-ops", section: "section.people_ops" },
-      { label: "Employee map", icon: MapPinned, path: "/employee-map", permissions: ["employee_map.self", "employee_map.team", "employee_map.all"], section: "section.employee_map" },
     ],
   },
   {

@@ -41,7 +41,6 @@ const SalesDashboardPage = lazy(() => import("@/features/sales/pages/SalesDashbo
 const GeographicSalesPage = lazy(() => import("@/features/sales/pages/GeographicSalesPage").then((module) => ({ default: module.GeographicSalesPage })));
 const SalesTerritoriesPage = lazy(() => import("@/features/sales/pages/SalesTerritoriesPage").then((module) => ({ default: module.SalesTerritoriesPage })));
 const SalesDataPage = lazy(() => import("@/features/sales/pages/SalesDataPage").then((module) => ({ default: module.SalesDataPage })));
-const EmployeeMapPage = lazy(() => import("@/features/sales/pages/EmployeeMapPage").then((module) => ({ default: module.EmployeeMapPage })));
 const SalesAgentsPage = lazy(() => import("@/features/sales/pages/SalesAgentsPage").then((module) => ({ default: module.SalesAgentsPage })));
 const TargetPerformancePage = lazy(() => import("@/features/sales/pages/TargetPerformancePage").then((module) => ({ default: module.TargetPerformancePage })));
 const OrgHierarchyPage = lazy(() => import("@/pages/OrgHierarchyPage").then((module) => ({ default: module.OrgHierarchyPage })));
@@ -92,7 +91,6 @@ export const App = () => <Suspense fallback={<PageLoader/>}><Routes>
       <Route element={<PermissionRoute permissions={["sales.territory.view"]}/>}> <Route path="sales/territories" element={<SalesTerritoriesPage/>}/></Route>
       <Route element={<PermissionRoute permissions={["sales.view.self","sales.view.team","sales.view.all"]}/>}> <Route path="sales/employees" element={<SalesAgentsPage/>}/><Route path="sales/leads" element={<SalesDataPage path="leads" title="Leads"/>}/><Route path="sales/customers" element={<SalesDataPage path="customers" title="Customers"/>}/><Route path="sales/pipeline" element={<Navigate to="/sales/leads" replace/>}/><Route path="sales/targets" element={<SalesDataPage path="targets" title="Targets"/>}/><Route path="sales/revenue" element={<SalesDataPage path="revenue" title="Revenue"/>}/><Route path="sales/channel-partners" element={<SalesDataPage path="channel-partners" title="Channel partners"/>}/></Route>
     </Route>
-    <Route element={<PermissionRoute permissions={["section.employee_map"]}/>}><Route element={<PermissionRoute permissions={["employee_map.self","employee_map.team","employee_map.all"]}/>}> <Route path="employee-map" element={<EmployeeMapPage/>}/></Route></Route>
   </Route></Route>
   <Route path="*" element={<div className="grid min-h-screen place-items-center"><p>Page not found</p></div>}/>
 </Routes></Suspense>;

@@ -79,13 +79,6 @@ export interface SalesTerritory {
   coverageRules: { geoNodeIds: (string | GeoNodeDto)[] };
 }
 
-export interface EmployeeMapItem extends SalesEmployeeDto {
-  markerColor: string;
-  officeLocation?: string;
-  profilePhotoKey?: string;
-  salesTerritory?: { _id: string; name: string; code: string };
-}
-
 export interface TargetPerformanceDto {
   target: SalesRecord & {
     version?: number;
@@ -256,7 +249,6 @@ export const salesApi = {
     api.post<{ item: SalesActivityItem }>(`/api/v1/sales/${path}/${id}/activities`, body),
   createTerritory: (body: Record<string, unknown>) => api.post<{ item: SalesTerritory }>("/api/v1/sales/territories", body),
   assignTerritory: (body: Record<string, unknown>) => api.post<{ item: unknown }>("/api/v1/sales/territories/assignments", body),
-  employeeMap: () => api.get<{ scope: "SELF" | "TEAM" | "ALL"; geography: GeoNodeDto[]; employees: EmployeeMapItem[] }>("/api/v1/employee-map"),
 };
 
 export interface CalculationAuditBreakdown {

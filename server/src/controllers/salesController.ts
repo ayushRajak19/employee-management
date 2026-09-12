@@ -2,7 +2,6 @@ import type { Request, Response } from "express";
 import * as analytics from "../services/salesAnalyticsService.js";
 import * as configuration from "../services/salesConfigurationService.js";
 import * as data from "../services/salesDataService.js";
-import { employeeMap as getEmployeeMap } from "../services/employeeMapService.js";
 import * as geography from "../services/geoService.js";
 import * as geographicSales from "../services/geographicSalesService.js";
 import * as territories from "../services/salesTerritoryService.js";
@@ -50,7 +49,6 @@ export const createActivity = async (request: Request, response: Response) => se
 
 export const getConfiguration = async (_request: Request, response: Response) => send(response, "Sales configuration retrieved", { configuration: await configuration.getSalesConfiguration() });
 export const updateConfiguration = async (request: Request, response: Response) => send(response, "Sales configuration updated", { configuration: await configuration.updateSalesConfiguration(request.user!, request.body) });
-export const employeeMap = async (request: Request, response: Response) => send(response, "Employee map retrieved", await getEmployeeMap(request.user!));
 export const myTargetPerformance = async (request: Request, response: Response) => send(response, "Target performance retrieved", { items: await targetPerformance.targetPerformance(request.user!) });
 export const myDailyCockpit = async (request: Request, response: Response) => send(response, "Daily sales cockpit retrieved", await getDailySalesCockpit(request.user!));
 export const teamTargetPerformance = async (request: Request, response: Response) => send(response, "Team target performance retrieved", { items: await targetPerformance.targetPerformance(request.user!, true) });
