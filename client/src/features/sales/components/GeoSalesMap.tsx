@@ -362,7 +362,7 @@ export const GeoSalesMap = ({
                     >
                       View Intelligence
                     </button>
-                    {onDrillDown && node.type !== "PINCODE" && (
+                    {onDrillDown && node.type !== "PINCODE" && !node._id.startsWith("market-") && (
                       <button
                         onClick={() => onDrillDown!(node._id)}
                         className="w-full rounded-md border border-slate-200 bg-white py-1 px-2 text-center text-[11px] font-medium text-slate-700 hover:bg-slate-50 transition"

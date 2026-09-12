@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import countryMaster from "world-countries";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { GeographicRollupNode } from "@mobius-ems/shared";
 import {
@@ -84,13 +85,30 @@ export const GeographicSalesPage = () => {
   // Combine current node and children for map display
   const mapNodes = useMemo(() => {
     if (!currentNode) return [];
-    // If at global level, display children (countries)
     if (currentNode._id === "global" || currentNode.type === "GLOBAL") {
-      return childrenNodes;
+      const existingNames = new Set(childrenNodes.map((node) => node.name.trim().toLowerCase()));
+      const fallbackCountries = (countryPinsQuery.data?.items ?? []).flatMap((summary) => {
+        const lookup = summary.country.trim().toLowerCase();
+        if (lookup === "country not set" || existingNames.has(lookup)) return [];
+        const country = countryMaster.find((item) => [item.name.common, item.name.official, item.cca2, item.cca3, ...item.altSpellings].some((alias) => alias.toLowerCase() === lookup));
+        if (!country) return [];
+        return [{
+          _id: `market-${country.cca2}`,
+          name: country.name.common,
+          code: country.cca2,
+          type: "COUNTRY" as const,
+          ancestors: [],
+          depth: 1,
+          location: { type: "Point" as const, coordinates: [country.latlng[1], country.latlng[0]] as [number, number] },
+          leadCount: summary.leads,
+          customerCount: summary.customers,
+          actualRevenue: Object.values(summary.revenue).reduce((total, value) => total + value, 0),
+        }];
+      });
+      return [...childrenNodes, ...fallbackCountries];
     }
-    // Otherwise, display the current node plus its immediate children
     return [currentNode, ...childrenNodes];
-  }, [currentNode, childrenNodes]);
+  }, [currentNode, childrenNodes, countryPinsQuery.data?.items]);
 
   // Handle drilldown into a child node
   const handleDrillDown = (nodeId: string) => {
