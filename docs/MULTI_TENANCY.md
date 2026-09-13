@@ -50,8 +50,6 @@ EMAIL_AUTOMATION_ENABLED=true
 
 `PLATFORM_ADMIN_EMAILS` is a comma-separated allowlist. An allowlisted account must also have the `SUPER_ADMIN` role. When the variable is empty, `SUPER_ADMIN_EMAIL` is the fallback platform owner. The original organization keeps its normal login behavior; the Organization ID can be left blank unless the same email exists in multiple organizations.
 
-Email automation uses one platform Brevo account. `EMAIL_AUTOMATION_DAILY_LIMIT` is an account-wide UTC-day safety cap shared atomically by every organization and server instance. Organizations keep separate workflows, contacts, enrollments, deliveries, unsubscribe state, and sender display names. Production startup requires an HTTPS `CLIENT_URL` plus explicit `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, and `BREVO_WEBHOOK_TOKEN` values. After upgrading, register the v2 webhook from the Email Automation settings page and remove the older query-token webhook in Brevo if one exists.
-
 ## Vendor onboarding
 
 An allowlisted platform owner can use **Administration → Vendor organizations** or these endpoints:

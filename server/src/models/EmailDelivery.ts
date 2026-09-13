@@ -25,5 +25,4 @@ const schema = new Schema<EmailDeliveryDocument>({
   lastEventAt: { type: Date, required: true, default: Date.now },
   events: [{ _id: false, type: { type: String, required: true }, occurredAt: { type: Date, required: true }, reason: String }],
 }, { timestamps: true });
-schema.index({ enrollment: 1, step: 1 }, { unique: true, partialFilterExpression: { enrollment: { $type: "objectId" } } });
 export const EmailDelivery = tenantModel<EmailDeliveryDocument>("EmailDelivery", schema);
