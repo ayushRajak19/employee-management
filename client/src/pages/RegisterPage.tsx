@@ -4,6 +4,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { api } from "@/api/client";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Particles } from "@/components/inspira";
 
 export const RegisterPage = () => {
   // Check if loaded with legacy token in hash
@@ -126,8 +127,9 @@ export const RegisterPage = () => {
   };
 
   return (
-    <main className="grid min-h-screen place-items-center bg-brand-50 px-4 py-10">
-      <section className="w-full max-w-lg rounded-2xl border bg-white p-8 shadow-soft">
+    <main className="relative grid min-h-screen place-items-center bg-slate-950 px-4 py-10 overflow-hidden">
+      <Particles className="absolute inset-0 pointer-events-none opacity-40" quantity={45} color="#6366f1" />
+      <section className="relative w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-8 shadow-soft overflow-hidden z-10">
         <p className="text-sm font-medium text-brand-700">MobiusEMS</p>
         <h1 className="mt-2 text-2xl font-semibold">
           {step === "complete"

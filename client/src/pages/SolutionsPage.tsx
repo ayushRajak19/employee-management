@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, Bot, BriefcaseBusiness, Check, FileSearch, Finge
 import { Link, Navigate, useParams } from "react-router-dom";
 import logo from "@/assets/mobius-mark.png";
 import { useAuth } from "@/features/auth/AuthProvider";
+import { MarketingNavbar } from "@/components/MarketingNavbar";
 import "./solutions.css";
 
 type Solution = {
@@ -36,10 +37,7 @@ const solutions: Solution[] = [
   { slug:"secure-operations", number:"09", name:"Secure Operations", label:"ENTERPRISE CONTROL", title:"Control the platform without slowing the people.", summary:"Protect sensitive employee information with identity, permissions, auditability, and strict separation between organizations.", features:["Invitation-only accounts and forced password replacement","Role-based permissions and administrator controls","In-app notifications, global search and structured reports","Private employee documents with authorized access","Immutable audit logs for sensitive actions","Isolated multi-organization workspaces with provisioning and suspension controls"], value:"Scalable administration with traceable sensitive actions and organization-level isolation.", accent:"#233e3a", soft:"#e8efec", Icon:Fingerprint, visualTitle:"Security posture", visualRows:["Role scope · Enforced","Private files · Authorized","Sensitive actions · Logged","Tenant isolation · Active"], visualMetric:"100%", visualMetricLabel:"TENANT ISOLATION" }
 ];
 
-const MarketingHeader = () => {
-  const { user } = useAuth();
-  return <header className="sol-nav"><Link to="/welcome" className="sol-brand"><img src={logo} alt=""/><span>MobiusEMS</span><small>BY MOBIUS BLOOM</small></Link><nav><Link to="/solutions">All capabilities</Link><Link to="/solutions/employee-360">Employee intelligence</Link><Link to="/solutions/mobius-ems-ai">AI & automation</Link></nav><div><Link to={user ? "/" : "/login"}>{user ? "Workspace" : "Sign in"}</Link><Link className="sol-nav-cta" to={user ? "/" : "/register"}>Start building <ArrowRight size={15}/></Link></div></header>;
-};
+const MarketingHeader = () => <MarketingNavbar />;
 
 const MarketingFooter = () => <footer className="sol-footer"><Link to="/welcome" className="sol-brand"><img src={logo} alt=""/><span>MobiusEMS</span></Link><p>A flagship product of Mobius Bloom Venture Pvt Ltd</p><Link to="/solutions">Explore all capabilities ↗</Link></footer>;
 

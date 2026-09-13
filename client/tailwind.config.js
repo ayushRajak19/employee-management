@@ -37,6 +37,35 @@ export default {
           "0%, 100%": { transform: "translateY(0)" },
           "50%": { transform: "translateY(-6px)" },
         },
+        meteor: {
+          "0%": { transform: "rotate(215deg) translateX(0)", opacity: "1" },
+          "70%": { opacity: "1" },
+          "100%": { transform: "rotate(215deg) translateX(-600px)", opacity: "0" },
+        },
+        "border-beam": {
+          "100%": {
+            offsetDistance: "100%",
+          },
+        },
+        marquee: {
+          from: { transform: "translateX(0)" },
+          to: { transform: "translateX(calc(-100% - var(--gap, 1.5rem)))" },
+        },
+        "shimmer-slide": {
+          to: {
+            transform: "translate(calc(100cqw - 100%), 0)",
+          },
+        },
+        "spin-around": {
+          "0%": { transform: "translateZ(0) rotate(0)" },
+          "15%, 35%": { transform: "translateZ(0) rotate(90deg)" },
+          "65%, 85%": { transform: "translateZ(0) rotate(270deg)" },
+          "100%": { transform: "translateZ(0) rotate(360deg)" },
+        },
+        sparkle: {
+          "0%, 100%": { transform: "scale(0) rotate(0deg)", opacity: "0" },
+          "50%": { transform: "scale(1) rotate(90deg)", opacity: "1" },
+        },
       },
       animation: {
         fadeInUp: "fadeInUp .5s ease-out both",
@@ -44,6 +73,12 @@ export default {
         pulseGlow: "pulseGlow 2s ease-in-out infinite",
         slideInRight: "slideInRight .4s ease-out both",
         float: "float 3s ease-in-out infinite",
+        "meteor-effect": "meteor 5s linear infinite",
+        "border-beam": "border-beam calc(var(--duration, 15)*1s) infinite linear",
+        marquee: "marquee var(--duration, 35s) linear infinite",
+        "shimmer-slide": "shimmer-slide var(--speed, 3s) ease-in-out infinite alternate",
+        "spin-around": "spin-around calc(var(--speed, 3s) * 2) infinite linear",
+        sparkle: "sparkle 800ms ease-in-out forwards",
       },
     },
   },
