@@ -24,3 +24,4 @@ const contact = z.object({
 export const contactsSchema = z.object({ body: z.object({ contacts: z.array(contact).min(1).max(1000) }) });
 export const contactStatusSchema = z.object({ params: z.object({ id: objectId }), body: z.object({ status: z.enum(["ACTIVE", "REPLIED", "UNSUBSCRIBED", "BOUNCED", "BLOCKED"]) }) });
 export const testEmailSchema = z.object({ body: z.object({ recipient: z.string().trim().email().max(254).transform((value) => value.toLowerCase()) }) });
+export const unsubscribeSchema = z.object({ params: z.object({ token: z.string().regex(/^[a-f\d]{48}$/i, "Invalid unsubscribe token") }) });

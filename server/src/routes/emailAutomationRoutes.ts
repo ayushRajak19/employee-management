@@ -3,11 +3,12 @@ import * as controller from "../controllers/emailAutomationController.js";
 import { authenticate } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { contactStatusSchema, contactsSchema, createWorkflowSchema, testEmailSchema, updateWorkflowSchema, workflowIdSchema } from "../validators/emailAutomationValidators.js";
+import { contactStatusSchema, contactsSchema, createWorkflowSchema, testEmailSchema, unsubscribeSchema, updateWorkflowSchema, workflowIdSchema } from "../validators/emailAutomationValidators.js";
 
 export const emailAutomationRouter = Router();
 emailAutomationRouter.post("/webhooks/brevo", asyncHandler(controller.brevoWebhook));
-emailAutomationRouter.get("/unsubscribe/:token", asyncHandler(controller.unsubscribe));
+emailAutomationRouter.get("/unsubscribe/:token", validate(unsubscribeSchema), asyncHandler(controller.unsubscribe));
+emailAutomationRouter.post("/unsubscribe/:token", validate(unsubscribeSchema), asyncHandler(controller.confirmUnsubscribe));
 emailAutomationRouter.use(authenticate);
 emailAutomationRouter.get("/configuration", asyncHandler(controller.getConfiguration));
 emailAutomationRouter.post("/connection/test", asyncHandler(controller.checkConnection));
