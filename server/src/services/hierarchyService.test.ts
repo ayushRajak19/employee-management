@@ -19,7 +19,7 @@ test("ROLES catalog contains required enterprise hierarchy roles", () => {
   assert.ok(ROLES.includes("EMPLOYEE"));
 });
 
-test("TEAM_LEAD has team surveillance and work oversight permissions", () => {
+test("TEAM_LEAD has team delivery and work oversight permissions", () => {
   const perms = ROLE_PERMISSIONS.TEAM_LEAD;
   assert.ok(perms.includes("task.create"));
   assert.ok(perms.includes("task.assign"));

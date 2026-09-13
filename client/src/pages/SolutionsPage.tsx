@@ -2,9 +2,9 @@ import { useEffect, type CSSProperties } from "react";
 import type { LucideIcon } from "lucide-react";
 import { ArrowLeft, ArrowRight, Bot, BriefcaseBusiness, Check, FileSearch, Fingerprint, MailCheck, Mic, ShieldCheck, Sparkles, Target, Users } from "lucide-react";
 import { Link, Navigate, useParams } from "react-router-dom";
-import logo from "@/assets/mobius-mark.png";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { MarketingNavbar } from "@/components/MarketingNavbar";
+import { MarketingFooter } from "@/components/MarketingFooter";
 import "./solutions.css";
 
 type Solution = {
@@ -38,8 +38,6 @@ const solutions: Solution[] = [
 ];
 
 const MarketingHeader = () => <MarketingNavbar />;
-
-const MarketingFooter = () => <footer className="sol-footer"><Link to="/welcome" className="sol-brand"><img src={logo} alt=""/><span>MobiusEMS</span></Link><p>A flagship product of Mobius Bloom Venture Pvt Ltd</p><Link to="/solutions">Explore all capabilities ↗</Link></footer>;
 
 export const SolutionsIndexPage = () => {
   useEffect(() => { window.scrollTo(0, 0); document.title = "MobiusEMS Capabilities — Complete Workforce OS"; }, []);

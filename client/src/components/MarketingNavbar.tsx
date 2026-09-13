@@ -15,7 +15,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import logo from "@/assets/mobius-mark.png";
+import logo from "@/assets/mobius-mark.svg";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { ShimmerButton } from "@/components/inspira";
 

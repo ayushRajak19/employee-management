@@ -1,0 +1,77 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 320" width="100%" height="100%" fill="none">
+  <defs>
+    <linearGradient id="pillarLeft" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#147461" />
+      <stop offset="100%" stop-color="#105b4e" />
+    </linearGradient>
+
+    <linearGradient id="pillarLeftFacet" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#43aa94" />
+      <stop offset="100%" stop-color="#258d79" />
+    </linearGradient>
+
+    <linearGradient id="chevronAscent" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#152c39" />
+      <stop offset="45%" stop-color="#147461" />
+      <stop offset="85%" stop-color="#43aa94" />
+      <stop offset="100%" stop-color="#6ee7b7" />
+    </linearGradient>
+
+    <linearGradient id="pillarRight" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#258d79" />
+      <stop offset="100%" stop-color="#105b4e" />
+    </linearGradient>
+
+    <linearGradient id="pillarRightFacet" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399" />
+      <stop offset="100%" stop-color="#258d79" />
+    </linearGradient>
+
+    <linearGradient id="centerDiamond" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5142cb" />
+      <stop offset="100%" stop-color="#258d79" />
+    </linearGradient>
+
+    <filter id="subtleGlow" x="-10%" y="-10%" width="120%" height="120%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#147461" flood-opacity="0.18" />
+    </filter>
+  </defs>
+
+  <!-- Mark Container with shadow -->
+  <g transform="translate(40, 35)" filter="url(#subtleGlow)">
+    <path d="M70 215 L140 255 L210 215" stroke="#e2e8f0" stroke-width="2" stroke-linecap="round" stroke-dasharray="4 6" opacity="0.6"/>
+
+    <!-- Left Pillar -->
+    <path d="M40 90 L80 65 L80 200 L40 225 Z" fill="url(#pillarLeft)" />
+    <path d="M80 65 L115 88 L115 175 L80 200 Z" fill="url(#pillarLeftFacet)" />
+    <path d="M40 90 L80 65 L115 88 L75 112 Z" fill="#5eead4" opacity="0.9" />
+
+    <!-- Center V Core - Ascending Trajectory Chevron -->
+    <path d="M75 160 L140 210 L140 165 L95 130 Z" fill="#0f172a" opacity="0.85" />
+    <path d="M75 160 L140 210 L220 70 L195 50 L135 160 L95 130 Z" fill="url(#chevronAscent)" />
+    <polygon points="220,70 238,98 228,62 195,50 202,78" fill="#a7f3d0" />
+
+    <!-- Right Pillar -->
+    <path d="M165 95 L200 70 L200 185 L165 210 Z" fill="url(#pillarRight)" />
+    <path d="M200 70 L240 95 L240 230 L200 185 Z" fill="url(#pillarRightFacet)" />
+    <path d="M165 95 L200 70 L240 95 L205 120 Z" fill="#6ee7b7" opacity="0.8" />
+
+    <!-- Core Focal Catalyst -->
+    <polygon points="140,115 152,132 140,150 128,132" fill="url(#centerDiamond)" />
+  </g>
+
+  <!-- Typography: MobiusEMS -->
+  <g transform="translate(340, 155)">
+    <text x="0" y="0" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="76" font-weight="800" letter-spacing="-1.5" fill="#152c39">
+      Mobius<tspan fill="#147461">EMS</tspan>
+    </text>
+
+    <text x="4" y="44" font-family="Inter, system-ui, -apple-system, sans-serif" font-size="16" font-weight="600" letter-spacing="4" fill="#64748b">
+      WORKFORCE INTELLIGENCE PLATFORM
+    </text>
+
+    <rect x="4" y="68" width="48" height="4" rx="2" fill="#258d79" />
+    <rect x="58" y="68" width="16" height="4" rx="2" fill="#5142cb" />
+    <rect x="80" y="68" width="8" height="4" rx="2" fill="#43aa94" opacity="0.6"/>
+  </g>
+</svg>

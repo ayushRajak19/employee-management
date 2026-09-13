@@ -1,5 +1,5 @@
 import { useEffect, useState, type ComponentType } from "react";
-import logoMark from "@/assets/mobius-mark.png";
+import logoMark from "@/assets/mobius-mark.svg";
 import { useMutation } from "@tanstack/react-query";
 import type { CapabilityName, PermissionName, RoleName, SectionPermissionName } from "@mobius-ems/shared";
 import {
@@ -166,7 +166,7 @@ export const AppLayout = () => {
         <img
           src={logoMark}
           alt="MobiusEMS"
-          className="h-10 w-8 shrink-0 rounded-lg object-contain"
+          className="h-9 w-9 shrink-0 object-contain"
         />
         {!collapsed && (
           <div className="ml-3 overflow-hidden">

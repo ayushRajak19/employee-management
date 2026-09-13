@@ -217,7 +217,7 @@ export const DashboardPage = () => {
             onClick={() => setAdminViewMode("HIERARCHY")}
             className="inline-flex items-center gap-1.5 rounded-xl border border-brand-200 bg-brand-50 px-3.5 py-2 text-xs font-semibold text-brand-700 transition hover:bg-brand-100"
           >
-            ← Switch to Subordinates Surveillance Hub
+            ← Switch to Team Delivery Hub
           </button>
           <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
             Viewing: Executive Analytics
@@ -249,7 +249,7 @@ export const DashboardPage = () => {
               {employeeView
                 ? "Your current work, capability, goals and growth in one place."
                 : isSuperior
-                ? "Live surveillance of subordinate delivery, task blockers, and team operations across your reporting hierarchy."
+                ? "Live visibility into team delivery, task blockers, and team operations across your reporting hierarchy."
                 : "Live capability, delivery and workforce signals within your permitted scope."}
             </p>
           </div>
@@ -266,7 +266,7 @@ export const DashboardPage = () => {
                       : "text-slate-600 hover:text-ink"
                   )}
                 >
-                  Subordinates Hub
+                  Team Delivery Hub
                 </button>
                 <button
                   type="button"
@@ -287,7 +287,7 @@ export const DashboardPage = () => {
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex size-2.5 rounded-full bg-emerald-500" />
               </span>
-              {employeeView ? "Live personal view" : isSuperior ? "Hierarchical surveillance view" : "Live management view"}
+              {employeeView ? "Live personal view" : isSuperior ? "Team delivery view" : "Live management view"}
             </div>
           </div>
         </div>
@@ -361,10 +361,10 @@ export const DashboardPage = () => {
               })}
         </section>
 
-        {/* ────── Superior's Subordinate Work Surveillance Hub ────── */}
+        {/* ────── Superior's Team Work & Delivery Hub ────── */}
         {isSuperior && subordinateWork && (
           <section
-            aria-label="Subordinate delivery surveillance"
+            aria-label="Team delivery and blocker oversight"
             className="animate-fadeInUp anim-delay-2 mt-8 overflow-hidden rounded-2xl border bg-white shadow-soft"
           >
             {/* Hub Header */}
@@ -529,7 +529,7 @@ export const DashboardPage = () => {
               </div>
             </div>
 
-            {/* Tasks Surveillance List */}
+            {/* Tasks Delivery & Oversight List */}
             <div className="divide-y">
               {filteredSubordinateTasks.length > 0 ? (
                 filteredSubordinateTasks.map((task) => {
