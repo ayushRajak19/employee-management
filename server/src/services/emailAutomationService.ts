@@ -17,7 +17,7 @@ type BrevoResponse = { messageId?: string; code?: string; message?: string };
 type WebhookInput = { event?: string; email?: string; reason?: string; ts_event?: number; ts?: number; "message-id"?: string };
 type BrevoEmailEvent = { date?: string; email?: string; event?: string; messageId?: string; reason?: string };
 
-const configured = () => env.EMAIL_AUTOMATION_ENABLED && Boolean(env.BREVO_API_KEY && env.BREVO_SENDER_EMAIL);
+const configured = () => env.EMAIL_AUTOMATION_ENABLED && Boolean(env.BREVO_API_KEY && env.BREVO_SENDER_EMAIL && (env.NODE_ENV !== "production" || env.BREVO_WEBHOOK_TOKEN));
 const webhookToken = env.BREVO_WEBHOOK_TOKEN || createHash("sha256").update(`brevo-webhook:${env.JWT_ACCESS_SECRET}`).digest("hex");
 const validWebhookToken = (value?: string) => {
   if (!value) return false;

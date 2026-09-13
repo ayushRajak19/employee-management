@@ -46,10 +46,5 @@ const schema = z.object({
 
 const result = schema.safeParse(process.env);
 if (!result.success) throw new Error(`Invalid environment configuration: ${result.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join(", ")}`);
-if (result.data.NODE_ENV === "production" && result.data.EMAIL_AUTOMATION_ENABLED) {
-  const missing = ["BREVO_API_KEY", "BREVO_SENDER_EMAIL", "BREVO_WEBHOOK_TOKEN"].filter((key) => !process.env[key]);
-  if (missing.length) throw new Error(`Invalid production email configuration: ${missing.join(", ")} required when EMAIL_AUTOMATION_ENABLED=true`);
-  if (!result.data.CLIENT_URL.startsWith("https://")) throw new Error("Invalid production email configuration: CLIENT_URL must use HTTPS");
-}
 export const env = result.data;
 
