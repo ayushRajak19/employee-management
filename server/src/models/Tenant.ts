@@ -16,6 +16,13 @@ export interface TenantDocument {
   plan: "STANDARD" | "ENTERPRISE";
   createdBy?: Types.ObjectId;
   activatedAt?: Date;
+  emailAutomation?: {
+    senderName: string;
+    senderEmail: string;
+    replyToEmail: string;
+    updatedAt: Date;
+    updatedBy: Types.ObjectId;
+  };
 }
 
 const schema = new Schema<TenantDocument>({
@@ -31,6 +38,13 @@ const schema = new Schema<TenantDocument>({
   plan: { type: String, enum: ["STANDARD", "ENTERPRISE"], default: "STANDARD" },
   createdBy: { type: Schema.Types.ObjectId, ref: "User" },
   activatedAt: Date,
+  emailAutomation: {
+    senderName: { type: String, trim: true, minlength: 1, maxlength: 100 },
+    senderEmail: { type: String, trim: true, lowercase: true, maxlength: 254 },
+    replyToEmail: { type: String, trim: true, lowercase: true, maxlength: 254 },
+    updatedAt: Date,
+    updatedBy: { type: Schema.Types.ObjectId, ref: "User" },
+  },
 }, { timestamps: true });
 
 schema.index({ status: 1, createdAt: -1 });

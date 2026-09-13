@@ -3,7 +3,8 @@ import * as service from "../services/emailAutomationService.js";
 import { AppError } from "../utils/AppError.js";
 
 const requireSuperAdmin = (request: Request) => { if (request.user!.role !== "SUPER_ADMIN") throw new AppError("Only a Super Admin can manage email automation", 403, "SUPER_ADMIN_REQUIRED"); };
-export const getConfiguration = async (request: Request, response: Response): Promise<void> => { requireSuperAdmin(request); response.json({ success: true, message: "Email configuration retrieved", data: service.configuration() }); };
+export const getConfiguration = async (request: Request, response: Response): Promise<void> => { requireSuperAdmin(request); response.json({ success: true, message: "Email configuration retrieved", data: await service.configuration() }); };
+export const updateConfiguration = async (request: Request, response: Response): Promise<void> => { requireSuperAdmin(request); response.json({ success: true, message: "Organization sender saved", data: await service.updateConfiguration(request.body, request.user!.id) }); };
 export const checkConnection = async (request: Request, response: Response): Promise<void> => { requireSuperAdmin(request); response.json({ success: true, message: "Brevo API connection is valid", data: await service.testConnection() }); };
 export const registerWebhook = async (request: Request, response: Response): Promise<void> => { requireSuperAdmin(request); response.json({ success: true, message: "Brevo webhook configured", data: await service.registerWebhook() }); };
 export const sendTest = async (request: Request, response: Response): Promise<void> => { requireSuperAdmin(request); response.json({ success: true, message: "Test email accepted by Brevo", data: await service.sendTest(request.body.recipient) }); };
