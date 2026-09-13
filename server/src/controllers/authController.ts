@@ -13,8 +13,8 @@ const clearCookies = (response: Response): void => {
 };
 
 export const login = async (request: Request, response: Response): Promise<void> => {
-  const { email, password } = request.body as { email: string; password: string };
-  const result = await authService.login(email, password, request); setCookies(response, result.accessToken, result.refreshToken);
+  const { email, password, tenantSlug } = request.body as { email: string; password: string; tenantSlug?: string };
+  const result = await authService.login(email, password, tenantSlug, request); setCookies(response, result.accessToken, result.refreshToken);
   response.json({ success: true, message: "Signed in successfully", data: { user: result.user } });
 };
 export const refresh = async (request: Request, response: Response): Promise<void> => {
@@ -33,5 +33,5 @@ export const changePassword = async (request: Request, response: Response): Prom
   const user = await authService.changePassword(request.user!.id, currentPassword, newPassword, request); clearCookies(response);
   response.json({ success: true, message: "Password changed. Please sign in again", data: { user } });
 };
-export const requestPasswordReset = async (request: Request, response: Response): Promise<void> => { const result = await authService.requestSuperAdminPasswordReset(request.body.email, request); response.json({ success: true, message: result }); };
-export const resetPassword = async (request: Request, response: Response): Promise<void> => { await authService.resetSuperAdminPassword(request.body.email, request.body.token, request.body.newPassword, request); response.json({ success: true, message: "Password reset successfully" }); };
+export const requestPasswordReset = async (request: Request, response: Response): Promise<void> => { const result = await authService.requestSuperAdminPasswordReset(request.body.email, request.body.tenantSlug); response.json({ success: true, message: result }); };
+export const resetPassword = async (request: Request, response: Response): Promise<void> => { await authService.resetSuperAdminPassword(request.body.email, request.body.token, request.body.newPassword, request.body.tenantSlug, request); response.json({ success: true, message: "Password reset successfully" }); };

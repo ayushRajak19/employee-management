@@ -42,9 +42,9 @@ const requestMeta = (request: Request) => ({ ip: request.ip, userAgent: request.
 const resetHash = (token: string) => createHash("sha256").update(token).digest("hex");
 const resetMessage = "If the account is an eligible Super Admin, a password reset link has been sent.";
 
-export const requestSuperAdminPasswordReset = async (email: string, request: Request) => {
+export const requestSuperAdminPasswordReset = async (email: string, tenantSlug?: string) => {
   let tenant: ActiveTenant;
-  try { tenant = await resolveTenantForLogin(email, undefined); } catch { return resetMessage; }
+  try { tenant = await resolveTenantForLogin(email, tenantSlug); } catch { return resetMessage; }
   await runWithTenant(tenant._id, async () => {
     const user = await User.findOne({ email, isActive: true }).populate<{ role: RoleDocument }>("role");
     if (!user || user.role.name !== "SUPER_ADMIN" || !isPlatformAdminEmail(user.email)) return;
@@ -59,8 +59,8 @@ export const requestSuperAdminPasswordReset = async (email: string, request: Req
   return resetMessage;
 };
 
-export const resetSuperAdminPassword = async (email: string, token: string, newPassword: string, request: Request) => {
-  const tenant = await resolveTenantForLogin(email, undefined);
+export const resetSuperAdminPassword = async (email: string, token: string, newPassword: string, tenantSlug: string | undefined, request: Request) => {
+  const tenant = await resolveTenantForLogin(email, tenantSlug);
   return runWithTenant(tenant._id, async () => {
     const user = await User.findOne({ email, isActive: true }).select("+passwordHash +passwordResetTokenHash").populate<{ role: RoleDocument }>("role");
     if (!user || user.role.name !== "SUPER_ADMIN" || !isPlatformAdminEmail(user.email) || !user.passwordResetTokenHash || !user.passwordResetTokenExpiresAt || user.passwordResetTokenExpiresAt < new Date() || user.passwordResetTokenHash !== resetHash(token)) throw new AppError("Reset link is invalid or expired", 400, "INVALID_RESET_TOKEN");
@@ -70,8 +70,8 @@ export const resetSuperAdminPassword = async (email: string, token: string, newP
   });
 };
 
-export const login = async (email: string, password: string, request: Request) => {
-  const tenant = await resolveTenantForLogin(email);
+export const login = async (email: string, password: string, tenantSlug: string | undefined, request: Request) => {
+  const tenant = await resolveTenantForLogin(email, tenantSlug);
   return runWithTenant(tenant._id, async () => {
     const user = await User.findOne({ email, isActive: true }).select("+passwordHash").populate<{ role: RoleDocument }>("role");
     if (!user || !(await bcrypt.compare(password, user.passwordHash))) throw new AppError("Email, password or organization is incorrect", 401, "INVALID_CREDENTIALS");
