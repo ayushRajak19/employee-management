@@ -3,8 +3,8 @@ import { api } from "@/api/client";
 export type WorkflowStatus = "DRAFT" | "ACTIVE" | "PAUSED";
 export interface EmailWorkflowItem { _id: string; name: string; audience: string; subject: string; message: string; followUp: boolean; delayDays: number; followUpSubject?: string; followUpMessage?: string; status: WorkflowStatus; createdAt: string }
 export interface VendorContactItem { _id: string; name: string; companyName: string; email: string; source: string; consentAt: string; status: "ACTIVE" | "REPLIED" | "UNSUBSCRIBED" | "BOUNCED" | "BLOCKED"; repliedAt?: string; createdAt: string }
-export interface AutomationConfiguration { configured: boolean; providerConfigured: boolean; senderEmail: string | null; senderName: string | null; replyToEmail: string | null; webhookConfigured: boolean; webhookUrl: string; dailyLimit: number }
-export interface AutomationConfigurationInput { senderName: string; senderEmail: string; replyToEmail: string }
+export interface AutomationConfiguration { configured: boolean; providerConfigured: boolean; provider: "BREVO" | null; senderEmail: string | null; senderName: string | null; replyToEmail: string | null; webhookConfigured: boolean; webhookUrl: string; dailyLimit: number }
+export interface AutomationConfigurationInput { apiKey?: string; senderName: string; senderEmail: string; replyToEmail: string }
 export interface AutomationSummary { workflows: number; active: number; contacts: number; accepted: number; sent: number; delivered: number; opened: number; clicked: number; bounced: number; replies: number }
 export interface EmailDeliveryItem { _id: string; recipientEmail: string; subject: string; status: string; lastEventAt: string; createdAt: string; step: number; lastError?: string | null }
 export interface WorkflowInput { name: string; audience: string; subject: string; message: string; followUp: boolean; delayDays: number; followUpSubject?: string; followUpMessage?: string }
@@ -13,7 +13,7 @@ export interface VendorInput { name: string; companyName: string; email: string;
 export const emailAutomationApi = {
   configuration: () => api.get<AutomationConfiguration>("/api/v1/email-automation/configuration"),
   updateConfiguration: (body: AutomationConfigurationInput) => api.patch<AutomationConfiguration>("/api/v1/email-automation/configuration", body),
-  checkConnection: () => api.post<{ connected: boolean; accountEmail: string | null; companyName: string | null }>("/api/v1/email-automation/connection/test"),
+  checkConnection: () => api.post<{ connected: boolean; sendingEnabled: boolean; accountEmail: string | null; companyName: string | null }>("/api/v1/email-automation/connection/test"),
   registerWebhook: () => api.post<{ id: number; created: boolean }>("/api/v1/email-automation/connection/webhook"),
   sendTest: (recipient: string) => api.post<{ messageId: string }>("/api/v1/email-automation/test-email", { recipient }),
   summary: () => api.get<AutomationSummary>("/api/v1/email-automation/summary"),

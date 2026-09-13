@@ -17,6 +17,8 @@ export interface TenantDocument {
   createdBy?: Types.ObjectId;
   activatedAt?: Date;
   emailAutomation?: {
+    provider: "BREVO";
+    apiKeyEncrypted: string;
     senderName: string;
     senderEmail: string;
     replyToEmail: string;
@@ -39,6 +41,8 @@ const schema = new Schema<TenantDocument>({
   createdBy: { type: Schema.Types.ObjectId, ref: "User" },
   activatedAt: Date,
   emailAutomation: {
+    provider: { type: String, enum: ["BREVO"] },
+    apiKeyEncrypted: { type: String, select: false },
     senderName: { type: String, trim: true, minlength: 1, maxlength: 100 },
     senderEmail: { type: String, trim: true, lowercase: true, maxlength: 254 },
     replyToEmail: { type: String, trim: true, lowercase: true, maxlength: 254 },

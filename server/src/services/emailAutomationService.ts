@@ -5,6 +5,7 @@ import { EmailEnrollment } from "../models/EmailEnrollment.js";
 import { EmailWorkflow, type EmailWorkflowDocument } from "../models/EmailWorkflow.js";
 import { VendorContact, type VendorContactDocument } from "../models/VendorContact.js";
 import { AppError } from "../utils/AppError.js";
+import { decryptSecret, encryptSecret } from "../utils/secretCipher.js";
 import { writeAudit } from "./auditService.js";
 import { Tenant } from "../models/Tenant.js";
 import { requireTenantId, currentTenantId, runWithTenant } from "../tenancy/tenantContext.js";
@@ -14,33 +15,38 @@ type ContactInput = Pick<VendorContactDocument, "name" | "companyName" | "email"
 type BrevoResponse = { messageId?: string; code?: string; message?: string };
 type WebhookInput = { event?: string; email?: string; reason?: string; ts_event?: number; ts?: number; "message-id"?: string };
 type BrevoEmailEvent = { date?: string; email?: string; event?: string; messageId?: string; reason?: string };
-type SenderConfiguration = { senderName: string; senderEmail: string; replyToEmail: string };
+type SenderConfiguration = { senderName: string; senderEmail: string; replyToEmail: string; apiKey: string };
+type ConfigurationInput = Omit<SenderConfiguration, "apiKey"> & { apiKey?: string };
+type BrevoAccount = { email?: string; companyName?: string; relay?: { enabled?: boolean } };
 
-const providerConfigured = () => env.EMAIL_AUTOMATION_ENABLED && Boolean(env.BREVO_API_KEY);
 const tenantConfiguration = async (): Promise<SenderConfiguration | null> => {
-  const tenant = await Tenant.findById(requireTenantId()).select("emailAutomation").lean();
-  return tenant?.emailAutomation?.senderEmail ? tenant.emailAutomation : null;
+  const tenant = await Tenant.findById(requireTenantId()).select("+emailAutomation.apiKeyEncrypted emailAutomation").lean();
+  const stored = tenant?.emailAutomation;
+  if (!stored?.apiKeyEncrypted || !stored.senderEmail) return null;
+  return { senderName: stored.senderName, senderEmail: stored.senderEmail, replyToEmail: stored.replyToEmail, apiKey: decryptSecret(stored.apiKeyEncrypted) };
 };
 const webhookToken = env.BREVO_WEBHOOK_TOKEN || createHash("sha256").update(`brevo-webhook:${env.JWT_ACCESS_SECRET}`).digest("hex");
-const requireProvider = () => {
-  if (!providerConfigured()) throw new AppError("Email delivery is not configured on the server", 503, "BREVO_NOT_CONFIGURED");
-};
 const requireConfiguration = async () => {
-  requireProvider();
+  if (!env.EMAIL_AUTOMATION_ENABLED) throw new AppError("Email automation is disabled", 503, "EMAIL_AUTOMATION_DISABLED");
   const configuration = await tenantConfiguration();
-  if (!configuration) throw new AppError("Save this organization's sender email before using email automation", 409, "EMAIL_SENDER_NOT_CONFIGURED");
+  if (!configuration) throw new AppError("Connect this organization's Brevo account before using email automation", 409, "BREVO_NOT_CONNECTED");
   return configuration;
 };
-const brevoRequest = async <T>(path: string, init: RequestInit = {}): Promise<T> => {
-  requireProvider();
+const brevoRequest = async <T>(apiKey: string, path: string, init: RequestInit = {}): Promise<T> => {
   const response = await fetch(`https://api.brevo.com/v3${path}`, {
     ...init,
-    headers: { accept: "application/json", "content-type": "application/json", "api-key": env.BREVO_API_KEY!, ...init.headers },
+    headers: { accept: "application/json", "content-type": "application/json", "api-key": apiKey, ...init.headers },
     signal: AbortSignal.timeout(20_000),
   });
   const payload = await response.json().catch(() => ({})) as BrevoResponse;
   if (!response.ok) throw new AppError(payload.message || "Brevo rejected the request", 502, payload.code || "BREVO_ERROR");
   return payload as T;
+};
+const accountStatus = (apiKey: string) => brevoRequest<BrevoAccount>(apiKey, "/account");
+const requireSendingEnabled = async (configuration: SenderConfiguration) => {
+  const account = await accountStatus(configuration.apiKey);
+  if (account.relay?.enabled === false) throw new AppError("Brevo has disabled transactional sending for this account. Ask Brevo Support to reactivate it.", 409, "BREVO_SENDING_DISABLED");
+  return account;
 };
 
 const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[character]!);
@@ -51,7 +57,7 @@ const personalize = (value: string, contact: Pick<VendorContactDocument, "name" 
 const messageHtml = (text: string, unsubscribeUrl?: string) => `${text.split(/\r?\n/).map((line) => line ? `<p style="margin:0 0 12px">${escapeHtml(line)}</p>` : "<br>").join("")}${unsubscribeUrl ? `<hr style="border:0;border-top:1px solid #e5e7eb;margin:24px 0 12px"><p style="font-size:12px;color:#64748b">You are receiving this business email because your contact was provided for vendor communication. <a href="${escapeHtml(unsubscribeUrl)}">Unsubscribe</a></p>` : ""}`;
 
 const sendBrevoEmail = async (input: { to: string; toName?: string; subject: string; text: string; unsubscribeUrl?: string; enrollmentId?: string }, sender: SenderConfiguration) => {
-  const payload = await brevoRequest<BrevoResponse>("/smtp/email", {
+  const payload = await brevoRequest<BrevoResponse>(sender.apiKey, "/smtp/email", {
     method: "POST",
     body: JSON.stringify({
       sender: { name: sender.senderName, email: sender.senderEmail },
@@ -71,38 +77,47 @@ const sendBrevoEmail = async (input: { to: string; toName?: string; subject: str
 export const configuration = async () => {
   const sender = await tenantConfiguration();
   return ({
-  configured: providerConfigured() && Boolean(sender),
-  providerConfigured: providerConfigured(),
+  configured: env.EMAIL_AUTOMATION_ENABLED && Boolean(sender),
+  providerConfigured: Boolean(sender),
+  provider: sender ? "BREVO" : null,
   senderEmail: sender?.senderEmail || null,
   senderName: sender?.senderName || null,
   replyToEmail: sender?.replyToEmail || null,
-  webhookConfigured: providerConfigured(),
+  webhookConfigured: Boolean(sender),
   webhookUrl: `${env.CLIENT_URL}/api/v1/email-automation/webhooks/brevo`,
   dailyLimit: env.EMAIL_AUTOMATION_DAILY_LIMIT,
   });
 };
-export const updateConfiguration = async (input: SenderConfiguration, actor: string) => {
+export const updateConfiguration = async (input: ConfigurationInput, actor: string) => {
   const oldValue = await tenantConfiguration();
-  await Tenant.updateOne({ _id: requireTenantId() }, { $set: { emailAutomation: { ...input, updatedAt: new Date(), updatedBy: actor } } });
-  await writeAudit({ user: actor as never, action: "EMAIL_CONFIGURATION_UPDATED", entityType: "Tenant", entityId: requireTenantId().toString(), oldValue, newValue: input });
+  const apiKey = input.apiKey || oldValue?.apiKey;
+  if (!apiKey) throw new AppError("Enter this organization's Brevo API key", 409, "BREVO_API_KEY_REQUIRED");
+  await accountStatus(apiKey);
+  const result = await brevoRequest<{ senders?: { email?: string; active?: boolean }[] }>(apiKey, "/senders?ipAndEmails=true");
+  const sender = result.senders?.find((item) => item.email?.toLowerCase() === input.senderEmail && item.active !== false);
+  if (!sender) throw new AppError("Verify this sender email in the connected Brevo account first", 409, "BREVO_SENDER_NOT_VERIFIED");
+  const stored = { provider: "BREVO" as const, apiKeyEncrypted: encryptSecret(apiKey), senderName: input.senderName, senderEmail: input.senderEmail, replyToEmail: input.replyToEmail, updatedAt: new Date(), updatedBy: actor };
+  await Tenant.updateOne({ _id: requireTenantId() }, { $set: { emailAutomation: stored } });
+  await writeAudit({ user: actor as never, action: "EMAIL_CONFIGURATION_UPDATED", entityType: "Tenant", entityId: requireTenantId().toString(), oldValue: oldValue && { senderName: oldValue.senderName, senderEmail: oldValue.senderEmail, replyToEmail: oldValue.replyToEmail }, newValue: { provider: "BREVO", senderName: input.senderName, senderEmail: input.senderEmail, replyToEmail: input.replyToEmail } });
   return configuration();
 };
 export const testConnection = async () => {
-  const account = await brevoRequest<{ email?: string; companyName?: string }>("/account");
-  return { connected: true, accountEmail: account.email || null, companyName: account.companyName || null };
+  const configuration = await requireConfiguration();
+  const account = await accountStatus(configuration.apiKey);
+  return { connected: true, sendingEnabled: account.relay?.enabled !== false, accountEmail: account.email || null, companyName: account.companyName || null };
 };
 export const registerWebhook = async () => {
-  requireProvider();
+  const configuration = await requireConfiguration();
   const baseUrl = `${env.CLIENT_URL}/api/v1/email-automation/webhooks/brevo`;
   const url = `${baseUrl}?token=${encodeURIComponent(webhookToken)}`;
   try {
-    const existing = await brevoRequest<{ webhooks?: { id: number; url: string; type: string }[] }>("/webhooks?type=transactional&sort=desc");
+    const existing = await brevoRequest<{ webhooks?: { id: number; url: string; type: string }[] }>(configuration.apiKey, "/webhooks?type=transactional&sort=desc");
     const match = existing.webhooks?.find((webhook) => webhook.url === url && webhook.type === "transactional");
     if (match) return { id: match.id, created: false };
   } catch (error) {
     console.warn("Could not read existing Brevo webhooks; attempting a fresh registration", error);
   }
-  const created = await brevoRequest<{ id: number }>("/webhooks", { method: "POST", body: JSON.stringify({
+  const created = await brevoRequest<{ id: number }>(configuration.apiKey, "/webhooks", { method: "POST", body: JSON.stringify({
     url, type: "transactional", description: "MobiusEMS email automation events", batched: false,
     events: ["request", "delivered", "hardBounce", "softBounce", "blocked", "spam", "invalid", "deferred", "click", "opened", "uniqueOpened", "unsubscribed"],
   }) });
@@ -110,6 +125,7 @@ export const registerWebhook = async () => {
 };
 export const sendTest = async (recipient: string) => {
   const sender = await requireConfiguration();
+  await requireSendingEnabled(sender);
   const messageId = await sendBrevoEmail({ to: recipient, subject: "MobiusEMS Brevo connection test", text: "Your Brevo email automation connection is working correctly." }, sender);
   await EmailDelivery.create({ recipientEmail: recipient, providerMessageId: messageId, step: -1, subject: "MobiusEMS Brevo connection test", status: "REQUESTED", events: [{ type: "request", occurredAt: new Date() }] });
   return { messageId };
@@ -118,7 +134,8 @@ export const sendTest = async (recipient: string) => {
 const normalizeMessageId = (value: string) => value.replace(/^<|>$/g, "");
 const normalizeEvent = (value: string) => value.replace(/[A-Z]/g, (character) => `_${character.toLowerCase()}`).toLowerCase();
 export const syncDeliveryEvents = async () => {
-  const report = await brevoRequest<{ events?: BrevoEmailEvent[] }>("/smtp/statistics/events?days=30&limit=500&sort=desc");
+  const configuration = await requireConfiguration();
+  const report = await brevoRequest<{ events?: BrevoEmailEvent[] }>(configuration.apiKey, "/smtp/statistics/events?days=30&limit=500&sort=desc");
   let updated = 0;
   for (const item of report.events ?? []) {
     if (!item.messageId || !item.event) continue;
@@ -146,7 +163,7 @@ export const syncDeliveryEvents = async () => {
   return { updated };
 };
 export const summary = async () => {
-  if (providerConfigured()) await syncDeliveryEvents().catch((error: unknown) => console.warn("Brevo delivery activity sync failed", error));
+  if (await tenantConfiguration()) await syncDeliveryEvents().catch((error: unknown) => console.warn("Brevo delivery activity sync failed", error));
   const [workflows, active, contacts, accepted, delivered, opened, clicked, bounced, replies] = await Promise.all([
     EmailWorkflow.countDocuments(), EmailWorkflow.countDocuments({ status: "ACTIVE" }), VendorContact.countDocuments(),
     EmailDelivery.countDocuments({ step: { $gte: 0 } }), EmailDelivery.countDocuments({ "events.type": "delivered" }),
@@ -182,7 +199,7 @@ export const deleteWorkflow = async (id: string, actor: string) => {
   await writeAudit({ user: actor as never, action: "EMAIL_WORKFLOW_DELETED", entityType: "EmailWorkflow", entityId: id });
 };
 export const activateWorkflow = async (id: string, actor: string) => {
-  await requireConfiguration();
+  await requireSendingEnabled(await requireConfiguration());
   const item = await EmailWorkflow.findById(id);
   if (!item) throw new AppError("Email workflow not found", 404);
   const contacts = await VendorContact.find({ status: "ACTIVE" }).select("_id").lean();
@@ -255,7 +272,7 @@ export const unsubscribe = async (token: string) => {
   });
 };
 
-const processOne = async () => {
+const processOne = async (sender: SenderConfiguration) => {
   const stale = new Date(Date.now() - 10 * 60_000);
   await EmailEnrollment.updateMany({ status: "PROCESSING", lockedAt: { $lt: stale } }, { $set: { status: "PENDING" }, $unset: { lockedAt: 1 } });
   const enrollment = await EmailEnrollment.findOneAndUpdate({ status: "PENDING", nextRunAt: { $lte: new Date() } }, { $set: { status: "PROCESSING", lockedAt: new Date() } }, { new: true });
@@ -267,7 +284,6 @@ const processOne = async () => {
     if (workflow.status !== "ACTIVE") { enrollment.status = "STOPPED"; await enrollment.save(); return true; }
     const followUp = enrollment.step === 1;
     if (followUp && contact.repliedAt) { enrollment.status = "STOPPED"; await enrollment.save(); return true; }
-    const sender = await requireConfiguration();
     const subject = personalize(followUp ? workflow.followUpSubject || `Following up: ${workflow.subject}` : workflow.subject, contact, sender.senderName);
     const text = personalize(followUp ? workflow.followUpMessage || `Hi {{vendor_name}},\n\nI wanted to follow up on my previous message about a potential partnership with {{company_name}}. Please let me know if this is relevant for your team.` : workflow.message, contact, sender.senderName);
     const unsubscribeUrl = `${env.CLIENT_URL}/api/v1/email-automation/unsubscribe/${contact.unsubscribeToken}`;
@@ -284,15 +300,18 @@ const processOne = async () => {
   return true;
 };
 const runTenantEmailAutomationCycle = async () => {
-    if (!(await tenantConfiguration())) return;
+    const sender = await tenantConfiguration();
+    if (!sender || !(await EmailEnrollment.exists({ status: "PENDING", nextRunAt: { $lte: new Date() } }))) return;
+    try { await requireSendingEnabled(sender); }
+    catch (error) { console.warn("Tenant Brevo sending is unavailable", error); return; }
     const startOfDay = new Date(); startOfDay.setUTCHours(0, 0, 0, 0);
     const sentToday = await EmailDelivery.countDocuments({ step: { $gte: 0 }, createdAt: { $gte: startOfDay } });
     const available = Math.max(0, env.EMAIL_AUTOMATION_DAILY_LIMIT - sentToday);
-    for (let index = 0; index < Math.min(env.EMAIL_AUTOMATION_BATCH_SIZE, available); index += 1) if (!(await processOne())) break;
+    for (let index = 0; index < Math.min(env.EMAIL_AUTOMATION_BATCH_SIZE, available); index += 1) if (!(await processOne(sender))) break;
 };
 let cycleRunning = false;
 export const runEmailAutomationCycle = async () => {
-  if (cycleRunning || !providerConfigured()) return;
+  if (cycleRunning || !env.EMAIL_AUTOMATION_ENABLED) return;
   cycleRunning = true;
   try {
     const tenantId = currentTenantId();
@@ -305,14 +324,7 @@ export const runEmailAutomationCycle = async () => {
   finally { cycleRunning = false; }
 };
 export const initializeEmailAutomation = async () => {
-  if (!providerConfigured()) { console.warn("Brevo email automation is not configured"); return; }
-  await testConnection();
-  try {
-    const webhook = await registerWebhook();
-    console.log(`Brevo email automation connected; webhook ${webhook.created ? "created" : "ready"}`);
-  } catch (error) {
-    console.warn("Brevo connected, but automatic webhook registration failed; delivery polling remains active", error);
-  }
+  if (!env.EMAIL_AUTOMATION_ENABLED) { console.warn("Email automation is disabled"); return; }
   await runEmailAutomationCycle();
 };
 

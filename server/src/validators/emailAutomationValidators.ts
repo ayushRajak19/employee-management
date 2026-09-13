@@ -25,6 +25,7 @@ export const contactsSchema = z.object({ body: z.object({ contacts: z.array(cont
 export const contactStatusSchema = z.object({ params: z.object({ id: objectId }), body: z.object({ status: z.enum(["ACTIVE", "REPLIED", "UNSUBSCRIBED", "BOUNCED", "BLOCKED"]) }) });
 export const testEmailSchema = z.object({ body: z.object({ recipient: z.string().trim().email().max(254).transform((value) => value.toLowerCase()) }) });
 export const emailConfigurationSchema = z.object({ body: z.object({
+  apiKey: z.preprocess((value) => typeof value === "string" && !value.trim() ? undefined : value, z.string().trim().min(20).max(500).optional()),
   senderName: z.string().trim().min(1).max(100),
   senderEmail: z.string().trim().email().max(254).transform((value) => value.toLowerCase()),
   replyToEmail: z.string().trim().email().max(254).transform((value) => value.toLowerCase()),
