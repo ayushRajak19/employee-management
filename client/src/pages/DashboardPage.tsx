@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
-  AlertCircle, AlertOctagon, AlertTriangle, ArrowUpRight, Briefcase, CalendarClock,
+  AlertCircle, AlertOctagon, AlertTriangle, ArrowRight, ArrowUpRight, Briefcase, CalendarClock,
   ChevronRight, Clock, Eye, Layers, Search, ShieldCheck,
   Sparkles, Trophy, Users, Zap,
 } from "lucide-react";
@@ -116,10 +116,10 @@ const getGreeting = () => {
 };
 
 const metricAccents = [
-  { bar: "accent-bar-violet", iconBg: "bg-violet-100", iconColor: "text-violet-600", Icon: Users },
+  { bar: "accent-bar-emerald", iconBg: "bg-emerald-100", iconColor: "text-emerald-700", Icon: Users },
   { bar: "accent-bar-blue", iconBg: "bg-blue-100", iconColor: "text-blue-600", Icon: Zap },
   { bar: "accent-bar-amber", iconBg: "bg-amber-100", iconColor: "text-amber-600", Icon: ShieldCheck },
-  { bar: "accent-bar-emerald", iconBg: "bg-emerald-100", iconColor: "text-emerald-600", Icon: ArrowUpRight },
+  { bar: "accent-bar-violet", iconBg: "bg-indigo-100", iconColor: "text-indigo-600", Icon: ArrowUpRight },
 ];
 
 const rankStyles = [
@@ -229,33 +229,47 @@ export const DashboardPage = () => {
   }
 
   return (
-    <main className="flex-1 overflow-x-clip px-4 py-6 sm:px-8 sm:py-9">
+    <main className="dashboard-page flex-1 overflow-x-clip px-4 py-5 sm:px-8 sm:py-8">
       <div className="mx-auto w-full min-w-0 max-w-[1440px]">
         {employeeView && <div className="mb-7 animate-fadeInUp"><GamificationHeader/></div>}
 
         {/* ────── Hero greeting ────── */}
-        <div className="animate-fadeInUp flex min-w-0 flex-col justify-between gap-4 sm:flex-row sm:items-end sm:gap-5">
-          <div className="min-w-0">
-            <p className="text-sm font-semibold uppercase tracking-wider text-brand-500">
-              {employeeView ? "Your overview" : isSuperior ? "Hierarchy & Workforce Overview" : "Workforce overview"}
-            </p>
-            <h1 className="mt-2 max-w-full break-words text-2xl font-bold tracking-tight text-ink sm:text-4xl">
-              {getGreeting()},{" "}
-              <span className="bg-gradient-to-r from-brand-600 to-violet-500 bg-clip-text text-transparent">
-                {firstName}
-              </span>
-            </h1>
-            <p className="mt-3 max-w-2xl break-words text-sm leading-6 text-slate-500">
-              {employeeView
-                ? "Your current work, capability, goals and growth in one place."
-                : isSuperior
-                ? "Live surveillance of subordinate delivery, task blockers, and team operations across your reporting hierarchy."
-                : "Live capability, delivery and workforce signals within your permitted scope."}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
+        <div className="animate-fadeInUp relative min-w-0 overflow-hidden rounded-[28px] bg-[#10263a] p-6 text-white shadow-[0_24px_60px_rgba(16,38,58,.18)] sm:p-8">
+          <div className="pointer-events-none absolute -right-16 -top-24 size-72 rounded-full bg-brand-400/20 blur-3xl" />
+          <div className="pointer-events-none absolute bottom-0 right-[26%] h-40 w-40 rounded-full bg-blue-500/10 blur-3xl" />
+          <div className="relative flex min-w-0 flex-col justify-between gap-7 lg:flex-row lg:items-end">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 text-brand-200">
+                <Sparkles size={15} />
+                <p className="text-[11px] font-bold uppercase tracking-[.18em]">
+                  {employeeView ? "Your overview" : isSuperior ? "Hierarchy & workforce" : "Workforce overview"}
+                </p>
+              </div>
+              <h1 className="mt-3 max-w-full break-words text-3xl font-bold tracking-tight sm:text-4xl">
+                {getGreeting()}, <span className="text-brand-300">{firstName}</span>
+              </h1>
+              <p className="mt-3 max-w-2xl break-words text-sm leading-6 text-slate-300">
+                {employeeView
+                  ? "Your current work, capability, goals and growth in one place."
+                  : isSuperior
+                  ? "See delivery, upcoming work and team signals across your reporting hierarchy."
+                  : "Live capability, delivery and workforce signals within your permitted scope."}
+              </p>
+              <div className="mt-6 flex flex-wrap gap-2.5">
+                <button type="button" onClick={() => navigate(employeeView ? "/work" : "/employees")} className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-[#10263a] shadow-lg transition hover:-translate-y-0.5 hover:bg-brand-50">
+                  {employeeView ? <Briefcase size={15} /> : <Users size={15} />}
+                  {employeeView ? "Open my work" : "View employees"}
+                  <ArrowRight size={14} />
+                </button>
+                <button type="button" onClick={() => navigate(user?.permissions.includes("section.task_tracker") ? "/task-tracker" : "/work")} className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-4 py-2.5 text-xs font-semibold text-white backdrop-blur transition hover:bg-white/15">
+                  <CalendarClock size={15} />
+                  {user?.permissions.includes("section.task_tracker") ? "Task tracker" : "Open work"}
+                </button>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2.5 self-start lg:max-w-md lg:justify-end lg:self-auto">
             {user?.role === "SUPER_ADMIN" && (
-              <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-100/90 p-1">
+              <div className="flex items-center gap-1 rounded-xl border border-white/10 bg-white/10 p-1 backdrop-blur">
                 <button
                   type="button"
                   onClick={() => setAdminViewMode("HIERARCHY")}
@@ -263,7 +277,7 @@ export const DashboardPage = () => {
                     "rounded-lg px-3 py-1.5 text-xs font-semibold transition",
                     adminViewMode === "HIERARCHY"
                       ? "bg-white text-brand-700 shadow-sm"
-                      : "text-slate-600 hover:text-ink"
+                      : "text-slate-300 hover:text-white"
                   )}
                 >
                   Subordinates Hub
@@ -275,27 +289,28 @@ export const DashboardPage = () => {
                     "rounded-lg px-3 py-1.5 text-xs font-semibold transition",
                     adminViewMode === "ANALYTICS"
                       ? "bg-white text-brand-700 shadow-sm"
-                      : "text-slate-600 hover:text-ink"
+                      : "text-slate-300 hover:text-white"
                   )}
                 >
                   Executive Analytics
                 </button>
               </div>
             )}
-            <div className="flex max-w-full items-center gap-2.5 rounded-full border border-emerald-200 bg-emerald-50/60 px-4 py-2 text-xs font-medium text-emerald-700 backdrop-blur-sm">
+            <div className="flex max-w-full items-center gap-2.5 rounded-full border border-white/10 bg-white/10 px-4 py-2 text-xs font-medium text-emerald-200 backdrop-blur-sm">
               <span className="relative flex size-2.5 shrink-0">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex size-2.5 rounded-full bg-emerald-500" />
               </span>
-              {employeeView ? "Live personal view" : isSuperior ? "Hierarchical surveillance view" : "Live management view"}
+              {employeeView ? "Personal view live" : isSuperior ? "Hierarchy view live" : "Management view live"}
             </div>
+          </div>
           </div>
         </div>
 
         {/* ────── Metric cards ────── */}
         <section
           aria-label="Key workforce metrics"
-          className="mt-7 grid min-w-0 gap-4 sm:mt-9 sm:grid-cols-2 xl:grid-cols-4"
+          className="mt-5 grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-4"
         >
           {isLoading
             ? Array.from({ length: 4 }, (_, i) => (
@@ -308,7 +323,7 @@ export const DashboardPage = () => {
                   <article
                     key={metric.label}
                     className={cn(
-                      "animate-fadeInUp group min-w-0 overflow-hidden rounded-2xl border bg-white p-5 shadow-soft transition-all duration-300 hover:-translate-y-1 hover:shadow-soft-lg sm:p-6",
+                      "animate-fadeInUp group min-w-0 overflow-hidden rounded-2xl border border-slate-200/70 bg-white p-5 shadow-[0_10px_32px_rgba(15,35,52,.06)] transition-all duration-300 hover:-translate-y-1 hover:border-brand-200 hover:shadow-[0_18px_45px_rgba(15,35,52,.10)] sm:p-6",
                       accent.bar,
                       index === 0 && "anim-delay-1",
                       index === 1 && "anim-delay-2",
@@ -322,7 +337,7 @@ export const DashboardPage = () => {
                       </p>
                       <div
                         className={cn(
-                          "grid size-10 shrink-0 place-items-center rounded-xl transition-transform duration-300 group-hover:scale-110",
+                          "grid size-11 shrink-0 place-items-center rounded-2xl transition-transform duration-300 group-hover:scale-110",
                           accent.iconBg, accent.iconColor
                         )}
                       >
@@ -365,12 +380,12 @@ export const DashboardPage = () => {
         {isSuperior && subordinateWork && (
           <section
             aria-label="Subordinate delivery surveillance"
-            className="animate-fadeInUp anim-delay-2 mt-8 overflow-hidden rounded-2xl border bg-white shadow-soft"
+            className="animate-fadeInUp anim-delay-2 mt-6 overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-[0_12px_36px_rgba(15,35,52,.07)]"
           >
             {/* Hub Header */}
-            <div className="flex flex-col justify-between gap-4 border-b bg-gradient-to-r from-slate-50 via-white to-brand-50/30 p-5 sm:flex-row sm:items-center sm:p-6">
+            <div className="flex flex-col justify-between gap-4 border-b border-slate-200/70 bg-gradient-to-r from-[#f3faf8] via-white to-blue-50/40 p-5 sm:flex-row sm:items-center sm:p-6">
               <div className="flex items-center gap-3.5">
-                <div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-brand-600 text-white shadow-md shadow-brand-200">
+                <div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-[#10263a] text-brand-200 shadow-md shadow-slate-300">
                   <Briefcase size={22} />
                 </div>
                 <div>
@@ -492,7 +507,7 @@ export const DashboardPage = () => {
             )}
 
             {/* Filter and Search Toolbar */}
-            <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+            <div className="flex flex-col gap-3 border-b border-slate-200/70 bg-white p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
               <div className="flex flex-wrap items-center gap-1.5 text-xs">
                 {[
                   { key: "ACTIVE", label: "All active work" },
@@ -508,7 +523,7 @@ export const DashboardPage = () => {
                     className={cn(
                       "rounded-lg px-3 py-1.5 font-medium transition",
                       taskStatusFilter === tab.key
-                        ? "bg-slate-900 text-white"
+                        ? "bg-[#10263a] text-white shadow-sm"
                         : "text-slate-600 hover:bg-slate-100"
                     )}
                   >
@@ -643,7 +658,7 @@ export const DashboardPage = () => {
         <div className="mt-6 grid min-w-0 gap-5 xl:grid-cols-2">
 
           {/* Top performers */}
-          <section className="animate-fadeInUp anim-delay-3 min-w-0 overflow-hidden rounded-2xl border bg-white shadow-soft transition-shadow duration-300 hover:shadow-soft-lg">
+          <section className="animate-fadeInUp anim-delay-3 min-w-0 overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-[0_12px_36px_rgba(15,35,52,.07)] transition-all duration-300 hover:border-slate-300 hover:shadow-[0_18px_48px_rgba(15,35,52,.10)]">
             <div className="flex min-w-0 items-center gap-3 border-b bg-gradient-to-r from-amber-50/80 to-white p-5 sm:p-6">
               <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-amber-400 to-yellow-500 text-white shadow-md shadow-amber-200/60">
                 <Trophy size={18} />
@@ -728,9 +743,9 @@ export const DashboardPage = () => {
           </section>
 
           {/* Upcoming deadlines */}
-          <section className="animate-fadeInUp anim-delay-4 min-w-0 overflow-hidden rounded-2xl border bg-white shadow-soft transition-shadow duration-300 hover:shadow-soft-lg">
+          <section className="animate-fadeInUp anim-delay-4 min-w-0 overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-[0_12px_36px_rgba(15,35,52,.07)] transition-all duration-300 hover:border-slate-300 hover:shadow-[0_18px_48px_rgba(15,35,52,.10)]">
             <div className="flex min-w-0 items-center gap-3 border-b bg-gradient-to-r from-brand-50/80 to-white p-5 sm:p-6">
-              <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-brand-500 to-violet-600 text-white shadow-md shadow-brand-200/60">
+              <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-brand-500 to-[#146a74] text-white shadow-md shadow-brand-200/60">
                 <CalendarClock size={18} />
               </div>
               <div className="min-w-0">
@@ -794,7 +809,7 @@ export const DashboardPage = () => {
         <div className="mt-6 grid min-w-0 gap-5 lg:grid-cols-2">
 
           {/* Workload attention */}
-          <section className="animate-fadeInUp anim-delay-5 min-w-0 overflow-hidden rounded-2xl border bg-white p-5 shadow-soft transition-shadow duration-300 hover:shadow-soft-lg sm:p-6">
+          <section className="animate-fadeInUp anim-delay-5 min-w-0 overflow-hidden rounded-2xl border border-slate-200/70 bg-white p-5 shadow-[0_12px_36px_rgba(15,35,52,.07)] transition-all duration-300 hover:border-slate-300 hover:shadow-[0_18px_48px_rgba(15,35,52,.10)] sm:p-6">
             <div className="flex items-center gap-3">
               <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-amber-100 text-amber-600">
                 <AlertTriangle size={18} />
@@ -856,15 +871,15 @@ export const DashboardPage = () => {
           </section>
 
           {/* Decision principle */}
-          <section className="animate-fadeInUp anim-delay-6 group relative min-w-0 overflow-hidden rounded-2xl bg-gradient-to-br from-[#302947] via-[#3d2f5c] to-[#4a2e6e] p-6 text-white shadow-soft sm:p-8">
+          <section className="animate-fadeInUp anim-delay-6 group relative min-w-0 overflow-hidden rounded-2xl bg-gradient-to-br from-[#0c1c2c] via-[#11344a] to-[#0f655b] p-6 text-white shadow-[0_18px_48px_rgba(15,35,52,.18)] sm:p-8">
             {/* Shimmer overlay */}
             <div className="bg-shimmer animate-shimmer pointer-events-none absolute inset-0" />
             {/* Decorative circles */}
-            <div className="pointer-events-none absolute -right-10 -top-10 size-40 rounded-full bg-violet-500/10 blur-2xl" />
-            <div className="pointer-events-none absolute -bottom-8 -left-8 size-32 rounded-full bg-fuchsia-500/10 blur-2xl" />
+            <div className="pointer-events-none absolute -right-10 -top-10 size-40 rounded-full bg-brand-300/10 blur-2xl" />
+            <div className="pointer-events-none absolute -bottom-8 -left-8 size-32 rounded-full bg-blue-400/10 blur-2xl" />
 
             <div className="relative">
-              <div className="flex items-center gap-2.5 text-violet-300">
+              <div className="flex items-center gap-2.5 text-brand-200">
                 <Sparkles size={18} className="animate-float" />
                 <span className="text-xs font-bold uppercase tracking-[.18em]">
                   Decision principle
@@ -873,7 +888,7 @@ export const DashboardPage = () => {
               <h2 className="mt-6 break-words text-2xl font-bold leading-tight sm:text-3xl">
                 Evidence informs.
                 <br />
-                <span className="bg-gradient-to-r from-violet-300 to-fuchsia-300 bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-brand-200 to-cyan-200 bg-clip-text text-transparent">
                   People decide.
                 </span>
               </h2>

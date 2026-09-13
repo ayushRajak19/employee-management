@@ -39,7 +39,7 @@ export const HeaderSearch = () => {
   return (
     <div className="relative min-w-0 w-full" ref={ref}>
       {/* Input */}
-      <div className="flex h-10 items-center rounded-xl border bg-white px-3 shadow-sm sm:h-11">
+      <div className="flex h-10 items-center rounded-xl border border-slate-200/80 bg-slate-50/80 px-3 shadow-sm transition focus-within:border-brand-300 focus-within:bg-white focus-within:shadow-md sm:h-11">
         <Search size={17} className="mr-2.5 shrink-0 text-slate-400" />
         <input
           aria-label="Global search"

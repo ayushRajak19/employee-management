@@ -101,8 +101,9 @@ const groups: { label: string; items: NavItem[] }[] = [
 ];
 
 export const AppLayout = () => {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem("mobius-sidebar-collapsed") === "true");
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [navHint, setNavHint] = useState<{ label: string; top: number } | null>(null);
   const { user, setUser } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -112,6 +113,10 @@ export const AppLayout = () => {
     document.documentElement.scrollLeft = 0;
     document.body.scrollLeft = 0;
   }, [location.pathname]);
+
+  useEffect(() => {
+    localStorage.setItem("mobius-sidebar-collapsed", String(collapsed));
+  }, [collapsed]);
 
   const logout = useMutation({
     mutationFn: authApi.logout,
@@ -154,37 +159,41 @@ export const AppLayout = () => {
     return false;
   };
 
-  const sidebar = (
+  const activeItem = visibleGroups.flatMap((group) => group.items).find((item) => isItemActive(item.path));
+
+  const sidebar = (isCollapsed = collapsed) => (
     <aside
       className={cn(
-        "flex h-full max-w-[86vw] flex-col border-r bg-white transition-[width] duration-200",
-        collapsed ? "w-[76px]" : "w-[260px]"
+        "app-sidebar flex h-full max-w-[86vw] flex-col border-r border-slate-800/70 bg-[#0c1c2c] text-white shadow-[12px_0_40px_rgba(8,22,38,.08)] transition-[width] duration-300",
+        isCollapsed ? "w-[84px]" : "w-[280px]"
       )}
     >
       {/* Sidebar header */}
-      <div className="flex h-16 items-center border-b px-4 sm:h-20 sm:px-5">
-        <img
-          src={logoMark}
-          alt="MobiusEMS"
-          className="h-10 w-8 shrink-0 rounded-lg object-contain"
-        />
-        {!collapsed && (
-          <div className="ml-3 overflow-hidden">
-            <p className="truncate text-sm font-semibold">MobiusEMS</p>
-            <p className="truncate text-[11px] text-slate-400">{user?.tenantName ?? "Employee management"}</p>
+      <div className="relative flex h-20 items-center border-b border-white/10 px-5">
+        <div className="grid size-10 shrink-0 place-items-center rounded-2xl bg-white shadow-lg shadow-black/20">
+          <img src={logoMark} alt="MobiusEMS" className="h-8 w-7 object-contain" />
+        </div>
+        {!isCollapsed && (
+          <div className="ml-3 min-w-0 overflow-hidden">
+            <p className="truncate text-[15px] font-bold tracking-tight">MobiusEMS</p>
+            <p className="mt-0.5 truncate text-[10px] font-medium uppercase tracking-[.14em] text-slate-400">{user?.tenantName ?? "Employee management"}</p>
           </div>
         )}
         {/* Desktop collapse toggle */}
         <button
-          className="ml-auto hidden size-8 place-items-center rounded-lg text-slate-400 hover:bg-slate-100 lg:grid"
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          className={cn(
+            "hidden size-8 place-items-center rounded-xl border border-white/10 bg-white/5 text-slate-300 transition hover:bg-white/10 hover:text-white lg:grid",
+            isCollapsed ? "absolute -right-4 top-6 z-10 bg-[#13283d] shadow-md" : "ml-auto"
+          )}
+          aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-expanded={!isCollapsed}
           onClick={() => setCollapsed((v) => !v)}
         >
-          <ChevronLeft size={16} className={cn("transition", collapsed && "rotate-180")} />
+          <ChevronLeft size={16} className={cn("transition-transform duration-300", isCollapsed && "rotate-180")} />
         </button>
         {/* Mobile close button */}
         <button
-          className="ml-auto grid size-8 place-items-center lg:hidden"
+          className="ml-auto grid size-9 place-items-center rounded-xl bg-white/5 text-slate-300 lg:hidden"
           aria-label="Close navigation"
           onClick={() => setMobileOpen(false)}
         >
@@ -193,18 +202,18 @@ export const AppLayout = () => {
       </div>
 
       {/* Nav links */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-4" aria-label="Primary navigation">
+      <nav className="sidebar-scroll flex-1 space-y-5 overflow-y-auto overflow-x-hidden px-3 py-5" aria-label="Primary navigation">
         {visibleGroups.map((group, groupIdx) => (
           <div key={group.label} className={groupIdx > 0 ? "pt-1" : ""}>
-            {!collapsed && (
-              <p className="mb-1.5 px-3 text-[10px] font-bold uppercase tracking-[.14em] text-slate-400">
+            {!isCollapsed && (
+              <p className="mb-2 px-3 text-[9px] font-bold uppercase tracking-[.18em] text-slate-500">
                 {group.label}
               </p>
             )}
-            {collapsed && groupIdx > 0 && (
-              <div className="mx-auto my-2 h-px w-8 bg-slate-200" />
+            {isCollapsed && groupIdx > 0 && (
+              <div className="mx-auto my-3 h-px w-8 bg-white/10" />
             )}
-            <div className="space-y-0.5">
+            <div className="space-y-1">
               {group.items.map((item) => {
                 const Icon = item.icon;
                 const active = isItemActive(item.path);
@@ -212,17 +221,22 @@ export const AppLayout = () => {
                   <button
                     key={`${item.label}-${item.path}`}
                     onClick={() => { navigate(item.path); setMobileOpen(false); }}
+                    onMouseEnter={(event) => isCollapsed && setNavHint({ label: item.label, top: event.currentTarget.getBoundingClientRect().top + 20 })}
+                    onMouseLeave={() => setNavHint(null)}
+                    onFocus={(event) => isCollapsed && setNavHint({ label: item.label, top: event.currentTarget.getBoundingClientRect().top + 20 })}
+                    onBlur={() => setNavHint(null)}
                     title={item.label}
                     className={cn(
-                      "flex h-9 w-full items-center rounded-xl px-3 text-xs font-medium transition",
+                      "group/nav relative flex h-10 w-full items-center rounded-xl px-3 text-xs font-medium transition-all duration-200",
                       active
-                        ? "bg-brand-50 font-semibold text-brand-700 shadow-2xs"
-                        : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
-                      collapsed && "justify-center px-0"
+                        ? "bg-gradient-to-r from-brand-500 to-brand-600 font-semibold text-white shadow-lg shadow-brand-950/20"
+                        : "text-slate-400 hover:bg-white/[.07] hover:text-white",
+                      isCollapsed && "justify-center px-0"
                     )}
                   >
-                    <Icon size={16} className={cn("shrink-0", active ? "text-brand-600" : "text-slate-500")} />
-                    {!collapsed && <span className="ml-3 truncate">{item.label}</span>}
+                    {active && !isCollapsed && <span className="absolute -left-3 h-5 w-1 rounded-r-full bg-brand-300" />}
+                    <Icon size={17} className={cn("shrink-0 transition-transform group-hover/nav:scale-110", active ? "text-white" : "text-slate-400 group-hover/nav:text-brand-300")} />
+                    {!isCollapsed && <span className="ml-3 truncate">{item.label}</span>}
                   </button>
                 );
               })}
@@ -231,22 +245,28 @@ export const AppLayout = () => {
         ))}
       </nav>
 
+      {isCollapsed && navHint && (
+        <div className="pointer-events-none fixed left-[98px] z-50 -translate-y-1/2 whitespace-nowrap rounded-lg bg-[#10263a] px-3 py-2 text-xs font-semibold text-white shadow-xl ring-1 ring-white/10" style={{ top: navHint.top }}>
+          {navHint.label}
+        </div>
+      )}
+
       {/* User / logout */}
-      <div className="space-y-2 border-t p-3">
+      <div className="space-y-2 border-t border-white/10 bg-black/10 p-3">
         <div
           className={cn(
             "flex w-full items-center rounded-xl p-2 text-left",
-            collapsed && "justify-center"
+            isCollapsed && "justify-center"
           )}
         >
-          <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-slate-100 text-xs font-semibold">
+          <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 text-xs font-bold text-white shadow-lg shadow-black/20">
             {user?.name.split(" ").map((part) => part[0]).slice(0, 2).join("")}
           </div>
-          {!collapsed && (
+          {!isCollapsed && (
             <>
               <div className="ml-2.5 min-w-0 flex-1">
-                <p className="truncate text-xs font-semibold">{user?.name}</p>
-                <p className="truncate text-[10px] text-slate-400">{user?.role.replaceAll("_", " ")}</p>
+                <p className="truncate text-xs font-semibold text-white">{user?.name}</p>
+                <p className="truncate text-[9px] font-medium uppercase tracking-wider text-slate-500">{user?.role.replaceAll("_", " ")}</p>
               </div>
             </>
           )}
@@ -257,13 +277,13 @@ export const AppLayout = () => {
           title="Sign out"
           disabled={logout.isPending}
           className={cn(
-            "flex h-10 w-full items-center rounded-xl px-3 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-wait disabled:opacity-60",
-            collapsed && "justify-center px-0"
+            "flex h-10 w-full items-center rounded-xl px-3 text-sm font-medium text-slate-400 transition hover:bg-red-500/10 hover:text-red-300 disabled:cursor-wait disabled:opacity-60",
+            isCollapsed && "justify-center px-0"
           )}
           onClick={() => logout.mutate()}
         >
           <LogOut size={17} />
-          {!collapsed && <span className="ml-3">{logout.isPending ? "Signing out…" : "Sign out"}</span>}
+          {!isCollapsed && <span className="ml-3">{logout.isPending ? "Signing out…" : "Sign out"}</span>}
         </button>
       </div>
     </aside>
@@ -273,7 +293,7 @@ export const AppLayout = () => {
     <div className="flex min-h-screen w-full min-w-0 max-w-full overflow-x-clip">
       {/* Desktop sidebar — fixed */}
       <div className="fixed inset-y-0 left-0 z-40 hidden lg:block">
-        {sidebar}
+        {sidebar()}
       </div>
 
       {/* Mobile sidebar overlay */}
@@ -287,7 +307,7 @@ export const AppLayout = () => {
           />
           {/* Drawer */}
           <div className="relative h-full w-[min(280px,86vw)] shadow-2xl">
-            {sidebar}
+            {sidebar(false)}
           </div>
         </div>
       )}
@@ -296,14 +316,14 @@ export const AppLayout = () => {
       <div
         className={cn(
           "flex w-full min-w-0 max-w-full flex-1 flex-col overflow-x-clip transition-[margin] duration-200",
-          collapsed ? "lg:ml-[76px]" : "lg:ml-[260px]"
+          collapsed ? "lg:ml-[84px]" : "lg:ml-[280px]"
         )}
       >
         {/* Top header */}
-        <header className="sticky top-0 z-30 flex h-16 min-w-0 max-w-full items-center gap-2 border-b bg-[#f6f8f7]/90 px-4 backdrop-blur-xl sm:h-20 sm:gap-3 sm:px-8">
+        <header className="app-header sticky top-0 z-30 flex h-16 min-w-0 max-w-full items-center gap-3 border-b border-slate-200/70 bg-white/85 px-4 backdrop-blur-xl sm:h-20 sm:px-8">
           {/* Hamburger — mobile only */}
           <button
-            className="grid size-10 shrink-0 place-items-center rounded-xl border bg-white lg:hidden"
+            className="grid size-10 shrink-0 place-items-center rounded-xl border bg-white text-slate-700 shadow-sm lg:hidden"
             aria-label="Open navigation"
             onClick={() => setMobileOpen(true)}
           >
@@ -311,23 +331,29 @@ export const AppLayout = () => {
           </button>
 
           {/* Search bar — hidden on tiny screens, shown sm+ */}
-          <div className="hidden min-w-0 flex-1 sm:block sm:max-w-md">
+          <div className="hidden min-w-0 flex-1 sm:block sm:max-w-lg">
             <HeaderSearch />
+          </div>
+
+          <div className="hidden h-8 w-px bg-slate-200 xl:block" />
+          <div className="hidden min-w-0 xl:block">
+            <p className="text-[10px] font-bold uppercase tracking-[.16em] text-slate-400">Current workspace</p>
+            <p className="mt-0.5 truncate text-sm font-semibold text-ink">{activeItem?.label ?? "MobiusEMS"}</p>
           </div>
 
           {/* Right side actions */}
           <div className="ml-auto flex items-center gap-1 sm:gap-2">
             <NotificationsPopover />
             <div className="ml-1 hidden text-right sm:block">
-              <p className="text-xs font-semibold">{user?.name}</p>
-              <p className="text-[10px] text-slate-400">{user?.role.replaceAll("_", " ")}</p>
+              <p className="text-xs font-semibold text-ink">{user?.name}</p>
+              <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">{user?.role.replaceAll("_", " ")}</p>
             </div>
             <button
               type="button"
               aria-label="Sign out"
               title="Sign out"
               disabled={logout.isPending}
-              className="ml-1 grid size-10 shrink-0 place-items-center rounded-xl border bg-white text-slate-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:cursor-wait disabled:opacity-60"
+              className="ml-1 grid size-10 shrink-0 place-items-center rounded-xl border bg-white text-slate-500 shadow-sm transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:cursor-wait disabled:opacity-60"
               onClick={() => logout.mutate()}
             >
               <LogOut size={17} />
