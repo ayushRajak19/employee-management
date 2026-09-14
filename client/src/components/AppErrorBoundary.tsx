@@ -2,13 +2,24 @@ import { Component, type ErrorInfo, type ReactNode } from "react";
 
 const reloadKey = "mobius-chunk-reload";
 
+export const forceHardReload = () => {
+  try {
+    sessionStorage.clear();
+  } catch {}
+  const url = new URL(window.location.href);
+  url.searchParams.set("_v", String(Date.now()));
+  window.location.replace(url.toString());
+};
+
 export const recoverStaleChunk = (error: unknown) => {
   const message = error instanceof Error ? error.message : String(error);
-  if (!/dynamically imported module|loading chunk|chunkloaderror|importing a module script/i.test(message)) return false;
+  if (!/dynamically imported module|loading chunk|chunkloaderror|importing a module script|failed to fetch|load failed/i.test(message)) {
+    return false;
+  }
   const lastReload = Number(sessionStorage.getItem(reloadKey) || 0);
-  if (Date.now() - lastReload < 60_000) return false;
+  if (Date.now() - lastReload < 15_000) return false;
   sessionStorage.setItem(reloadKey, String(Date.now()));
-  window.location.reload();
+  forceHardReload();
   return true;
 };
 
@@ -26,6 +37,23 @@ export class AppErrorBoundary extends Component<{ children: ReactNode }, { faile
 
   render() {
     if (!this.state.failed) return this.props.children;
-    return <main className="grid min-h-screen place-items-center bg-slate-50 p-6 text-center"><div><h1 className="text-2xl font-semibold text-slate-900">This page could not load</h1><p className="mt-2 text-sm text-slate-500">The application may have been updated. Reload to continue.</p><button className="mt-5 rounded-xl bg-teal-700 px-5 py-2.5 font-semibold text-white" onClick={() => window.location.reload()}>Reload page</button></div></main>;
+    return (
+      <main className="grid min-h-screen place-items-center bg-slate-50 p-6 text-center">
+        <div className="max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-soft">
+          <h1 className="text-2xl font-semibold text-slate-900">This page could not load</h1>
+          <p className="mt-2 text-sm leading-6 text-slate-500">
+            The application has been updated with the latest changes. Reload to load the newest version.
+          </p>
+          <button
+            type="button"
+            className="mt-6 inline-flex items-center justify-center rounded-xl bg-brand-700 px-6 py-2.5 font-semibold text-white shadow-sm transition hover:bg-brand-800 cursor-pointer"
+            onClick={forceHardReload}
+          >
+            Reload page
+          </button>
+        </div>
+      </main>
+    );
   }
 }
+

@@ -32,7 +32,12 @@ export const createApp = () => {
   if (env.NODE_ENV === "production") {
     const dirname = path.dirname(fileURLToPath(import.meta.url)); const clientDist = path.resolve(dirname, "../../client/dist");
     app.use(express.static(clientDist, { index: false, maxAge: "1y", immutable: true }));
-    app.get("*", (_request, response) => response.sendFile(path.join(clientDist, "index.html")));
+    app.get("*", (_request, response) => {
+      response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+      response.setHeader("Pragma", "no-cache");
+      response.setHeader("Expires", "0");
+      response.sendFile(path.join(clientDist, "index.html"));
+    });
   } else app.use(notFound);
   app.use(errorHandler); return app;
 };
