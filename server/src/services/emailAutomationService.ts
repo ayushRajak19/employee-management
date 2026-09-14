@@ -120,6 +120,7 @@ export const registerWebhook = async () => {
 };
 export const sendTest = async (recipient: string) => {
   const sender = await requireConfiguration();
+  await registerWebhook();
   const messageId = await sendBrevoEmail({ to: recipient, subject: "MobiusEMS Brevo connection test", text: "Your Brevo email automation connection is working correctly." }, sender);
   await EmailDelivery.create({ recipientEmail: recipient, providerMessageId: messageId, step: -1, subject: "MobiusEMS Brevo connection test", status: "REQUESTED", events: [{ type: "request", occurredAt: new Date() }] });
   return { messageId };
@@ -194,6 +195,7 @@ export const deleteWorkflow = async (id: string, actor: string) => {
 };
 export const activateWorkflow = async (id: string, actor: string) => {
   await requireConfiguration();
+  await registerWebhook();
   const item = await EmailWorkflow.findById(id);
   if (!item) throw new AppError("Email workflow not found", 404);
   const contacts = await VendorContact.find({ status: "ACTIVE" }).select("_id").lean();
