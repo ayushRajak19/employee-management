@@ -20,7 +20,7 @@ type ConfigurationInput = Omit<SenderConfiguration, "apiKey"> & { apiKey?: strin
 type BrevoAccount = { email?: string; companyName?: string; relay?: { enabled?: boolean } };
 
 const tenantConfiguration = async (): Promise<SenderConfiguration | null> => {
-  const tenant = await Tenant.findById(requireTenantId()).select("+emailAutomation.apiKeyEncrypted emailAutomation").lean();
+  const tenant = await Tenant.findById(requireTenantId()).select("+emailAutomation.apiKeyEncrypted").lean();
   const stored = tenant?.emailAutomation;
   if (!stored?.apiKeyEncrypted || !stored.senderEmail) return null;
   return { senderName: stored.senderName, senderEmail: stored.senderEmail, replyToEmail: stored.replyToEmail, apiKey: decryptSecret(stored.apiKeyEncrypted) };
