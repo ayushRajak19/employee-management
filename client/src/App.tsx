@@ -1,9 +1,29 @@
-import { lazy, Suspense } from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { lazy, Suspense, useEffect } from "react";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AppLayout } from "@/layouts/AppLayout";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { LandingPage } from "@/pages/LandingPage";
 import { OnboardingRoute, PasswordChangeRoute, PermissionRoute, ProtectedRoute, RoleRoute } from "@/routes/ProtectedRoute";
+
+const ScrollToTop = () => {
+  const { pathname, hash } = useLocation();
+
+  useEffect(() => {
+    if (hash) {
+      const id = hash.replace("#", "");
+      const timer = setTimeout(() => {
+        const element = document.getElementById(id);
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [pathname, hash]);
+
+  return null;
+};
 
 const LoginPage = lazy(() => import("@/pages/LoginPage").then((module) => ({ default: module.LoginPage })));
 const SolutionsIndexPage = lazy(() => import("@/pages/SolutionsPage").then((module) => ({ default: module.SolutionsIndexPage })));
@@ -48,7 +68,7 @@ const OrgHierarchyPage = lazy(() => import("@/pages/OrgHierarchyPage").then((mod
 const PageLoader = () => <div className="space-y-4 p-8" aria-label="Loading page"><Skeleton className="h-9 w-64"/><Skeleton className="h-48 w-full"/><Skeleton className="h-48 w-full"/></div>;
 const AccessDeniedPage = () => <main className="grid min-h-[60vh] flex-1 place-items-center p-8 text-center"><div><p className="text-sm font-semibold text-brand-700">Access restricted</p><h1 className="mt-2 text-3xl font-semibold">This section is not assigned to your role</h1><p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-slate-500">Ask your Super Admin to enable this section in Administration → Access hierarchy.</p></div></main>;
 
-export const App = () => <Suspense fallback={<PageLoader/>}><Routes>
+export const App = () => <Suspense fallback={<PageLoader/>}><ScrollToTop/><Routes>
   <Route path="/welcome" element={<LandingPage/>}/>
   <Route path="/solutions" element={<SolutionsIndexPage/>}/>
   <Route path="/solutions/:slug" element={<SolutionDetailPage/>}/>
