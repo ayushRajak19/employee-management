@@ -22,12 +22,18 @@ export const OrganizationPage = () => {
   // Skills Assessment Modal State
   const [skillsTarget, setSkillsTarget] = useState<NamedEntity | null>(null);
 
+  const generateCode = (name: string) =>
+    name.trim().toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 15) || "ITEM";
+
   const mutation = useMutation({
-    mutationFn: () => kind === "department"
-      ? organizationApi.createDepartment({ ...form, capabilities: form.salesEnabled ? ["SALES_MODULE"] : [] })
-      : kind === "team"
-        ? organizationApi.createTeam({ ...form, department: form.department })
-        : organizationApi.createDesignation({ ...form, department: form.department || undefined, catalogRole: form.catalogRole || undefined }),
+    mutationFn: () => {
+      const generatedCode = form.code || generateCode(form.name);
+      return kind === "department"
+        ? organizationApi.createDepartment({ ...form, code: generatedCode, capabilities: form.salesEnabled ? ["SALES_MODULE"] : [] })
+        : kind === "team"
+          ? organizationApi.createTeam({ ...form, code: generatedCode, department: form.department })
+          : organizationApi.createDesignation({ ...form, code: generatedCode, department: form.department || undefined, catalogRole: form.catalogRole || undefined });
+    },
     onSuccess: async () => { await qc.invalidateQueries({ queryKey: ["organization"] }); setKind(null); setForm(emptyForm()); },
   });
 
@@ -144,7 +150,6 @@ export const OrganizationPage = () => {
         <h2 className="text-xl font-semibold">Add {kind}</h2>
         <div className="mt-5 space-y-4">
           <label className="block text-sm font-medium">Name<Input required className="mt-2" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })}/></label>
-          <label className="block text-sm font-medium">Code<Input required className="mt-2 uppercase" value={form.code} onChange={(event) => setForm({ ...form, code: event.target.value })}/></label>
           {kind !== "department" && <label className="block text-sm font-medium">Department<select required={kind === "team"} className="mt-2 h-11 w-full rounded-xl border bg-white px-3 text-sm" value={form.department} onChange={(event) => setForm({ ...form, department: event.target.value })}><option value="">Company-wide</option>{query.data?.departments.map((department) => <option key={department._id} value={department._id}>{department.name}</option>)}</select></label>}
           {kind === "designation" && <label className="block text-sm font-medium">Skill Catalog Template (Optional)<select className="mt-2 h-11 w-full rounded-xl border bg-white px-3 text-sm" value={form.catalogRole} onChange={(event) => setForm({ ...form, catalogRole: event.target.value })}><option value="">None (Custom skills / define later)</option>{query.data?.skillCatalogRoles.map((item) => <option key={item.role} value={item.role}>{item.role} ({item.skillCount} skills)</option>)}</select><span className="mt-1 block text-xs font-normal text-slate-400">You can also configure custom skills and assessment questions anytime.</span></label>}
           {kind === "department" && <label className="flex items-center gap-3 rounded-xl border p-3 text-sm font-medium"><input type="checkbox" checked={form.salesEnabled} onChange={(event) => setForm({ ...form, salesEnabled: event.target.checked })}/> Enable Sales Intelligence</label>}
@@ -161,7 +166,6 @@ export const OrganizationPage = () => {
         <h2 className="text-xl font-semibold">Edit {editTarget.kind}</h2>
         <div className="mt-5 space-y-4">
           <label className="block text-sm font-medium">Name<Input required className="mt-2" value={editForm.name} onChange={(event) => setEditForm({ ...editForm, name: event.target.value })}/></label>
-          <label className="block text-sm font-medium">Code<Input required className="mt-2 uppercase" value={editForm.code} onChange={(event) => setEditForm({ ...editForm, code: event.target.value })}/></label>
           {editTarget.kind !== "department" && <label className="block text-sm font-medium">Department<select required={editTarget.kind === "team"} className="mt-2 h-11 w-full rounded-xl border bg-white px-3 text-sm" value={editForm.department} onChange={(event) => setEditForm({ ...editForm, department: event.target.value })}><option value="">Company-wide</option>{query.data?.departments.map((department) => <option key={department._id} value={department._id}>{department.name}</option>)}</select></label>}
           {editTarget.kind === "designation" && <label className="block text-sm font-medium">Skills for this designation<select className="mt-2 h-11 w-full rounded-xl border bg-white px-3 text-sm" value={editForm.catalogRole} onChange={(event) => setEditForm({ ...editForm, catalogRole: event.target.value })}><option value="">None / Custom skills</option>{query.data?.skillCatalogRoles.map((item) => <option key={item.role} value={item.role}>{item.role} ({item.skillCount} skills)</option>)}</select></label>}
           {editTarget.kind === "department" && <label className="flex items-center gap-3 rounded-xl border p-3 text-sm font-medium"><input type="checkbox" checked={editForm.salesEnabled} onChange={(event) => setEditForm({ ...editForm, salesEnabled: event.target.checked })}/> Enable Sales Intelligence</label>}

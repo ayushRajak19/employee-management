@@ -4,7 +4,7 @@ import { getViewerHierarchyScope, assertEmployeeInScope } from "./hierarchyServi
 import type { RoleName } from "@mobius-ems/shared";
 import { awardTaskXp, baseXpForComplexity, getGamificationForUser } from "./gamificationService.js";
 
-export const createProject = async (input: Omit<ProjectDocument, "isActive" | "progress">, actor: string) => { const project = await Project.create(input); await writeAudit({ user: actor, action: "PROJECT_CREATED", entityType: "Project", entityId: project.id, newValue: { code: project.code, name: project.name } }); return project; };
+export const createProject = async (input: Omit<ProjectDocument, "isActive" | "progress">, actor: string) => { const code = input.code || `${(input.name.replace(/[^A-Z0-9]/gi, "").slice(0, 10) || "PRJ").toUpperCase()}-${randomBytes(2).toString("hex").toUpperCase()}`; const project = await Project.create({ ...input, code }); await writeAudit({ user: actor, action: "PROJECT_CREATED", entityType: "Project", entityId: project.id, newValue: { code: project.code, name: project.name } }); return project; };
 export const listProjects = async (viewer: { id: string; role: string }) => {
   const filter: FilterQuery<ProjectDocument> = { isActive: true };
   const scope = await getViewerHierarchyScope(viewer as { id: string; role: RoleName });

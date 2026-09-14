@@ -6,9 +6,26 @@ import { AppError } from "../utils/AppError.js";
 import { roleSkillCatalog } from "../data/roleSkillCatalog.js";
 import { profilePhotoUrl } from "./storageService.js";
 
-type DepartmentInput = { name: string; code: string; description?: string; capabilities?: ("SALES_MODULE")[] };
+type DepartmentInput = { name: string; code?: string; description?: string; capabilities?: ("SALES_MODULE")[] };
 type TeamInput = Omit<DepartmentInput, "capabilities"> & { department: string };
 type DesignationInput = Omit<DepartmentInput, "capabilities"> & { department?: string; level?: string; catalogRole?: string; customSkills?: DesignationSkillItem[] };
+
+const generateUniqueOrgCode = async (model: any, name: string, departmentId?: string) => {
+  const base = name.trim().toUpperCase().replace(/[^A-Z0-9_-]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 14) || "ORG";
+  let candidate = base.slice(0, 20);
+  const filter: Record<string, unknown> = { isActive: true, code: candidate };
+  if (departmentId) filter.department = departmentId;
+  const exists = await model.exists(filter);
+  if (!exists) return candidate;
+
+  for (let i = 0; i < 5; i++) {
+    const suffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+    candidate = `${base.slice(0, 14)}_${suffix}`.slice(0, 20);
+    filter.code = candidate;
+    if (!await model.exists(filter)) return candidate;
+  }
+  return `${base.slice(0, 10)}_${Date.now().toString(36).toUpperCase()}`.slice(0, 20);
+};
 
 export const listOrganization = async () => {
   const [departments, teams, designations] = await Promise.all([
@@ -23,17 +40,22 @@ export const listOrganization = async () => {
   return { departments, teams, designations, skillCatalogRoles };
 };
 
-export const createDepartment = async (input: DepartmentInput) => Department.create(input);
+export const createDepartment = async (input: DepartmentInput) => {
+  const code = input.code || await generateUniqueOrgCode(Department, input.name);
+  return Department.create({ ...input, code });
+};
 
 export const createTeam = async (input: TeamInput) => {
   if (!await Department.exists({ _id: input.department, isActive: true })) throw new AppError("Department not found", 404, "DEPARTMENT_NOT_FOUND");
-  return Team.create(input);
+  const code = input.code || await generateUniqueOrgCode(Team, input.name, input.department);
+  return Team.create({ ...input, code });
 };
 
 export const createDesignation = async (input: DesignationInput) => {
   if (input.department && !await Department.exists({ _id: input.department, isActive: true })) throw new AppError("Department not found", 404, "DEPARTMENT_NOT_FOUND");
   if (input.catalogRole && !roleSkillCatalog.some((item) => item.role === input.catalogRole)) throw new AppError("Select a valid skill catalogue for this designation", 422, "INVALID_SKILL_CATALOG");
-  return Designation.create(input);
+  const code = input.code || await generateUniqueOrgCode(Designation, input.name);
+  return Designation.create({ ...input, code });
 };
 
 export const updateDepartment = async (id: string, input: Partial<DepartmentInput>) => {

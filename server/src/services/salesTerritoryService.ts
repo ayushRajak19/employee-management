@@ -73,9 +73,10 @@ export const createTerritory = async (viewer: SessionUser, input: TerritoryInput
   for (const geoId of input.coverageRules?.geoNodeIds ?? []) {
     assertSalesGeoScope(scope, geoId.toString());
   }
+  const code = input.code || (input.name.trim().toUpperCase().replace(/[^A-Z0-9_-]+/g, "_").slice(0, 15) || "TERRITORY");
   const normalized = scope.level !== "ALL" && scope.employeeId
-    ? { ...input, ownerEmployee: scope.employeeId }
-    : input;
+    ? { ...input, code, ownerEmployee: scope.employeeId }
+    : { ...input, code };
   const item = await SalesTerritory.create({ ...normalized, ancestors: await validateTerritoryInput(normalized) ?? [] });
   if (scope.employeeId) {
     await EmployeeTerritoryAssignment.create({

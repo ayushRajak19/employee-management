@@ -360,6 +360,9 @@ export const createSalesData = async (viewer: SessionUser, entity: SalesEntityNa
     delete input.actualCloseDate;
     delete input.lostReason;
   }
+  if (entity === "channelPartners" && !input.code) {
+    input.code = (String(input.name || "PARTNER").trim().toUpperCase().replace(/[^A-Z0-9_-]+/g, "_").slice(0, 15) || "PARTNER") + "_" + Math.random().toString(36).substring(2, 6).toUpperCase();
+  }
   await applyCustomerContext(scope, entity, input);
   await applyTerritoryGeography(input);
   if (!["targets", "channelPartners"].includes(entity) && !input[employeeKey]) throw new AppError("Employee is required", 422);

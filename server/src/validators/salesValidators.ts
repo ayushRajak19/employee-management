@@ -29,7 +29,7 @@ export const territoryIdSchema = z.object({ params: z.object({ territoryId: obje
 
 const geoBody = z.object({
   name: z.string().trim().min(1).max(160),
-  code: z.string().trim().min(1).max(40).regex(/^[A-Za-z0-9_-]+$/).transform((value) => value.toUpperCase()),
+  code: z.string().trim().min(1).max(40).regex(/^[A-Za-z0-9_-]+$/).transform((value) => value.toUpperCase()).optional(),
   type: z.enum(GEO_NODE_TYPES),
   parent: objectId.optional(),
   location: coordinates.optional(),
@@ -49,7 +49,7 @@ const coverageRules = z.object({
 });
 const territoryBase = z.object({
   name: z.string().trim().min(1).max(160),
-  code: z.string().trim().min(1).max(40).regex(/^[A-Za-z0-9_-]+$/).transform((value) => value.toUpperCase()),
+  code: z.string().trim().min(1).max(40).regex(/^[A-Za-z0-9_-]+$/).transform((value) => value.toUpperCase()).optional(),
   parentTerritory: objectId.optional(),
   status: z.enum(TERRITORY_STATUSES).default("ACTIVE"),
   ownerEmployee: objectId.optional(),
@@ -165,7 +165,7 @@ export const revenueBody = z.object({
   reference: z.string().trim().max(160).optional(), productId: z.string().trim().max(120).optional(), channelPartner: objectId.optional(),
 });
 const channelPartnerBase = z.object({
-  name: z.string().trim().min(1).max(160), code: z.string().trim().min(1).max(40).transform((value) => value.toUpperCase()),
+  name: z.string().trim().min(1).max(160), code: z.string().trim().min(1).max(40).transform((value) => value.toUpperCase()).optional(),
   type: z.enum(["DISTRIBUTOR", "DEALER", "RESELLER", "RETAILER", "SERVICE_PARTNER", "OTHER"]),
   contactName: z.string().trim().min(1).max(160).optional(), email, phone, market: z.string().trim().max(120).optional(),
   territory: objectId.optional(), ownerEmployee: objectId.optional(), geoNode: objectId.optional(),
