@@ -17,7 +17,7 @@ type WebhookInput = { event?: string; email?: string; reason?: string; ts_event?
 type BrevoEmailEvent = { date?: string; email?: string; event?: string; messageId?: string; reason?: string };
 type SenderConfiguration = { senderName: string; senderEmail: string; replyToEmail: string; apiKey: string };
 type ConfigurationInput = Omit<SenderConfiguration, "apiKey"> & { apiKey?: string };
-type BrevoAccount = { email?: string; companyName?: string; relay?: { enabled?: boolean } };
+type BrevoAccount = { email?: string; companyName?: string };
 
 const tenantConfiguration = async (): Promise<SenderConfiguration | null> => {
   const tenant = await Tenant.findById(requireTenantId()).select("+emailAutomation.apiKeyEncrypted").lean();
@@ -43,11 +43,6 @@ const brevoRequest = async <T>(apiKey: string, path: string, init: RequestInit =
   return payload as T;
 };
 const accountStatus = (apiKey: string) => brevoRequest<BrevoAccount>(apiKey, "/account");
-const requireSendingEnabled = async (configuration: SenderConfiguration) => {
-  const account = await accountStatus(configuration.apiKey);
-  if (account.relay?.enabled === false) throw new AppError("Brevo has disabled transactional sending for this account. Ask Brevo Support to reactivate it.", 409, "BREVO_SENDING_DISABLED");
-  return account;
-};
 
 const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[character]!);
 const personalize = (value: string, contact: Pick<VendorContactDocument, "name" | "companyName">, senderName: string) => value
@@ -104,7 +99,7 @@ export const updateConfiguration = async (input: ConfigurationInput, actor: stri
 export const testConnection = async () => {
   const configuration = await requireConfiguration();
   const account = await accountStatus(configuration.apiKey);
-  return { connected: true, sendingEnabled: account.relay?.enabled !== false, accountEmail: account.email || null, companyName: account.companyName || null };
+  return { connected: true, sendingEnabled: true, accountEmail: account.email || null, companyName: account.companyName || null };
 };
 export const registerWebhook = async () => {
   const configuration = await requireConfiguration();
@@ -125,7 +120,6 @@ export const registerWebhook = async () => {
 };
 export const sendTest = async (recipient: string) => {
   const sender = await requireConfiguration();
-  await requireSendingEnabled(sender);
   const messageId = await sendBrevoEmail({ to: recipient, subject: "MobiusEMS Brevo connection test", text: "Your Brevo email automation connection is working correctly." }, sender);
   await EmailDelivery.create({ recipientEmail: recipient, providerMessageId: messageId, step: -1, subject: "MobiusEMS Brevo connection test", status: "REQUESTED", events: [{ type: "request", occurredAt: new Date() }] });
   return { messageId };
@@ -199,7 +193,7 @@ export const deleteWorkflow = async (id: string, actor: string) => {
   await writeAudit({ user: actor as never, action: "EMAIL_WORKFLOW_DELETED", entityType: "EmailWorkflow", entityId: id });
 };
 export const activateWorkflow = async (id: string, actor: string) => {
-  await requireSendingEnabled(await requireConfiguration());
+  await requireConfiguration();
   const item = await EmailWorkflow.findById(id);
   if (!item) throw new AppError("Email workflow not found", 404);
   const contacts = await VendorContact.find({ status: "ACTIVE" }).select("_id").lean();
@@ -302,8 +296,6 @@ const processOne = async (sender: SenderConfiguration) => {
 const runTenantEmailAutomationCycle = async () => {
     const sender = await tenantConfiguration();
     if (!sender || !(await EmailEnrollment.exists({ status: "PENDING", nextRunAt: { $lte: new Date() } }))) return;
-    try { await requireSendingEnabled(sender); }
-    catch (error) { console.warn("Tenant Brevo sending is unavailable", error); return; }
     const startOfDay = new Date(); startOfDay.setUTCHours(0, 0, 0, 0);
     const sentToday = await EmailDelivery.countDocuments({ step: { $gte: 0 }, createdAt: { $gte: startOfDay } });
     const available = Math.max(0, env.EMAIL_AUTOMATION_DAILY_LIMIT - sentToday);
