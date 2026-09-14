@@ -1,12 +1,12 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import {
-  AlertOctagon,
   AlertTriangle,
   ArrowRight,
   BarChart3,
   Bot,
   Check,
+  CheckCircle2,
   ChevronDown,
   Clock3,
   FileSearch,
@@ -125,17 +125,17 @@ const humanStories: Record<HumanStoryKey, HumanStoryItem> = {
   engineering: {
     id: "engineering",
     tabLabel: "Engineering & Delivery",
-    role: "Team Blocker Triage",
-    badgeIcon: AlertOctagon,
+    role: "Sprint Delivery & Resolution",
+    badgeIcon: CheckCircle2,
     headline: "Unblock critical sprints without",
     highlightText: "status chasing",
-    story: "Engineers shouldn't spend half their week in standup meetings just to say they're blocked. With transparent team delivery and active blocker tracking, roadblocks flag immediately with root-cause tags so leads clear impediments in minutes.",
+    story: "Engineers shouldn't spend half their week in standup meetings just to say they're blocked. With transparent team delivery and active blocker resolution, roadblocks are cleared in minutes with root-cause tags so sprints stay on schedule.",
     image: engineeringImg,
     imageAlt: "Software engineering lead and developers collaborating around dual monitors to resolve an architecture blocker",
     liveTag: "Engineering Sprint · 3.4x Faster Resolution",
-    stat1: { value: 86, suffix: "%", label: "On-time delivery rate" },
+    stat1: { value: 92, suffix: "%", label: "On-time delivery rate" },
     stat2: { value: "0", label: "Status update meetings required" },
-    ctaText: "Explore blocker triage",
+    ctaText: "Explore sprint velocity",
   },
   recruitment: {
     id: "recruitment",
@@ -232,7 +232,7 @@ export const LandingPage = () => {
                   <div className="lp-ai-pulse">
                     <span><Sparkles size={15}/> <SparklesText text="MOBIUSEMS AI" colors={{ first: "#a7d9c3", second: "#f5c94b" }} /></span>
                     <strong>What deserves attention?</strong>
-                    <p>Two reviews are waiting, 1 task has a client blocker, and Operations workload is above its range.</p>
+                    <p>Two reviews are ready for approval, all team deliverables are unblocked, and sprint velocity is tracking at 94% on-time delivery.</p>
                     <button type="button">Open insight <ArrowRight size={13}/></button>
                   </div>
                   <div className="lp-team-pulse">
@@ -247,14 +247,14 @@ export const LandingPage = () => {
             </div>
           </div>
           <div className="lp-float-card lp-float-left"><Mic size={16}/><span><small>VOICE → TASK</small><strong>2 assignments ready</strong></span></div>
-          <div className="lp-float-card lp-float-right"><AlertOctagon size={16} className="text-red-500"/><span><small>BLOCKER ALERT</small><strong>Client API pending</strong></span></div>
+          <div className="lp-float-card lp-float-right"><CheckCircle2 size={16} className="text-emerald-500"/><span><small>SPRINT VELOCITY</small><strong>Milestone 100% unblocked</strong></span></div>
         </div>
       </section>
 
       <section className="lp-ribbon" aria-label="Platform capabilities">
         <p className="shrink-0 font-bold tracking-widest text-[9px] mr-6">ONE UNIFIED ENGINE FOR</p>
         <Marquee pauseOnHover repeat={4} duration="28s" className="py-0 flex-1">
-          {["Employee 360", "Team Delivery Hub", "Live Blockers", "Skill Matrix", "Performance Snapshots", "Burnout Radar", "Multilingual Voice", "Attendance Geofencing", "AI Workspace", "Email Automation"].map(item => (
+          {["Employee 360", "Team Delivery Hub", "Sprint Resolution", "Skill Matrix", "Performance Snapshots", "Burnout Radar", "Multilingual Voice", "Attendance Geofencing", "AI Workspace", "Email Automation"].map(item => (
             <span key={item} className="flex items-center gap-4 text-sm font-semibold tracking-wide whitespace-nowrap">
               {item} <i className="not-italic text-amber-200">✦</i>
             </span>
@@ -376,17 +376,17 @@ export const LandingPage = () => {
           <div className="lp-showroom-copy"><p>{active.eyebrow}</p><h3>{active.title}</h3><div>{active.body}</div><ul>{active.proof.map(item => <li key={item}><Check size={15}/>{item}</li>)}</ul></div>
           <div className="lp-showroom-ui" aria-live="polite"><div className="lp-ui-head"><span/><span/><span/><p>mobius-ems / {activeView.toLowerCase().replace(/[\s&]+/g, "-")}</p></div>
             {activeView === "Command center" && <div className="lp-scene-delivery">
-              <div className="lp-scene-title"><span>Team Delivery & Blocker Hub</span><strong>Engineering Team · 3 Members Active</strong></div>
+              <div className="lp-scene-title"><span>Team Delivery & Resolution Hub</span><strong>Engineering Team · 3 Members Active</strong></div>
               <div className="lp-surv-roster">
-                <div className="lp-surv-chip"><span className="avatar">AS</span><div><strong>Aarav Sharma</strong><small>Senior Lead</small></div><span className="badge-warn">1 BLOCKED</span></div>
+                <div className="lp-surv-chip"><span className="avatar">AS</span><div><strong>Aarav Sharma</strong><small>Senior Lead</small></div><span className="badge-warn">UNBLOCKED</span></div>
                 <div className="lp-surv-chip"><span className="avatar">PM</span><div><strong>Priya Mehta</strong><small>Backend Eng</small></div><span className="font-bold text-slate-500">4 Open</span></div>
-                <div className="lp-surv-chip"><span className="avatar">RV</span><div><strong>Rahul Verma</strong><small>Frontend Eng</small></div><span className="font-bold text-purple-600">1 In Review</span></div>
+                <div className="lp-surv-chip"><span className="avatar">RV</span><div><strong>Rahul Verma</strong><small>Frontend Eng</small></div><span className="font-bold text-emerald-600">1 In Review</span></div>
               </div>
               <div className="lp-blocker-card">
-                <div className="lp-blocker-head"><AlertOctagon size={13}/> LIVE TASK BLOCKER · CRITICAL</div>
+                <div className="lp-blocker-head"><CheckCircle2 size={13}/> SPRINT MILESTONE · READY FOR LAUNCH</div>
                 <p className="lp-blocker-title">Employee 360 & Skill Gap Benchmarking Rollout</p>
-                <p className="lp-blocker-quote">&ldquo;Waiting for HR Operations sign-off on department competency thresholds before publishing to team.&rdquo;</p>
-                <div className="lp-blocker-footer"><span>Owner: Aarav Sharma · Due today</span><button type="button">Resolve Blocker ↗</button></div>
+                <p className="lp-blocker-quote">&ldquo;Milestone sign-off complete: HR Operations approved department competency thresholds. Automated notification dispatched to 48 employees.&rdquo;</p>
+                <div className="lp-blocker-footer"><span>Owner: Aarav Sharma · Sprint on schedule</span><button type="button">View Milestone ↗</button></div>
               </div>
             </div>}
 
@@ -496,7 +496,7 @@ export const LandingPage = () => {
         <div className="lp-ai-conversation">
           <div className="lp-ai-avatar"><Bot size={31}/><i/></div>
           <p className="lp-ai-question">“What should I pay attention to before the executive review?”</p>
-          <div className="lp-ai-answer"><Sparkles size={18}/><div><strong>Here is the short version.</strong><p>Two tasks are awaiting review, 1 team blocker requires manager sign-off on Q3 appraisals, and the Engineering workload is approaching capacity.</p><div><span>View overdue work ↗</span><span>Open team workload ↗</span></div></div></div>
+          <div className="lp-ai-answer"><Sparkles size={18}/><div><strong>Here is the short version.</strong><p>Two tasks are awaiting review, the Q3 appraisal calibration has been cleared by the Lead, and team delivery velocity is tracking on schedule.</p><div><span>View overdue work ↗</span><span>Open team workload ↗</span></div></div></div>
           <small><ShieldCheck size={13}/> Permission-aware · Grounded in available records · Human-reviewed decisions</small>
         </div>
         <div className="lp-ai-capabilities">
@@ -511,20 +511,20 @@ export const LandingPage = () => {
         <div className="lp-engine-header">
           <div className="lp-opening-number">04</div>
           <div><p className="lp-kicker">BUILT FOR REAL ENTERPRISE OPERATORS</p><h2>Under the hood.<br/><em>Where standard tools stop.</em></h2></div>
-          <p className="lp-engine-intro">Most platforms show simple Kanban cards and stop there. MobiusEMS powers mission-critical workforce operations: hierarchical blocker triage, verified skill heatmaps, evidence-based performance reviews, and proactive workload defense.</p>
+          <p className="lp-engine-intro">Most platforms show simple Kanban cards and stop there. MobiusEMS powers mission-critical workforce operations: hierarchical delivery resolution, verified skill heatmaps, evidence-based performance reviews, and proactive workload defense.</p>
         </div>
 
         <div className="lp-engine-grid">
-          {/* Feature 1: Team Delivery Oversight & Blocker Triage */}
-          <CardSpotlight className="lp-engine-card" color="rgba(232, 98, 60, 0.08)">
+          {/* Feature 1: Team Delivery Oversight & Rapid Resolution */}
+          <CardSpotlight className="lp-engine-card" color="rgba(19, 137, 107, 0.08)">
             <div>
-              <div className="lp-engine-top"><span className="lp-engine-badge badge-coral"><AlertOctagon size={13}/> TEAM WORK OVERSIGHT</span><span className="font-mono text-xs text-slate-400">01</span></div>
-              <h3>Hierarchical Blocker Triage</h3>
-              <p>Managers and team leads maintain clear visibility across reporting lines. When work stalls, blockers are flagged immediately with root-cause tags and direct team notes—clearing roadblocks without endless status meetings.</p>
+              <div className="lp-engine-top"><span className="lp-engine-badge badge-forest"><CheckCircle2 size={13}/> TEAM WORK OVERSIGHT</span><span className="font-mono text-xs text-slate-400">01</span></div>
+              <h3>Hierarchical Delivery & Real-Time Resolution</h3>
+              <p>Managers and team leads maintain clear visibility across reporting lines. When work encounters dependencies, leads clear roadblocks immediately with contextual notes—keeping sprints moving without endless status meetings.</p>
               <div className="lp-engine-features">
                 <span><Check size={12}/> Reporting line hierarchy</span>
-                <span><Check size={12}/> Blocker root-cause tags</span>
-                <span><Check size={12}/> Direct task reassignment</span>
+                <span><Check size={12}/> Rapid roadblock resolution</span>
+                <span><Check size={12}/> Live task review queues</span>
               </div>
             </div>
             <div className="lp-engine-mockup">
@@ -532,17 +532,17 @@ export const LandingPage = () => {
                 <img src={engineeringImg} alt="Engineering delivery team" loading="lazy" decoding="async" className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent flex items-end p-2.5">
                   <span className="text-[10px] text-white font-semibold tracking-wide">
-                    ● Real-Time Team Blocker Triage · Sprint unblocked
+                    ● Real-Time Team Delivery · 100% Sprints Unblocked
                   </span>
                 </div>
               </div>
               <div className="lp-blocker-card">
-                <div className="lp-blocker-head"><AlertOctagon size={14}/> LIVE TASK BLOCKER · CRITICAL</div>
+                <div className="lp-blocker-head"><CheckCircle2 size={14}/> SPRINT RESOLUTION · ROADBLOCK CLEARED</div>
                 <p className="lp-blocker-title">Q3 Appraisal Calibration & Peer Review Cycle</p>
-                <p className="lp-blocker-quote">&ldquo;Blocked: Pending Department Head approval on updated performance evaluation rubrics and compensation bands.&rdquo;</p>
+                <p className="lp-blocker-quote">&ldquo;Roadblock cleared in 8 mins: Department Head approved updated evaluation rubrics and compensation bands. All 14 team reviews are 100% on schedule.&rdquo;</p>
                 <div className="lp-blocker-footer">
-                  <span>Assigned: Aarav Sharma (Engineering Lead)</span>
-                  <button type="button">Resolve Blocker ↗</button>
+                  <span>Assigned: Aarav Sharma (Engineering Lead) · On Schedule</span>
+                  <button type="button">View Milestone ↗</button>
                 </div>
               </div>
             </div>
@@ -686,13 +686,13 @@ export const LandingPage = () => {
       <section className="lp-voice relative overflow-hidden scroll-mt-24" id="voice">
         <div className="lp-voice-wave" aria-hidden="true">{[24,42,72,38,88,58,98,48,77,32,64,92,54,34,70,44,82,26].map((height,index)=><i key={index} style={{height:`${height}%`}}/>)}</div><div className="lp-voice-copy"><span><Mic size={20}/> MULTILINGUAL VOICE CONTROL</span><h2>Work said out loud.<br/><em>Work ready to move.</em></h2><p>Speak naturally. MobiusEMS turns the note into editable assignments, owners, and deadlines across English and Indian languages. You review everything before it becomes real.</p><blockquote>“Create the launch assets for the Design team, and assign the client follow-up to Client Success by tomorrow.”</blockquote><div><span><Check size={15}/> 2 task previews</span><span><Clock3 size={15}/> Deadline detected</span><span><Users size={15}/> Teams matched</span></div></div></section>
 
-      <section className="lp-chapters scroll-mt-24" id="why"><div className="lp-chapters-intro"><span className="lp-section-number">06</span><p className="lp-kicker">THE POWER OF COMPLETE CONNECTION</p><h2>Less software to manage.<br/>More company to understand.</h2></div><div className="lp-chapter-list">{[[Users, "People & Global Footprint", "Profiles, departments, onboarding, geofenced attendance, and interactive employee maps stay organized."], [AlertOctagon, "Delivery & Blocker Oversight", "Reporting line hierarchy, blocker root-cause alerts, and real-time review queues without status chasing."], [Sparkles, "Capability & Talent Matrix", "Skill assessments, verified competency heatmaps, and evidence-grounded performance reviews in one workspace."], [ShieldCheck, "Ethical Governance & Control", "Multi-tenant isolation, section-level RBAC, and recommendation-only AI keeping decisions 100% human-led."]].map(([Icon, title, text], index) => { const ChapterIcon = Icon as typeof Users; return <CardSpotlight key={title as string} color="rgba(19, 137, 107, 0.06)"><article className="border-0"><span>0{index + 1}</span><ChapterIcon size={24}/><h3>{title as string}</h3><p>{text as string}</p><i>↗</i></article></CardSpotlight>; })}</div></section>
+      <section className="lp-chapters scroll-mt-24" id="why"><div className="lp-chapters-intro"><span className="lp-section-number">06</span><p className="lp-kicker">THE POWER OF COMPLETE CONNECTION</p><h2>Less software to manage.<br/>More company to understand.</h2></div><div className="lp-chapter-list">{[[Users, "People & Global Footprint", "Profiles, departments, onboarding, geofenced attendance, and interactive employee maps stay organized."], [CheckCircle2, "Delivery & Sprint Resolution", "Reporting line hierarchy, real-time roadblock resolution, and active review queues without status chasing."], [Sparkles, "Capability & Talent Matrix", "Skill assessments, verified competency heatmaps, and evidence-grounded performance reviews in one workspace."], [ShieldCheck, "Ethical Governance & Control", "Multi-tenant isolation, section-level RBAC, and recommendation-only AI keeping decisions 100% human-led."]].map(([Icon, title, text], index) => { const ChapterIcon = Icon as typeof Users; return <CardSpotlight key={title as string} color="rgba(19, 137, 107, 0.06)"><article className="border-0"><span>0{index + 1}</span><ChapterIcon size={24}/><h3>{title as string}</h3><p>{text as string}</p><i>↗</i></article></CardSpotlight>; })}</div></section>
 
-      <section className="lp-outcomes"><p className="lp-kicker">WHAT CHANGES WHEN WORK CONNECTS</p><div>{[["From", "Status chasing", "to", "Live Blocker Triage"], ["From", "Scattered tools", "to", "Unified Workforce Operations"], ["From", "Reactive burnout", "to", "Workload Capacity Radar"]].map(([beforeLabel,before,afterLabel,after]) => <p key={before}><small>{beforeLabel}</small><span>{before}</span><i>→</i><small>{afterLabel}</small><strong>{after}</strong></p>)}</div></section>
+      <section className="lp-outcomes"><p className="lp-kicker">WHAT CHANGES WHEN WORK CONNECTS</p><div>{[["From", "Status chasing", "to", "Live Sprint Resolution"], ["From", "Scattered tools", "to", "Unified Workforce Operations"], ["From", "Reactive burnout", "to", "Workload Capacity Radar"]].map(([beforeLabel,before,afterLabel,after]) => <p key={before}><small>{beforeLabel}</small><span>{before}</span><i>→</i><small>{afterLabel}</small><strong>{after}</strong></p>)}</div></section>
 
       <section className="lp-principles scroll-mt-24" id="principles"><ShieldCheck size={34}/><p className="lp-kicker">PEOPLE STAY IN CHARGE</p><h2>AI can organize the evidence.<br/>It cannot replace judgment.</h2><p>Section-level RBAC permissions, immutable audit history, editable previews, and recommendation-only AI keep employment decisions explainable and in human hands.</p></section>
 
-      <section className="lp-faq scroll-mt-24" id="faq"><div><span className="lp-section-number">07</span><p className="lp-kicker">STRAIGHT ANSWERS</p><h2>Before you bring<br/>everyone together.</h2></div><div>{[["What makes MobiusEMS different from simple project tools?", "Traditional tools only track static task cards. MobiusEMS unites dynamic organizational hierarchy, real-time blocker triage, verified skill matrices, explainable performance intelligence, and employee workload telemetry into one seamless employee management platform."], ["How does MobiusEMS handle performance reviews?", "Performance evaluations in MobiusEMS are grounded in verified contribution evidence, completed tasks, and transparent weighted KPIs. The platform strictly excludes black-box automated rankings—managers retain full context and make all review decisions."], ["How does the AI Resume Screener work?", "The screener automatically parses PDF and DOCX resumes, matches candidate experience against saved Job Descriptions (JDs), highlights matching vs missing skills, and calculates a documented fit percentage. The AI is advisory; human interviewers make the final hiring decisions."], ["How does MobiusEMS identify and defend against employee burnout?", "The dashboard calculates remaining estimated hours for open work per person and flags overloaded team members on a live Workload Radar, helping managers reassign tasks and promote focus rhythms before burnout occurs."], ["What is the Team Delivery & Blocker Hub?", "It allows team leads, department heads, and managers to filter by reporting lines, view active task blockers with team notes, inspect pending reviews, and unblock execution in real time without scheduling meetings."], ["Does AI make decisions about employees?", "Never. AI only answers questions, parses documents, and drafts summaries from permitted records. Managers review the evidence and remain fully responsible for every promotion, compensation, and staffing decision."]].map(([question,answer]) => <details key={question}><summary>{question}<ChevronDown size={18}/></summary><p>{answer}</p></details>)}</div></section>
+      <section className="lp-faq scroll-mt-24" id="faq"><div><span className="lp-section-number">07</span><p className="lp-kicker">STRAIGHT ANSWERS</p><h2>Before you bring<br/>everyone together.</h2></div><div>{[["What makes MobiusEMS different from simple project tools?", "Traditional tools only track static task cards. MobiusEMS unites dynamic organizational hierarchy, real-time blocker triage, verified skill matrices, explainable performance intelligence, and employee workload telemetry into one seamless employee management platform."], ["How does MobiusEMS handle performance reviews?", "Performance evaluations in MobiusEMS are grounded in verified contribution evidence, completed tasks, and transparent weighted KPIs. The platform strictly excludes black-box automated rankings—managers retain full context and make all review decisions."], ["How does the AI Resume Screener work?", "The screener automatically parses PDF and DOCX resumes, matches candidate experience against saved Job Descriptions (JDs), highlights matching vs missing skills, and calculates a documented fit percentage. The AI is advisory; human interviewers make the final hiring decisions."], ["How does MobiusEMS identify and defend against employee burnout?", "The dashboard calculates remaining estimated hours for open work per person and flags overloaded team members on a live Workload Radar, helping managers reassign tasks and promote focus rhythms before burnout occurs."], ["What is the Team Delivery & Resolution Hub?", "It allows team leads, department heads, and managers to filter by reporting lines, clear task dependencies with real-time notes, inspect pending reviews, and keep execution moving smoothly without scheduling meetings."], ["Does AI make decisions about employees?", "Never. AI only answers questions, parses documents, and drafts summaries from permitted records. Managers review the evidence and remain fully responsible for every promotion, compensation, and staffing decision."]].map(([question,answer]) => <details key={question}><summary>{question}<ChevronDown size={18}/></summary><p>{answer}</p></details>)}</div></section>
 
       <section className="lp-final relative overflow-hidden">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] h-[320px] bg-white/10 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />

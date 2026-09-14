@@ -85,16 +85,16 @@
   font-size: 7px;
 }
 .lp-surv-chip .badge-warn {
-  padding: 2px 5px;
-  background: #fee2e2;
-  color: #b91c1c;
+  padding: 2px 6px;
+  background: #dcfce7;
+  color: #15803d;
   border-radius: 4px;
   font-weight: 700;
   font-size: 7px;
 }
 .lp-blocker-card {
-  border: 1px solid #fca5a5;
-  background: #fef2f2;
+  border: 1px solid #a7f3d0;
+  background: #f0fdf4;
   border-radius: 9px;
   padding: 12px 14px;
 }
@@ -102,7 +102,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #b91c1c;
+  color: #15803d;
   font-size: 8px;
   font-weight: 800;
   letter-spacing: 0.5px;
@@ -110,12 +110,12 @@
 .lp-blocker-title {
   font-size: 11px;
   font-weight: 700;
-  color: #7f1d1d;
+  color: #14532d;
   margin: 4px 0 2px;
 }
 .lp-blocker-quote {
   font-size: 8.5px;
-  color: #991b1b;
+  color: #166534;
   font-family: inherit;
   font-style: normal;
   margin-top: 3px;
@@ -127,16 +127,21 @@
   align-items: center;
   margin-top: 8px;
   font-size: 7px;
+  color: #166534;
 }
 .lp-blocker-footer button {
   padding: 4px 8px;
-  background: #b91c1c;
+  background: #15803d;
   color: white;
   border-radius: 4px;
   font-size: 7px;
   font-weight: 700;
   border: none;
   cursor: pointer;
+  transition: background 0.15s ease;
+}
+.lp-blocker-footer button:hover {
+  background: #166534;
 }
 
 /* Executive Analytics Scene */

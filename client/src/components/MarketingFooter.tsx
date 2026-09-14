@@ -253,7 +253,7 @@ export const MarketingFooter = () => {
                   className="group inline-flex items-center gap-1.5 text-slate-300 transition-all hover:text-white hover:translate-x-1 cursor-pointer"
                 >
                   <ChevronRight size={12} className="text-emerald-500/70 transition-transform group-hover:text-emerald-400" />
-                  <span>Hierarchical Blocker Triage</span>
+                  <span>Hierarchical Delivery & Resolution</span>
                 </a>
               </li>
               <li>
