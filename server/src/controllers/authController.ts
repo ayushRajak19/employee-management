@@ -2,7 +2,7 @@ import type { CookieOptions, Request, Response } from "express";
 import { env } from "../config/env.js";
 import * as authService from "../services/authService.js";
 
-const baseCookie: CookieOptions = { httpOnly: true, secure: env.NODE_ENV === "production", sameSite: "strict", ...(env.COOKIE_DOMAIN ? { domain: env.COOKIE_DOMAIN } : {}) };
+const baseCookie: CookieOptions = { httpOnly: true, secure: env.NODE_ENV === "production", sameSite: "lax", ...(env.COOKIE_DOMAIN ? { domain: env.COOKIE_DOMAIN } : {}) };
 const setCookies = (response: Response, accessToken: string, refreshToken: string): void => {
   response.cookie("access_token", accessToken, { ...baseCookie, path: "/", maxAge: 15 * 60 * 1000 });
   response.cookie("refresh_token", refreshToken, { ...baseCookie, path: "/api/v1/auth", maxAge: 7 * 24 * 60 * 60 * 1000 });
