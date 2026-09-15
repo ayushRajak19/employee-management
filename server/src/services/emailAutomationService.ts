@@ -245,7 +245,9 @@ export const activateWorkflow = async (id: string, actor: string) => {
   if (!item) throw new AppError("Email workflow not found", 404);
   const contacts = await VendorContact.find({ status: "ACTIVE" }).select("_id").lean();
   if (!contacts.length) throw new AppError("Add at least one active, consented vendor contact before activation", 409, "NO_VENDOR_CONTACTS");
-  await EmailEnrollment.bulkWrite(contacts.map((contact) => ({ updateOne: { filter: { workflow: item._id, contact: contact._id }, update: { $setOnInsert: { step: 0, status: "PENDING", nextRunAt: new Date(), attempts: 0 } }, upsert: true } })));
+  const nextRunAt = new Date();
+  await EmailEnrollment.updateMany({ workflow: item._id, contact: { $in: contacts.map(({ _id }) => _id) }, status: "FAILED" }, { $set: { step: 0, status: "PENDING", nextRunAt, attempts: 0 }, $unset: { lockedAt: 1, lastError: 1 } });
+  await EmailEnrollment.bulkWrite(contacts.map((contact) => ({ updateOne: { filter: { workflow: item._id, contact: contact._id }, update: { $setOnInsert: { step: 0, status: "PENDING", nextRunAt, attempts: 0 } }, upsert: true } })));
   item.status = "ACTIVE"; item.activatedAt = new Date(); await item.save();
   await writeAudit({ user: actor as never, action: "EMAIL_WORKFLOW_ACTIVATED", entityType: "EmailWorkflow", entityId: item.id, newValue: { contacts: contacts.length } });
   void runEmailAutomationCycle();
