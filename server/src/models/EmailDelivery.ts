@@ -2,6 +2,7 @@ import { Schema, type Types } from "mongoose";
 import { tenantModel } from "../tenancy/tenantModel.js";
 
 export interface EmailDeliveryDocument {
+  provider?: "BREVO" | "GMAIL";
   workflow?: Types.ObjectId;
   contact?: Types.ObjectId;
   enrollment?: Types.ObjectId;
@@ -14,6 +15,7 @@ export interface EmailDeliveryDocument {
   events: { type: string; occurredAt: Date; reason?: string }[];
 }
 const schema = new Schema<EmailDeliveryDocument>({
+  provider: { type: String, enum: ["BREVO", "GMAIL"], default: "BREVO" },
   workflow: { type: Schema.Types.ObjectId, ref: "EmailWorkflow", index: true },
   contact: { type: Schema.Types.ObjectId, ref: "VendorContact", index: true },
   enrollment: { type: Schema.Types.ObjectId, ref: "EmailEnrollment", index: true },

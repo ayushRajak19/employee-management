@@ -1,6 +1,28 @@
 import type { Request, Response } from "express";
 import * as service from "../services/emailAutomationService.js";
 import { AppError } from "../utils/AppError.js";
+import * as gmail from "../services/gmailService.js";
+import { env } from "../config/env.js";
+
+export const startGoogle = async (request: Request, response: Response) => {
+  requireSuperAdmin(request);
+  response.setHeader("Cache-Control", "no-store");
+  response.json({ success: true, data: await gmail.startGoogleConnection(request.user!.id) });
+};
+export const googleCallback = async (request: Request, response: Response) => {
+  requireSuperAdmin(request);
+  response.setHeader("Cache-Control", "no-store");
+  response.setHeader("Referrer-Policy", "no-referrer");
+  let result = "connected";
+  try { await gmail.finishGoogleConnection(request.user!.id, typeof request.query.state === "string" ? request.query.state : "", typeof request.query.code === "string" ? request.query.code : undefined); }
+  catch (error) { result = error instanceof AppError ? error.code || "GOOGLE_AUTH_FAILED" : "GOOGLE_AUTH_FAILED"; }
+  response.redirect(`${env.CLIENT_URL}/email-automation?google=${encodeURIComponent(result)}`);
+};
+export const disconnectGoogle = async (request: Request, response: Response) => {
+  requireSuperAdmin(request);
+  await gmail.disconnectGoogle(request.user!.id);
+  response.json({ success: true, data: {} });
+};
 
 const requireSuperAdmin = (request: Request) => { if (request.user!.role !== "SUPER_ADMIN") throw new AppError("Only a Super Admin can manage email automation", 403, "SUPER_ADMIN_REQUIRED"); };
 export const getConfiguration = async (request: Request, response: Response): Promise<void> => { requireSuperAdmin(request); response.json({ success: true, message: "Email configuration retrieved", data: await service.configuration() }); };

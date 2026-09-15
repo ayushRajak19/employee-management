@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { Types } from "mongoose";
 import { env } from "../config/env.js";
 import { EmailDelivery } from "../models/EmailDelivery.js";
@@ -9,6 +9,8 @@ import { AppError } from "../utils/AppError.js";
 import { decryptSecret, encryptSecret } from "../utils/secretCipher.js";
 import { writeAudit } from "./auditService.js";
 import { Tenant } from "../models/Tenant.js";
+import { GmailConnection } from "../models/GmailConnection.js";
+import { gmailAccessToken, googleReady, sendGmailEmail } from "./gmailService.js";
 import { requireTenantId, currentTenantId, runWithTenant } from "../tenancy/tenantContext.js";
 import { deliveryState, normalizeDeliveryEvent, type DeliveryEvent } from "../utils/emailDeliveryState.js";
 
@@ -17,12 +19,18 @@ type ContactInput = Pick<VendorContactDocument, "name" | "companyName" | "email"
 type BrevoResponse = { messageId?: string; code?: string; message?: string };
 type WebhookInput = { event?: string; email?: string; reason?: string; ts_event?: number; ts?: number; "message-id"?: string };
 type BrevoEmailEvent = { date?: string; email?: string; event?: string; messageId?: string; reason?: string };
-type SenderConfiguration = { senderName: string; senderEmail: string; replyToEmail: string; apiKey: string };
+type SenderConfiguration = { senderName: string; senderEmail: string; replyToEmail: string; apiKey: string; provider?: "BREVO" | "GMAIL" };
 type ConfigurationInput = Omit<SenderConfiguration, "apiKey"> & { apiKey?: string };
 type BrevoAccount = { email?: string; companyName?: string; relay?: { enabled?: boolean } };
 
 const tenantConfiguration = async (): Promise<SenderConfiguration | null> => {
   const tenant = await Tenant.findById(requireTenantId()).select("+emailAutomation.apiKeyEncrypted").lean();
+  if (tenant?.emailSendingProvider === "NONE") return null;
+  if (tenant?.emailSendingProvider === "GMAIL") {
+    const gmail = await GmailConnection.findOne({ key: "gmail" }).lean();
+    if (!gmail) return null;
+    return { provider: "GMAIL", senderName: tenant.name, senderEmail: gmail.email, replyToEmail: gmail.email, apiKey: "" };
+  }
   const stored = tenant?.emailAutomation;
   if (!stored?.apiKeyEncrypted || !stored.senderEmail) return null;
   return { senderName: stored.senderName, senderEmail: stored.senderEmail, replyToEmail: stored.replyToEmail, apiKey: decryptSecret(stored.apiKeyEncrypted) };
@@ -31,7 +39,7 @@ const webhookToken = env.BREVO_WEBHOOK_TOKEN || createHash("sha256").update(`bre
 const requireConfiguration = async () => {
   if (!env.EMAIL_AUTOMATION_ENABLED) throw new AppError("Email automation is disabled", 503, "EMAIL_AUTOMATION_DISABLED");
   const configuration = await tenantConfiguration();
-  if (!configuration) throw new AppError("Connect this organization's Brevo account before using email automation", 409, "BREVO_NOT_CONNECTED");
+  if (!configuration) throw new AppError("Connect an email account for this organization before using automation", 409, "EMAIL_NOT_CONNECTED");
   return configuration;
 };
 const brevoRequest = async <T>(apiKey: string, path: string, init: RequestInit = {}): Promise<T> => {
@@ -46,6 +54,7 @@ const brevoRequest = async <T>(apiKey: string, path: string, init: RequestInit =
 };
 const accountStatus = (apiKey: string) => brevoRequest<BrevoAccount>(apiKey, "/account");
 const requireSendingEnabled = async (sender: SenderConfiguration) => {
+  if (sender.provider === "GMAIL") { await gmailAccessToken(); return {}; }
   const account = await accountStatus(sender.apiKey);
   if (account.relay?.enabled === false) {
     throw new AppError("Brevo has disabled transactional sending for this account. Available credits do not enable sending. Contact Brevo Support to activate the transactional platform.", 409, "BREVO_SENDING_DISABLED");
@@ -61,6 +70,9 @@ const personalize = (value: string, contact: Pick<VendorContactDocument, "name" 
 const messageHtml = (text: string, unsubscribeUrl?: string) => `${text.split(/\r?\n/).map((line) => line ? `<p style="margin:0 0 12px">${escapeHtml(line)}</p>` : "<br>").join("")}${unsubscribeUrl ? `<hr style="border:0;border-top:1px solid #e5e7eb;margin:24px 0 12px"><p style="font-size:12px;color:#64748b">You are receiving this business email because your contact was provided for vendor communication. <a href="${escapeHtml(unsubscribeUrl)}">Unsubscribe</a></p>` : ""}`;
 
 const sendBrevoEmail = async (input: { to: string; toName?: string; subject: string; text: string; unsubscribeUrl?: string; enrollmentId?: string }, sender: SenderConfiguration) => {
+  const current = await tenantConfiguration();
+  if (!current || current.provider !== sender.provider || current.senderEmail !== sender.senderEmail || current.apiKey !== sender.apiKey) throw new AppError("The organization sender changed. Review the connection before sending.", 409, "EMAIL_SENDER_CHANGED");
+  if (sender.provider === "GMAIL") return sendGmailEmail(input, sender.senderEmail);
   const payload = await brevoRequest<BrevoResponse>(sender.apiKey, "/smtp/email", {
     method: "POST",
     body: JSON.stringify({
@@ -82,22 +94,27 @@ export const configuration = async () => {
   const sender = await tenantConfiguration();
   let sendingEnabled: boolean | null = null;
   let sendingStatusError: string | null = null;
-  if (sender) {
+  if (sender?.provider === "GMAIL") {
+    const gmail = await GmailConnection.findOne({ key: "gmail" }).lean();
+    sendingEnabled = googleReady() && Boolean(gmail && !gmail.needsReconnect);
+    if (!sendingEnabled) sendingStatusError = "Gmail needs reconnection or platform OAuth setup.";
+  } else if (sender) {
     try { sendingEnabled = (await accountStatus(sender.apiKey)).relay?.enabled ?? null; }
     catch { sendingStatusError = "Unable to verify Brevo sending status. Use Check account to retry."; }
   }
   return ({
   configured: env.EMAIL_AUTOMATION_ENABLED && Boolean(sender),
   providerConfigured: Boolean(sender),
-  provider: sender ? "BREVO" : null,
+  provider: sender ? sender.provider || "BREVO" : null,
+  googleAvailable: googleReady(),
   sendingEnabled,
   sendingStatusError,
   senderEmail: sender?.senderEmail || null,
   senderName: sender?.senderName || null,
   replyToEmail: sender?.replyToEmail || null,
-  webhookConfigured: Boolean(sender),
+  webhookConfigured: Boolean(sender) && sender?.provider !== "GMAIL",
   webhookUrl: `${env.CLIENT_URL}/api/v1/email-automation/webhooks/brevo`,
-  dailyLimit: env.EMAIL_AUTOMATION_DAILY_LIMIT,
+  dailyLimit: sender?.provider === "GMAIL" ? Math.min(env.GMAIL_DAILY_LIMIT, env.EMAIL_AUTOMATION_DAILY_LIMIT) : env.EMAIL_AUTOMATION_DAILY_LIMIT,
   });
 };
 export const updateConfiguration = async (input: ConfigurationInput, actor: string) => {
@@ -109,17 +126,20 @@ export const updateConfiguration = async (input: ConfigurationInput, actor: stri
   const sender = result.senders?.find((item) => item.email?.toLowerCase() === input.senderEmail && item.active !== false);
   if (!sender) throw new AppError("Verify this sender email in the connected Brevo account first", 409, "BREVO_SENDER_NOT_VERIFIED");
   const stored = { provider: "BREVO" as const, apiKeyEncrypted: encryptSecret(apiKey), senderName: input.senderName, senderEmail: input.senderEmail, replyToEmail: input.replyToEmail, updatedAt: new Date(), updatedBy: actor };
-  await Tenant.updateOne({ _id: requireTenantId() }, { $set: { emailAutomation: stored } });
+  await EmailWorkflow.updateMany({ status: "ACTIVE" }, { $set: { status: "PAUSED" } });
+  await Tenant.updateOne({ _id: requireTenantId() }, { $set: { emailAutomation: stored, emailSendingProvider: "BREVO" } });
   await writeAudit({ user: actor as never, action: "EMAIL_CONFIGURATION_UPDATED", entityType: "Tenant", entityId: requireTenantId().toString(), oldValue: oldValue && { senderName: oldValue.senderName, senderEmail: oldValue.senderEmail, replyToEmail: oldValue.replyToEmail }, newValue: { provider: "BREVO", senderName: input.senderName, senderEmail: input.senderEmail, replyToEmail: input.replyToEmail } });
   return configuration();
 };
 export const testConnection = async () => {
   const configuration = await requireConfiguration();
+  if (configuration.provider === "GMAIL") { const gmail = await gmailAccessToken(); return { connected: true, sendingEnabled: true, accountEmail: gmail.email, companyName: null }; }
   const account = await accountStatus(configuration.apiKey);
   return { connected: true, sendingEnabled: account.relay?.enabled ?? null, accountEmail: account.email || null, companyName: account.companyName || null };
 };
 export const registerWebhook = async () => {
   const configuration = await requireConfiguration();
+  if (configuration.provider === "GMAIL") throw new AppError("Gmail send-only connections do not provide delivery or open tracking", 409, "GMAIL_TRACKING_UNAVAILABLE");
   const baseUrl = `${env.CLIENT_URL}/api/v1/email-automation/webhooks/brevo`;
   const url = `${baseUrl}?token=${encodeURIComponent(webhookToken)}`;
   try {
@@ -138,9 +158,10 @@ export const registerWebhook = async () => {
 export const sendTest = async (recipient: string) => {
   const sender = await requireConfiguration();
   await requireSendingEnabled(sender);
-  await registerWebhook();
-  const messageId = await sendBrevoEmail({ to: recipient, subject: "MobiusEMS Brevo connection test", text: "Your Brevo email automation connection is working correctly." }, sender);
-  await EmailDelivery.create({ recipientEmail: recipient, providerMessageId: messageId, step: -1, subject: "MobiusEMS Brevo connection test", status: "REQUESTED", events: [{ type: "request", occurredAt: new Date() }] });
+  if (sender.provider !== "GMAIL") await registerWebhook();
+  const subject = "MobiusEMS email connection test";
+  const messageId = await sendBrevoEmail({ to: recipient, subject, text: "This is your requested MobiusEMS email connection test." }, sender);
+  await EmailDelivery.create({ provider: sender.provider || "BREVO", recipientEmail: recipient, providerMessageId: messageId, step: -1, subject, status: sender.provider === "GMAIL" ? "SENT" : "REQUESTED", events: [{ type: sender.provider === "GMAIL" ? "sent" : "request", occurredAt: new Date() }] });
   return { messageId };
 };
 
@@ -166,6 +187,7 @@ const recordDeliveryEvent = async (id: Types.ObjectId, event: DeliveryEvent) => 
 };
 export const syncDeliveryEvents = async () => {
   const configuration = await requireConfiguration();
+  if (configuration.provider === "GMAIL") return { updated: 0 };
   const report = await brevoRequest<{ events?: BrevoEmailEvent[] }>(configuration.apiKey, "/smtp/statistics/events?days=30&limit=500&sort=desc");
   let updated = 0;
   for (const item of report.events ?? []) {
@@ -183,7 +205,7 @@ export const summary = async () => {
   if (await tenantConfiguration()) await syncDeliveryEvents().catch((error: unknown) => console.warn("Brevo delivery activity sync failed", error));
   const [workflows, active, contacts, accepted, delivered, opened, clicked, bounced, replies] = await Promise.all([
     EmailWorkflow.countDocuments(), EmailWorkflow.countDocuments({ status: "ACTIVE" }), VendorContact.countDocuments(),
-    EmailDelivery.countDocuments({ step: { $gte: 0 } }), EmailDelivery.countDocuments({ "events.type": "delivered" }),
+    EmailDelivery.countDocuments({ step: { $gte: 0 }, "events.type": { $in: ["request", "requests", "sent", "delivered", "opened", "click"] } }), EmailDelivery.countDocuments({ "events.type": "delivered" }),
     EmailDelivery.countDocuments({ "events.type": "opened" }), EmailDelivery.countDocuments({ "events.type": "click" }),
     EmailDelivery.countDocuments({ status: { $in: ["ERROR", "BOUNCED", "BLOCKED", "INVALID", "SPAM"] } }),
     VendorContact.countDocuments({ status: "REPLIED" }),
@@ -191,7 +213,7 @@ export const summary = async () => {
   return { workflows, active, contacts, accepted, sent: accepted, delivered, opened, clicked, bounced, replies };
 };
 export const listDeliveries = async () => {
-  const items = await EmailDelivery.find().select("recipientEmail subject status lastEventAt createdAt step events").sort({ createdAt: -1 }).limit(50).lean();
+  const items = await EmailDelivery.find().select("provider recipientEmail subject status lastEventAt createdAt step events").sort({ createdAt: -1 }).limit(50).lean();
   return items.map((item) => ({ ...item, lastError: null, ...deliveryState(item.events), events: undefined }));
 };
 export const listWorkflows = () => EmailWorkflow.find().sort({ createdAt: -1 }).lean();
@@ -216,8 +238,9 @@ export const deleteWorkflow = async (id: string, actor: string) => {
   await writeAudit({ user: actor as never, action: "EMAIL_WORKFLOW_DELETED", entityType: "EmailWorkflow", entityId: id });
 };
 export const activateWorkflow = async (id: string, actor: string) => {
-  await requireSendingEnabled(await requireConfiguration());
-  await registerWebhook();
+  const sender = await requireConfiguration();
+  await requireSendingEnabled(sender);
+  if (sender.provider !== "GMAIL") await registerWebhook();
   const item = await EmailWorkflow.findById(id);
   if (!item) throw new AppError("Email workflow not found", 404);
   const contacts = await VendorContact.find({ status: "ACTIVE" }).select("_id").lean();
@@ -291,7 +314,7 @@ export const unsubscribe = async (token: string) => {
 
 const processOne = async (sender: SenderConfiguration) => {
   const stale = new Date(Date.now() - 10 * 60_000);
-  await EmailEnrollment.updateMany({ status: "PROCESSING", lockedAt: { $lt: stale } }, { $set: { status: "PENDING" }, $unset: { lockedAt: 1 } });
+  await EmailEnrollment.updateMany({ status: "PROCESSING", lockedAt: { $lt: stale } }, { $set: sender.provider === "GMAIL" ? { status: "FAILED", lastError: "Previous Gmail send outcome is unknown. Check Sent mail before retrying." } : { status: "PENDING" }, $unset: { lockedAt: 1 } });
   const enrollment = await EmailEnrollment.findOneAndUpdate({ status: "PENDING", nextRunAt: { $lte: new Date() } }, { $set: { status: "PROCESSING", lockedAt: new Date() } }, { new: true });
   if (!enrollment) return false;
   try {
@@ -305,14 +328,19 @@ const processOne = async (sender: SenderConfiguration) => {
     const text = personalize(followUp ? workflow.followUpMessage || `Hi {{vendor_name}},\n\nI wanted to follow up on my previous message about a potential partnership with {{company_name}}. Please let me know if this is relevant for your team.` : workflow.message, contact, sender.senderName);
     const unsubscribeUrl = `${env.CLIENT_URL}/api/v1/email-automation/unsubscribe/${contact.unsubscribeToken}`;
     const messageId = await sendBrevoEmail({ to: contact.email, toName: contact.name, subject, text, unsubscribeUrl, enrollmentId: enrollment.id }, sender);
-    await EmailDelivery.create({ workflow: workflow._id, contact: contact._id, enrollment: enrollment._id, recipientEmail: contact.email, providerMessageId: messageId, step: enrollment.step, subject, status: "REQUESTED", events: [{ type: "request", occurredAt: new Date() }] });
+    await EmailDelivery.create({ provider: sender.provider || "BREVO", workflow: workflow._id, contact: contact._id, enrollment: enrollment._id, recipientEmail: contact.email, providerMessageId: messageId, step: enrollment.step, subject, status: sender.provider === "GMAIL" ? "SENT" : "REQUESTED", events: [{ type: sender.provider === "GMAIL" ? "sent" : "request", occurredAt: new Date() }] });
     if (!followUp && workflow.followUp) { enrollment.step = 1; enrollment.status = "PENDING"; enrollment.nextRunAt = new Date(Date.now() + workflow.delayDays * 86_400_000); }
     else enrollment.status = "COMPLETED";
     enrollment.attempts = 0; enrollment.lastError = undefined; enrollment.lockedAt = undefined; await enrollment.save();
   } catch (error) {
     enrollment.attempts += 1; enrollment.lastError = error instanceof Error ? error.message.slice(0, 1000) : "Unknown sending error"; enrollment.lockedAt = undefined;
-    enrollment.status = enrollment.attempts >= 3 ? "FAILED" : "PENDING";
-    enrollment.nextRunAt = new Date(Date.now() + Math.min(60, 5 * 2 ** enrollment.attempts) * 60_000); await enrollment.save();
+    if (sender.provider === "GMAIL") {
+      const contact = await VendorContact.findById(enrollment.contact).select("email").lean();
+      if (contact) await EmailDelivery.create({ provider: "GMAIL", workflow: enrollment.workflow, enrollment: enrollment._id, contact: enrollment.contact, recipientEmail: contact.email, providerMessageId: `gmail-attempt:${randomUUID()}`, step: enrollment.step, subject: "Gmail automation needs attention", status: "ERROR", events: [{ type: "error", occurredAt: new Date(), reason: enrollment.lastError }] }).catch(() => console.warn("Could not record Gmail failure activity"));
+    }
+    const gmailQuota = error instanceof AppError && error.code === "GMAIL_DAILY_LIMIT";
+    enrollment.status = gmailQuota ? "PENDING" : sender.provider === "GMAIL" || enrollment.attempts >= 3 ? "FAILED" : "PENDING";
+    enrollment.nextRunAt = gmailQuota ? new Date(new Date().setUTCHours(24, 0, 0, 0)) : new Date(Date.now() + Math.min(60, 5 * 2 ** enrollment.attempts) * 60_000); await enrollment.save();
   }
   return true;
 };
@@ -323,7 +351,12 @@ const runTenantEmailAutomationCycle = async () => {
     catch (error) { console.warn("Tenant Brevo sending is unavailable", error instanceof Error ? error.message : "Account check failed"); return; }
     const startOfDay = new Date(); startOfDay.setUTCHours(0, 0, 0, 0);
     const sentToday = await EmailDelivery.countDocuments({ step: { $gte: 0 }, createdAt: { $gte: startOfDay } });
-    const available = Math.max(0, env.EMAIL_AUTOMATION_DAILY_LIMIT - sentToday);
+    let available = Math.max(0, env.EMAIL_AUTOMATION_DAILY_LIMIT - sentToday);
+    if (sender.provider === "GMAIL") {
+      const gmail = await GmailConnection.findOne({ key: "gmail" }).lean();
+      const attempts = gmail?.sendDay === new Date().toISOString().slice(0, 10) ? gmail.sendCount : 0;
+      available = Math.min(available, Math.max(0, env.GMAIL_DAILY_LIMIT - attempts));
+    }
     for (let index = 0; index < Math.min(env.EMAIL_AUTOMATION_BATCH_SIZE, available); index += 1) if (!(await processOne(sender))) break;
 };
 let cycleRunning = false;

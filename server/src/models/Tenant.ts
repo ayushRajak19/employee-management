@@ -16,6 +16,7 @@ export interface TenantDocument {
   plan: "STANDARD" | "ENTERPRISE";
   createdBy?: Types.ObjectId;
   activatedAt?: Date;
+  emailSendingProvider?: "BREVO" | "GMAIL" | "NONE";
   emailAutomation?: {
     provider: "BREVO";
     apiKeyEncrypted: string;
@@ -40,6 +41,7 @@ const schema = new Schema<TenantDocument>({
   plan: { type: String, enum: ["STANDARD", "ENTERPRISE"], default: "STANDARD" },
   createdBy: { type: Schema.Types.ObjectId, ref: "User" },
   activatedAt: Date,
+  emailSendingProvider: { type: String, enum: ["BREVO", "GMAIL", "NONE"] },
   emailAutomation: {
     provider: { type: String, enum: ["BREVO"] },
     apiKeyEncrypted: { type: String, select: false },
