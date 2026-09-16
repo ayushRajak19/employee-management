@@ -65,6 +65,7 @@ const SalesDataPage = lazyWithRetry(() => import("@/features/sales/pages/SalesDa
 const SalesAgentsPage = lazyWithRetry(() => import("@/features/sales/pages/SalesAgentsPage").then((module) => ({ default: module.SalesAgentsPage })));
 const TargetPerformancePage = lazyWithRetry(() => import("@/features/sales/pages/TargetPerformancePage").then((module) => ({ default: module.TargetPerformancePage })));
 const OrgHierarchyPage = lazyWithRetry(() => import("@/pages/OrgHierarchyPage").then((module) => ({ default: module.OrgHierarchyPage })));
+const TermsPage = lazyWithRetry(() => import("@/pages/TermsPage").then((module) => ({ default: module.TermsPage })));
 
 const PageLoader = () => <div className="space-y-4 p-8" aria-label="Loading page"><Skeleton className="h-9 w-64"/><Skeleton className="h-48 w-full"/><Skeleton className="h-48 w-full"/></div>;
 const AccessDeniedPage = () => <main className="grid min-h-[60vh] flex-1 place-items-center p-8 text-center"><div><p className="text-sm font-semibold text-brand-700">Access restricted</p><h1 className="mt-2 text-3xl font-semibold">This section is not assigned to your role</h1><p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-slate-500">Ask your Super Admin to enable this section in Administration → Access hierarchy.</p></div></main>;
@@ -73,6 +74,7 @@ export const App = () => <Suspense fallback={<PageLoader/>}><ScrollToTop/><Route
   <Route path="/welcome" element={<LandingPage/>}/>
   <Route path="/solutions" element={<SolutionsIndexPage/>}/>
   <Route path="/solutions/:slug" element={<SolutionDetailPage/>}/>
+  <Route path="/terms" element={<TermsPage/>}/>
   <Route path="/login" element={<LoginPage/>}/>
   <Route path="/forgot-password" element={<ForgotPasswordPage/>}/>
   <Route path="/reset-password" element={<ResetPasswordPage/>}/>

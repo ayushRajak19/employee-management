@@ -301,7 +301,7 @@ export const MarketingNavbar = () => {
         </nav>
 
         {/* Right CTA Actions */}
-        <div className="hidden sm:flex items-center gap-4">
+        <div className="hidden lg:flex items-center gap-4">
           <Link
             to={user ? "/" : "/login"}
             className="text-xs font-semibold text-[#102d2c] hover:text-[#e8623c] transition-colors px-2 py-1"

@@ -382,6 +382,13 @@ export const MarketingFooter = () => {
             Respectful accountability over invasive surveillance · Zero automated personnel decisions.
           </p>
 
+          <Link
+            to="/terms"
+            className="inline-flex min-h-9 items-center text-xs font-medium text-slate-300 transition-colors hover:text-white hover:underline"
+          >
+            Terms &amp; Conditions
+          </Link>
+
           {/* Back to top interactive action */}
           <button
             type="button"
