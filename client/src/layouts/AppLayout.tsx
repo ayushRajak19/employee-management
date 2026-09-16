@@ -94,7 +94,7 @@ const groups: { label: string; items: NavItem[] }[] = [
     items: [
       { label: "Administrators", icon: UserCog, path: "/administrators", roles: superAdminRole },
       { label: "Documents & reports", icon: FileText, path: "/governance", section: "section.governance" },
-      { label: "Access & audit", icon: ShieldCheck, path: "/governance", permission: "audit.view", section: "section.governance" },
+        { label: "Access & audit", icon: ShieldCheck, path: "/governance?tab=audit", permission: "audit.view", section: "section.governance" },
       { label: "Email automation", icon: MailPlus, path: "/email-automation", section: "section.email_automation" },
     ],
   },
@@ -139,6 +139,10 @@ export const AppLayout = () => {
   const allVisiblePaths = visibleGroups.flatMap((g) => g.items.map((i) => i.path));
 
   const isItemActive = (itemPath: string) => {
+    if (itemPath.startsWith("/governance")) {
+      return location.pathname === "/governance" &&
+        (itemPath.includes("tab=audit") === (new URLSearchParams(location.search).get("tab") === "audit"));
+    }
     if (itemPath === "/") {
       return location.pathname === "/";
     }

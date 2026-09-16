@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, FileLock2, FileText, ShieldCheck, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -13,7 +14,26 @@ export const GovernancePage = () => {
   const { user } = useAuth();
   const isEmployee = user?.role === "EMPLOYEE";
   const qc = useQueryClient();
-  const [tab, setTab] = useState<Tab>("documents");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const availableTabs: Tab[] = [
+    "documents",
+    ...(user?.permissions.includes("report.view") ? ["reports" as const] : []),
+    ...(user?.permissions.includes("audit.view") ? ["audit" as const] : []),
+  ];
+  const queryTab = searchParams.get("tab") as Tab | null;
+  const tab: Tab = queryTab && availableTabs.includes(queryTab) ? queryTab : "documents";
+
+  const setTab = (nextTab: Tab) => {
+    setSearchParams((prev) => {
+      const updated = new URLSearchParams(prev);
+      if (nextTab === "documents") {
+        updated.delete("tab");
+      } else {
+        updated.set("tab", nextTab);
+      }
+      return updated;
+    }, { replace: true });
+  };
   const [uploadOpen, setUploadOpen] = useState(false);
   const [employee, setEmployee] = useState("");
   const [category, setCategory] = useState<(typeof documentCategories)[number]>("RESUME");
@@ -53,7 +73,7 @@ export const GovernancePage = () => {
         <p className="mt-2 text-sm text-slate-500">Private employee records and traceable management actions stay authorization-scoped.</p>
       </div>
       <div className="mt-7 flex gap-1 rounded-xl border bg-white p-1">
-        {(["documents", ...(user?.permissions.includes("report.view") ? ["reports"] : []), ...(user?.permissions.includes("audit.view") ? ["audit"] : [])] as Tab[]).map((key) =>
+        {availableTabs.map((key) =>
           <button key={key} className={`h-10 rounded-lg px-4 text-sm capitalize ${tab === key ? "bg-ink text-white" : "text-slate-500"}`} onClick={() => setTab(key)}>{key}</button>
         )}
       </div>

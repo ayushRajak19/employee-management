@@ -115,7 +115,23 @@ export const GeographicSalesPage = () => {
           leadCount: summary.leads,
           customerCount: summary.customers,
           actualRevenue: Object.values(summary.revenue).reduce((total, value) => total + value, 0),
-        } as unknown as GeographicRollupNode];
+          assignedTarget: 0,
+          salesQuantity: 0,
+          salesTransactionCount: 0,
+          targetPacingPercentage: 0,
+          pipelineValue: 0,
+          leadConversionRate: 0,
+          activeHeadcount: 0,
+          channelPartnerCount: 0,
+          configuredCapacityPerRep: 50,
+          requiredHeadcount: 0,
+          headcountGap: 0,
+          isCapacityBottleneck: false,
+          estimatedOpportunityLost: 0,
+          whiteSpaceRecommendation: "MARKET_SUMMARY",
+          capacityUtilization: 0,
+          capacityStatus: "HEALTHY" as const,
+        } satisfies GeographicRollupNode];
       });
       return [...hierarchyChildren, ...fallbackCountries];
   }, [currentNode, hierarchyChildren, countryPinsQuery.data?.items]);
@@ -128,6 +144,7 @@ export const GeographicSalesPage = () => {
 
   // Handle drilldown into a child node
   const handleDrillDown = (nodeId: string) => {
+    if (nodeId.startsWith("market-")) return;
     setCurrentGeoId(nodeId);
     setSelectedNode(null);
   };
@@ -466,10 +483,11 @@ export const GeographicSalesPage = () => {
                           </button>
                           <Button
                             variant="secondary"
+                            disabled={child._id.startsWith("market-")}
                             onClick={() => handleDrillDown(child._id)}
                             className="gap-1 text-xs"
                           >
-                            <span>Drill Down</span>
+                            <span>{child._id.startsWith("market-") ? "Market summary" : "Drill Down"}</span>
                             <ArrowRight size={13} />
                           </Button>
                         </div>
@@ -486,7 +504,7 @@ export const GeographicSalesPage = () => {
               ancestors={ancestors}
               onClose={() => setSelectedNode(null)}
               onDrillDown={handleDrillDown}
-              canDrillDown={Boolean(selectedNode && childrenNodes.some((c) => c._id === selectedNode._id))}
+              canDrillDown={Boolean(selectedNode && !selectedNode._id.startsWith("market-") && childrenNodes.some((c) => c._id === selectedNode._id))}
             />
           </div>
         )}
