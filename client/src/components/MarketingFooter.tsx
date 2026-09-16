@@ -389,6 +389,13 @@ export const MarketingFooter = () => {
             Terms &amp; Conditions
           </Link>
 
+          <Link
+            to="/privacy"
+            className="inline-flex min-h-9 items-center text-xs font-medium text-slate-300 transition-colors hover:text-white hover:underline"
+          >
+            Privacy Policy
+          </Link>
+
           {/* Back to top interactive action */}
           <button
             type="button"
