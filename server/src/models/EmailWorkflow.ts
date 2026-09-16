@@ -3,6 +3,11 @@ import { tenantModel } from "../tenancy/tenantModel.js";
 
 export const EMAIL_WORKFLOW_STATUSES = ["DRAFT", "ACTIVE", "PAUSED"] as const;
 export interface EmailWorkflowDocument {
+  kind: "SEQUENCE" | "BROADCAST";
+  audienceSource?: string;
+  recipientCount?: number;
+  scheduledAt?: Date;
+  clientRequestId?: string;
   name: string;
   audience: string;
   subject: string;
@@ -16,6 +21,11 @@ export interface EmailWorkflowDocument {
   activatedAt?: Date;
 }
 const schema = new Schema<EmailWorkflowDocument>({
+  kind: { type: String, enum: ["SEQUENCE", "BROADCAST"], default: "SEQUENCE", index: true },
+  audienceSource: { type: String, trim: true, maxlength: 200 },
+  recipientCount: { type: Number, min: 0 },
+  scheduledAt: Date,
+  clientRequestId: { type: String, unique: true, sparse: true },
   name: { type: String, required: true, trim: true, maxlength: 160 },
   audience: { type: String, required: true, trim: true, maxlength: 160 },
   subject: { type: String, required: true, trim: true, maxlength: 250 },

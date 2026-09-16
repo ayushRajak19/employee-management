@@ -16,6 +16,7 @@ import { deliveryState, normalizeDeliveryEvent, type DeliveryEvent } from "../ut
 
 type WorkflowInput = Pick<EmailWorkflowDocument, "name" | "audience" | "subject" | "message" | "followUp" | "delayDays" | "followUpSubject" | "followUpMessage">;
 type ContactInput = Pick<VendorContactDocument, "name" | "companyName" | "email" | "source" | "consentAt">;
+type BroadcastInput = { clientRequestId: string; name: string; subject: string; message: string; source?: string; scheduledAt?: Date };
 type BrevoResponse = { messageId?: string; code?: string; message?: string };
 type WebhookInput = { event?: string; email?: string; reason?: string; ts_event?: number; ts?: number; "message-id"?: string };
 type BrevoEmailEvent = { date?: string; email?: string; event?: string; messageId?: string; reason?: string };
@@ -217,6 +218,28 @@ export const listDeliveries = async () => {
   return items.map((item) => ({ ...item, lastError: null, ...deliveryState(item.events), events: undefined }));
 };
 export const listWorkflows = () => EmailWorkflow.find().sort({ createdAt: -1 }).lean();
+const broadcastAudienceFilter = (source?: string) => ({ status: "ACTIVE" as const, consentAt: { $lte: new Date() }, ...(source ? { source } : {}) });
+export const previewBroadcastAudience = async (source?: string) => { const filter = broadcastAudienceFilter(source); const [count, sample] = await Promise.all([VendorContact.countDocuments(filter), VendorContact.find(filter).select("name companyName email source").sort({ createdAt: -1 }).limit(5).lean()]); return { count, sample }; };
+export const listBroadcasts = async () => {
+  const items = await EmailWorkflow.find({ kind: "BROADCAST" }).sort({ createdAt: -1 }).limit(100).lean();
+  return Promise.all(items.map(async (item) => { const [pending, accepted, delivered, failed, stopped] = await Promise.all([EmailEnrollment.countDocuments({ workflow: item._id, status: { $in: ["PENDING", "PROCESSING"] } }), EmailDelivery.countDocuments({ workflow: item._id }), EmailDelivery.countDocuments({ workflow: item._id, "events.type": "delivered" }), EmailEnrollment.countDocuments({ workflow: item._id, status: "FAILED" }), EmailEnrollment.countDocuments({ workflow: item._id, status: "STOPPED" })]); return { ...item, progress: { pending, accepted, delivered, failed, stopped } }; }));
+};
+export const createBroadcast = async (input: BroadcastInput, actor: string) => {
+  const existing = await EmailWorkflow.findOne({ clientRequestId: input.clientRequestId });
+  if (existing?.status === "ACTIVE") return { item: existing, recipientCount: existing.recipientCount ?? 0 };
+  if (existing?.status === "PAUSED") throw new AppError("This broadcast was cancelled and cannot be requeued", 409, "BROADCAST_CANCELLED");
+  if (existing && (existing.kind !== "BROADCAST" || existing.subject !== input.subject || existing.message !== input.message || existing.audienceSource !== input.source)) throw new AppError("This broadcast request has already been used", 409, "BROADCAST_REQUEST_CONFLICT");
+  const sender = await requireConfiguration(); await requireSendingEnabled(sender);
+  const contacts = await VendorContact.find(broadcastAudienceFilter(input.source)).select("_id").lean();
+  if (!contacts.length) throw new AppError("No active, consented contacts match this audience", 409, "NO_BROADCAST_RECIPIENTS");
+  const scheduledAt = input.scheduledAt && input.scheduledAt > new Date() ? input.scheduledAt : new Date();
+  const item = existing ?? await EmailWorkflow.create({ kind: "BROADCAST", clientRequestId: input.clientRequestId, name: input.name, audience: input.source ? `Source: ${input.source}` : "All active contacts", audienceSource: input.source, subject: input.subject, message: input.message, followUp: false, delayDays: 1, recipientCount: contacts.length, scheduledAt, status: "DRAFT", createdBy: actor });
+  await EmailEnrollment.bulkWrite(contacts.map((contact) => ({ updateOne: { filter: { workflow: item._id, contact: contact._id }, update: { $setOnInsert: { step: 0, status: "PENDING", nextRunAt: scheduledAt, attempts: 0 } }, upsert: true } })));
+  item.status = "ACTIVE"; item.recipientCount = contacts.length; item.scheduledAt = scheduledAt; item.activatedAt = new Date(); await item.save();
+  await writeAudit({ user: actor as never, action: "EMAIL_BROADCAST_QUEUED", entityType: "EmailWorkflow", entityId: item.id, newValue: { recipientCount: contacts.length, source: input.source ?? "ALL", scheduledAt } });
+  void runEmailAutomationCycle(); return { item, recipientCount: contacts.length };
+};
+export const cancelBroadcast = async (id: string, actor: string) => { const item = await EmailWorkflow.findOne({ _id: id, kind: "BROADCAST" }); if (!item) throw new AppError("Broadcast not found", 404); item.status = "PAUSED"; await item.save(); const result = await EmailEnrollment.updateMany({ workflow: item._id, status: "PENDING" }, { $set: { status: "STOPPED" } }); await writeAudit({ user: actor as never, action: "EMAIL_BROADCAST_CANCELLED", entityType: "EmailWorkflow", entityId: item.id, newValue: { stopped: result.modifiedCount } }); return { item, stopped: result.modifiedCount }; };
 export const createWorkflow = async (input: WorkflowInput, actor: string) => {
   const item = await EmailWorkflow.create({ ...input, createdBy: actor });
   await writeAudit({ user: actor as never, action: "EMAIL_WORKFLOW_CREATED", entityType: "EmailWorkflow", entityId: item.id, newValue: input });
@@ -225,6 +248,7 @@ export const createWorkflow = async (input: WorkflowInput, actor: string) => {
 export const updateWorkflow = async (id: string, input: Partial<WorkflowInput>, actor: string) => {
   const item = await EmailWorkflow.findById(id);
   if (!item) throw new AppError("Email workflow not found", 404);
+  if (item.kind === "BROADCAST") throw new AppError("Broadcasts are queued from the broadcast composer", 409, "BROADCAST_REACTIVATION_BLOCKED");
   if (item.status === "ACTIVE") throw new AppError("Pause the workflow before editing it", 409, "WORKFLOW_ACTIVE");
   const oldValue = item.toObject(); Object.assign(item, input); await item.save();
   await writeAudit({ user: actor as never, action: "EMAIL_WORKFLOW_UPDATED", entityType: "EmailWorkflow", entityId: item.id, oldValue, newValue: input });
@@ -269,7 +293,7 @@ export const addContacts = async (inputs: ContactInput[], actor: string) => {
     if (existing) { existing.name = input.name; existing.companyName = input.companyName; existing.source = input.source; existing.consentAt = input.consentAt; if (existing.status === "BOUNCED") existing.status = "ACTIVE"; contact = await existing.save(); results.updated += 1; }
     else { contact = await VendorContact.create({ ...input, createdBy: actor }); results.created += 1; }
     if (contact.status === "ACTIVE") {
-      const activeWorkflows = await EmailWorkflow.find({ status: "ACTIVE" }).select("_id").lean();
+      const activeWorkflows = await EmailWorkflow.find({ status: "ACTIVE", kind: { $ne: "BROADCAST" } }).select("_id").lean();
       if (activeWorkflows.length) await EmailEnrollment.bulkWrite(activeWorkflows.map((workflow) => ({ updateOne: { filter: { workflow: workflow._id, contact: contact._id }, update: { $setOnInsert: { step: 0, status: "PENDING", nextRunAt: new Date(), attempts: 0 } }, upsert: true } })));
     }
   }
@@ -322,7 +346,7 @@ const processOne = async (sender: SenderConfiguration) => {
   try {
     const [workflow, contact] = await Promise.all([EmailWorkflow.findById(enrollment.workflow), VendorContact.findById(enrollment.contact).select("+unsubscribeToken")]);
     if (!workflow || !contact || contact.status !== "ACTIVE") { enrollment.status = "STOPPED"; await enrollment.save(); return true; }
-    if (workflow.status === "PAUSED") { enrollment.status = "PENDING"; enrollment.nextRunAt = new Date(Date.now() + 5 * 60_000); enrollment.lockedAt = undefined; await enrollment.save(); return true; }
+    if (workflow.status === "PAUSED") { enrollment.status = workflow.kind === "BROADCAST" ? "STOPPED" : "PENDING"; enrollment.nextRunAt = new Date(Date.now() + 5 * 60_000); enrollment.lockedAt = undefined; await enrollment.save(); return true; }
     if (workflow.status !== "ACTIVE") { enrollment.status = "STOPPED"; await enrollment.save(); return true; }
     const followUp = enrollment.step === 1;
     if (followUp && contact.repliedAt) { enrollment.status = "STOPPED"; await enrollment.save(); return true; }

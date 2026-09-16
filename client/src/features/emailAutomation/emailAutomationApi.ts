@@ -1,7 +1,7 @@
 import { api } from "@/api/client";
 
 export type WorkflowStatus = "DRAFT" | "ACTIVE" | "PAUSED";
-export interface EmailWorkflowItem { _id: string; name: string; audience: string; subject: string; message: string; followUp: boolean; delayDays: number; followUpSubject?: string; followUpMessage?: string; status: WorkflowStatus; createdAt: string }
+export interface EmailWorkflowItem { _id: string; kind?: "SEQUENCE" | "BROADCAST"; name: string; audience: string; subject: string; message: string; followUp: boolean; delayDays: number; followUpSubject?: string; followUpMessage?: string; status: WorkflowStatus; createdAt: string }
 export interface VendorContactItem { _id: string; name: string; companyName: string; email: string; source: string; consentAt: string; status: "ACTIVE" | "REPLIED" | "UNSUBSCRIBED" | "BOUNCED" | "BLOCKED"; repliedAt?: string; createdAt: string }
 export interface AutomationConfiguration { configured: boolean; providerConfigured: boolean; provider: "BREVO" | "GMAIL" | null; googleAvailable: boolean; sendingEnabled: boolean | null; sendingStatusError: string | null; senderEmail: string | null; senderName: string | null; replyToEmail: string | null; webhookConfigured: boolean; webhookUrl: string; dailyLimit: number }
 export interface AutomationConfigurationInput { apiKey?: string; senderName: string; senderEmail: string; replyToEmail: string }
@@ -9,6 +9,9 @@ export interface AutomationSummary { workflows: number; active: number; contacts
 export interface EmailDeliveryItem { _id: string; provider?: "BREVO" | "GMAIL"; recipientEmail: string; subject: string; status: string; lastEventAt: string; createdAt: string; step: number; lastError?: string | null }
 export interface WorkflowInput { name: string; audience: string; subject: string; message: string; followUp: boolean; delayDays: number; followUpSubject?: string; followUpMessage?: string }
 export interface VendorInput { name: string; companyName: string; email: string; source: string; consentAt: string }
+export interface BroadcastInput { clientRequestId: string; name: string; subject: string; message: string; source?: string; scheduledAt?: string }
+export interface BroadcastItem extends EmailWorkflowItem { kind: "BROADCAST"; recipientCount: number; scheduledAt: string; progress: { pending: number; accepted: number; delivered: number; failed: number; stopped: number } }
+export interface BroadcastAudience { count: number; sample: Pick<VendorContactItem, "name" | "companyName" | "email" | "source">[] }
 
 export const emailAutomationApi = {
   connectGoogle: () => api.post<{ url: string }>("/api/v1/email-automation/google/connect"),
@@ -21,6 +24,10 @@ export const emailAutomationApi = {
   summary: () => api.get<AutomationSummary>("/api/v1/email-automation/summary"),
   deliveries: () => api.get<{ items: EmailDeliveryItem[] }>("/api/v1/email-automation/deliveries"),
   workflows: () => api.get<{ items: EmailWorkflowItem[] }>("/api/v1/email-automation/workflows"),
+  broadcasts: () => api.get<{ items: BroadcastItem[] }>("/api/v1/email-automation/broadcasts"),
+  broadcastAudience: (source?: string) => api.get<BroadcastAudience>(`/api/v1/email-automation/broadcasts/audience${source ? `?source=${encodeURIComponent(source)}` : ""}`),
+  createBroadcast: (body: BroadcastInput) => api.post<{ item: BroadcastItem; recipientCount: number }>("/api/v1/email-automation/broadcasts", body),
+  cancelBroadcast: (id: string) => api.post<{ item: BroadcastItem; stopped: number }>(`/api/v1/email-automation/broadcasts/${id}/cancel`),
   createWorkflow: (body: WorkflowInput) => api.post<{ item: EmailWorkflowItem }>("/api/v1/email-automation/workflows", body),
   updateWorkflow: (id: string, body: Partial<WorkflowInput>) => api.patch<{ item: EmailWorkflowItem }>(`/api/v1/email-automation/workflows/${id}`, body),
   deleteWorkflow: (id: string) => api.delete<Record<string, never>>(`/api/v1/email-automation/workflows/${id}`),

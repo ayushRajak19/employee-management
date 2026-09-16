@@ -3,7 +3,7 @@ import * as controller from "../controllers/emailAutomationController.js";
 import { authenticate } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { contactStatusSchema, contactsSchema, createWorkflowSchema, emailConfigurationSchema, testEmailSchema, updateWorkflowSchema, workflowIdSchema } from "../validators/emailAutomationValidators.js";
+import { broadcastAudienceSchema, contactStatusSchema, contactsSchema, createBroadcastSchema, createWorkflowSchema, emailConfigurationSchema, testEmailSchema, updateWorkflowSchema, workflowIdSchema } from "../validators/emailAutomationValidators.js";
 
 export const emailAutomationRouter = Router();
 emailAutomationRouter.post("/webhooks/brevo", asyncHandler(controller.brevoWebhook));
@@ -19,6 +19,10 @@ emailAutomationRouter.post("/connection/webhook", asyncHandler(controller.regist
 emailAutomationRouter.post("/test-email", validate(testEmailSchema), asyncHandler(controller.sendTest));
 emailAutomationRouter.get("/summary", asyncHandler(controller.getSummary));
 emailAutomationRouter.get("/deliveries", asyncHandler(controller.getDeliveries));
+emailAutomationRouter.get("/broadcasts/audience", validate(broadcastAudienceSchema), asyncHandler(controller.getBroadcastAudience));
+emailAutomationRouter.get("/broadcasts", asyncHandler(controller.getBroadcasts));
+emailAutomationRouter.post("/broadcasts", validate(createBroadcastSchema), asyncHandler(controller.createBroadcast));
+emailAutomationRouter.post("/broadcasts/:id/cancel", validate(workflowIdSchema), asyncHandler(controller.cancelBroadcast));
 emailAutomationRouter.get("/workflows", asyncHandler(controller.getWorkflows));
 emailAutomationRouter.post("/workflows", validate(createWorkflowSchema), asyncHandler(controller.createWorkflow));
 emailAutomationRouter.patch("/workflows/:id", validate(updateWorkflowSchema), asyncHandler(controller.updateWorkflow));

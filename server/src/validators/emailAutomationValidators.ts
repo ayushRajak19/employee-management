@@ -14,6 +14,15 @@ const workflowBody = z.object({
 export const createWorkflowSchema = z.object({ body: workflowBody });
 export const updateWorkflowSchema = z.object({ params: z.object({ id: objectId }), body: workflowBody.partial().refine((value) => Object.keys(value).length > 0, "Provide at least one field") });
 export const workflowIdSchema = z.object({ params: z.object({ id: objectId }) });
+export const broadcastAudienceSchema = z.object({ query: z.object({ source: z.string().trim().min(1).max(200).optional() }) });
+export const createBroadcastSchema = z.object({ body: z.object({
+  clientRequestId: z.string().uuid(),
+  name: z.string().trim().min(3).max(160),
+  subject: z.string().trim().min(2).max(250),
+  message: z.string().trim().min(5).max(20_000),
+  source: z.string().trim().min(1).max(200).optional(),
+  scheduledAt: z.coerce.date().refine((value) => value.getTime() <= Date.now() + 30 * 86_400_000, "Schedule within 30 days").optional(),
+}) });
 const contact = z.object({
   name: z.string().trim().min(1).max(120),
   companyName: z.string().trim().min(1).max(160),
