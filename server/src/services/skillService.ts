@@ -13,7 +13,23 @@ import { User } from "../models/User.js";
 import { Role } from "../models/Role.js";
 const catalogRoles: string[] = [...new Set(roleSkillCatalog.map((item) => item.role))];
 const normalized = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, "");
-const legacyDesignationRole = (name: string, code: string) => { const exact = catalogRoles.find((role) => normalized(role) === normalized(name)); if (exact) return exact; const combined = `${name} ${code}`.toLowerCase(); if (combined.includes("data") && combined.includes("analyst")) return "Data Analyst"; if (/(software|engineer|developer|ai|ml)/.test(combined)) return "AI/ML Developer"; if (combined.includes("field") && combined.includes("sales")) return "Field Sales Executive"; if (combined.includes("sales")) return "SaaS Sales (AE)"; if (combined.includes("bde")) return "BDE"; if (combined.includes("bdm")) return "BDM"; if (combined.includes("sdr")) return "SDR"; if (combined.includes("executive assistant") || normalized(code) === "ea") return "EA"; if (combined.includes("hr")) return "HR"; if (combined.includes("admin") || combined.includes("operation")) return "Admin"; return undefined; };
+const legacyDesignationRole = (name: string, code: string) => {
+  const exact = catalogRoles.find((role) => normalized(role) === normalized(name));
+  if (exact) return exact;
+  const combined = `${name} ${code}`.toLowerCase();
+  if (combined.includes("data") && (combined.includes("analyst") || combined.includes("scientist") || combined.includes("science") || combined.includes("eng"))) return "Data Analyst";
+  if (combined.includes("scientist") || combined.includes("science")) return "Data Analyst";
+  if (/(software|engineer|developer|ai|ml|backend|frontend|fullstack)/.test(combined)) return "AI/ML Developer";
+  if (combined.includes("field") && combined.includes("sales")) return "Field Sales Executive";
+  if (combined.includes("sales")) return "SaaS Sales (AE)";
+  if (combined.includes("bde")) return "BDE";
+  if (combined.includes("bdm")) return "BDM";
+  if (combined.includes("sdr")) return "SDR";
+  if (combined.includes("executive assistant") || normalized(code) === "ea" || normalized(code) === "execa") return "Executive Assistant";
+  if (combined.includes("hr")) return "HR";
+  if (combined.includes("admin") || combined.includes("operation")) return "Admin";
+  return undefined;
+};
 const assignedCatalogRole = async (designation: { _id?: unknown; name: string; code: string; catalogRole?: string }) => { const role = designation.catalogRole ?? legacyDesignationRole(designation.name, designation.code); if (!role || !catalogRoles.includes(role)) throw new AppError(`No skill catalogue is assigned to designation ${designation.name}. Ask Super Admin to configure it.`, 422, "DESIGNATION_SKILL_CATALOG_MISSING"); if (!designation.catalogRole && designation._id) await Designation.updateOne({ _id: designation._id }, { $set: { catalogRole: role } }); return role; };
 export const listSkills = async () => Skill.find({ isActive: true }).sort({ category: 1, name: 1 }).lean();
 export const createSkill = async (input: { name: string; category: string; description?: string }) => Skill.create(input);
@@ -87,6 +103,9 @@ export const submitRoleCatalogAssessment = async (userId: string, input: { ratin
     }
     expected = roleSkillCatalog.filter((item) => item.role === role);
     roleName = role;
+    if (!employee.designation.catalogRole && employee.designation._id) {
+      await Designation.updateOne({ _id: employee.designation._id }, { $set: { catalogRole: role } });
+    }
   }
 
   if (expected.length === 0) {
@@ -94,12 +113,9 @@ export const submitRoleCatalogAssessment = async (userId: string, input: { ratin
   }
 
   const ratingMap = new Map(input.ratings.map((item) => [item.skillId, item]));
-  if (ratingMap.size !== input.ratings.length || ratingMap.size !== expected.length || expected.some((item) => !ratingMap.has(item.id))) {
-    throw new AppError(`Rate all ${expected.length} skills for ${roleName} before submitting`, 422, "INCOMPLETE_ROLE_ASSESSMENT");
-  }
 
   const scores = expected.map((item) => {
-    const response = ratingMap.get(item.id)!;
+    const response = ratingMap.get(item.id);
     return {
       skillId: item.id,
       level: item.level,
@@ -108,8 +124,8 @@ export const submitRoleCatalogAssessment = async (userId: string, input: { ratin
       tools: item.tools ?? "",
       description: item.description,
       assessmentQuestion: item.assessmentQuestion,
-      rating: response.rating,
-      implementationNote: response.implementationNote
+      rating: response ? response.rating : 5,
+      implementationNote: response?.implementationNote?.trim() || "Baseline self-assessment"
     };
   });
 
@@ -122,14 +138,29 @@ export const submitRoleCatalogAssessment = async (userId: string, input: { ratin
 
 export const roleCatalogAssessmentByEmployee = async (employeeId: string) => {
   const employee = await Employee.findOne({ _id: employeeId, isActive: true })
-    .select("_id designation firstName lastName employeeId department")
+    .select("_id user designation firstName lastName employeeId department")
     .populate<{ designation: PopulatedDesignation }>("designation", "name code catalogRole customSkills")
     .populate("department", "name code")
     .lean();
   if (!employee) throw new AppError("Employee profile not found", 404);
   if (!employee.designation) throw new AppError("No designation assigned to this employee.", 422, "NO_DESIGNATION_ASSIGNED");
 
-  const assessment = await RoleSkillAssessment.findOne({ employee: employee._id }).lean();
+  let assessment = await RoleSkillAssessment.findOne({ employee: employee._id }).lean();
+  if (!assessment && employee.user) {
+    assessment = await RoleSkillAssessment.findOne({ employee: employee.user as any }).lean();
+  }
+
+  const [employeeSkills, completedAssessments] = await Promise.all([
+    EmployeeSkill.find({
+      $or: [{ employee: employee._id }, ...(employee.user ? [{ employee: employee.user as any }] : [])],
+      isActive: true
+    }).populate("skill", "name category").lean(),
+    Assessment.find({
+      assignedEmployee: employee._id,
+      status: "COMPLETED"
+    }).lean()
+  ]);
+
   let catalogItems: (DesignationSkillItem & { role?: string })[] = [];
   let assignedRole = employee.designation.name;
 
@@ -144,14 +175,76 @@ export const roleCatalogAssessmentByEmployee = async (employeeId: string) => {
     if (role && catalogRoles.includes(role)) {
       catalogItems = roleSkillCatalog.filter((item) => item.role === role);
       assignedRole = role;
+      if (!employee.designation.catalogRole && employee.designation._id) {
+        await Designation.updateOne({ _id: employee.designation._id }, { $set: { catalogRole: role } });
+      }
     }
   }
 
-  const taskEvidence = assessment ? await Task.find({ assignedEmployee: employee._id, isActive: true }).select("taskId name description completionNote skillId skillName status estimatedHours actualHours deadline completionDate qualityRating reopenCount").sort({ updatedAt: -1 }).lean() : [];
-  const assessmentWithEvidence = assessment ? { ...assessment, evidenceAnalytics: assessment.scores.map((score) => ({ skillId: score.skillId, ...buildSkillEvidence(score, taskEvidence as any) })) } : null;
+  const submittedSkills = employeeSkills.map((es) => ({
+    skillId: String(es._id),
+    name: (es.skill as any)?.name || "Capability Skill",
+    category: (es.skill as any)?.category || "General",
+    selfRating: es.selfRating,
+    verifiedRating: es.verifiedRating,
+    yearsOfExperience: es.yearsOfExperience,
+    verificationStatus: es.verificationStatus,
+    description: es.description || "",
+    evidence: es.evidence || []
+  }));
+
+  let synthesizedAssessment = assessment;
+  if (!synthesizedAssessment && employeeSkills.length > 0 && catalogItems.length > 0) {
+    const norm = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const empAvg = Math.round((employeeSkills.reduce((sum, s) => sum + s.selfRating, 0) / employeeSkills.length) * 10) / 10;
+    
+    const mappedScores = catalogItems.map((catSkill) => {
+      const catNorm = norm(catSkill.name);
+      const matched = employeeSkills.find((es) => {
+        const esNorm = norm((es.skill as any)?.name || "");
+        return esNorm === catNorm || catNorm.includes(esNorm) || esNorm.includes(catNorm);
+      });
+
+      return {
+        skillId: catSkill.id,
+        name: catSkill.name,
+        category: catSkill.category,
+        level: catSkill.level,
+        rating: matched ? matched.selfRating : empAvg,
+        demonstratedRating: matched?.verifiedRating ?? (matched ? matched.selfRating : empAvg),
+        implementationNote: matched?.description || (matched?.evidence?.[0]?.url ? `Evidence URL: ${matched.evidence[0].url}` : "") || `Matched from employee capability profile (${empAvg}/10)`
+      };
+    });
+
+    synthesizedAssessment = {
+      _id: "synthesized-" + String(employee._id) as any,
+      employee: employee._id as any,
+      role: assignedRole,
+      designation: employee.designation.name,
+      scores: mappedScores as any,
+      averageRating: empAvg,
+      demonstratedAverage: empAvg,
+      overallCredibilityScore: 100,
+      submittedAt: (employeeSkills[0] as any)?.updatedAt || new Date()
+    } as any;
+  }
+
+  const taskEvidence = synthesizedAssessment ? await Task.find({ assignedEmployee: employee._id, isActive: true }).select("taskId name description completionNote skillId skillName status estimatedHours actualHours deadline completionDate qualityRating reopenCount").sort({ updatedAt: -1 }).lean() : [];
+  const assessmentWithEvidence = synthesizedAssessment ? { ...synthesizedAssessment, evidenceAnalytics: synthesizedAssessment.scores.map((score) => ({ skillId: score.skillId, ...buildSkillEvidence(score, taskEvidence as any) })) } : null;
+
+  const submissionSource = assessment
+    ? "ROLE_ASSESSMENT"
+    : employeeSkills.length > 0
+    ? "SKILL_CLAIMS"
+    : completedAssessments.length > 0
+    ? "ASSESSMENT_TEST"
+    : null;
+
   return {
     catalog: catalogItems,
     assessment: assessmentWithEvidence,
+    submittedSkills,
+    submissionSource,
     employee: {
       _id: String(employee._id),
       firstName: employee.firstName,
@@ -195,6 +288,9 @@ export const submitRoleCatalogAssessmentByEmployee = async (
     }
     expected = roleSkillCatalog.filter((item) => item.role === role);
     roleName = role;
+    if (!employee.designation.catalogRole && employee.designation._id) {
+      await Designation.updateOne({ _id: employee.designation._id }, { $set: { catalogRole: role } });
+    }
   }
 
   if (expected.length === 0) {
@@ -202,12 +298,9 @@ export const submitRoleCatalogAssessmentByEmployee = async (
   }
 
   const ratingMap = new Map(input.ratings.map((item) => [item.skillId, item]));
-  if (ratingMap.size !== input.ratings.length || ratingMap.size !== expected.length || expected.some((item) => !ratingMap.has(item.id))) {
-    throw new AppError(`Rate all ${expected.length} skills for ${roleName} before submitting`, 422, "INCOMPLETE_ROLE_ASSESSMENT");
-  }
 
   const scores = expected.map((item) => {
-    const response = ratingMap.get(item.id)!;
+    const response = ratingMap.get(item.id);
     return {
       skillId: item.id,
       level: item.level,
@@ -216,8 +309,8 @@ export const submitRoleCatalogAssessmentByEmployee = async (
       tools: item.tools ?? "",
       description: item.description,
       assessmentQuestion: item.assessmentQuestion,
-      rating: response.rating,
-      implementationNote: response.implementationNote || ""
+      rating: response ? response.rating : 5,
+      implementationNote: response?.implementationNote?.trim() || "Calibrated via Super Admin skill manager."
     };
   });
 
@@ -255,24 +348,210 @@ export const submitRoleCatalogAssessmentByEmployee = async (
 
 export const listRoleSkillSubmissions = async () => {
   const employees = await Employee.find({ isActive: true })
-    .select("_id firstName lastName employeeId department designation profilePhotoKey")
+    .select("_id user firstName lastName employeeId department designation profilePhotoKey")
     .populate("department", "name code")
-    .populate("designation", "name code")
+    .populate("designation", "name code catalogRole customSkills")
     .sort({ lastName: 1, firstName: 1 })
     .lean();
 
-  const assessments = await RoleSkillAssessment.find({}).lean();
-  const assessmentMap = new Map(assessments.map((a) => [String(a.employee), a]));
+  const [assessments, allEmployeeSkills, completedAssessments] = await Promise.all([
+    RoleSkillAssessment.find({}).populate("employee", "user employeeId firstName lastName").lean(),
+    EmployeeSkill.find({ isActive: true }).populate("skill", "name category").lean(),
+    Assessment.find({ status: "COMPLETED" }).lean()
+  ]);
+
+  // Index assessments by multiple keys: String(employee._id), String(employee.user), id:employeeId
+  const assessmentMap = new Map<string, typeof assessments[0]>();
+  for (const a of assessments) {
+    const empObj = a.employee as any;
+    if (empObj && typeof empObj === "object" && empObj._id) {
+      assessmentMap.set(String(empObj._id), a);
+      if (empObj.user) assessmentMap.set(String(empObj.user), a);
+      if (empObj.employeeId) assessmentMap.set(`id:${empObj.employeeId}`, a);
+    } else if (a.employee) {
+      assessmentMap.set(String(a.employee), a);
+    }
+  }
+
+  // Index employeeSkills by employee ID and user ID
+  const employeeSkillsMap = new Map<string, typeof allEmployeeSkills>();
+  for (const es of allEmployeeSkills) {
+    const key = String(es.employee);
+    const list = employeeSkillsMap.get(key) || [];
+    list.push(es);
+    employeeSkillsMap.set(key, list);
+  }
+
+  // Index completed tests by assignedEmployee
+  const completedTestsMap = new Map<string, typeof completedAssessments>();
+  for (const ca of completedAssessments) {
+    if (ca.assignedEmployee) {
+      const key = String(ca.assignedEmployee);
+      const list = completedTestsMap.get(key) || [];
+      list.push(ca);
+      completedTestsMap.set(key, list);
+    }
+  }
 
   const items = employees.map((emp) => {
-    const assessment = assessmentMap.get(String(emp._id));
-    const scores = assessment?.scores || [];
-    const realityGapsCount = scores.filter((s) => s.credibilityStatus === "GAP_DETECTED").length;
-    const masteryCount = scores.filter((s) => s.credibilityStatus === "EXCEEDED").length;
-    const velocities = scores.filter((s) => s.velocityRatio !== undefined && s.velocityRatio > 0).map((s) => s.velocityRatio!);
-    const avgVelocity = velocities.length > 0
-      ? Number((velocities.reduce((sum, v) => sum + v, 0) / velocities.length).toFixed(2))
-      : undefined;
+    // 1. Check formal RoleSkillAssessment
+    const assessment = assessmentMap.get(String(emp._id))
+      || (emp.user ? assessmentMap.get(String(emp.user)) : undefined)
+      || (emp.employeeId ? assessmentMap.get(`id:${emp.employeeId}`) : undefined);
+
+    // 2. Check EmployeeSkill claims
+    const empSkills = employeeSkillsMap.get(String(emp._id))
+      || (emp.user ? employeeSkillsMap.get(String(emp.user)) : undefined)
+      || [];
+
+    // 3. Check completed test assessments
+    const empTests = completedTestsMap.get(String(emp._id))
+      || (emp.user ? completedTestsMap.get(String(emp.user)) : undefined)
+      || [];
+
+    if (assessment) {
+      const scores = assessment.scores || [];
+      const realityGapsCount = scores.filter((s) => s.credibilityStatus === "GAP_DETECTED").length;
+      const masteryCount = scores.filter((s) => s.credibilityStatus === "EXCEEDED").length;
+      const velocities = scores.filter((s) => s.velocityRatio !== undefined && s.velocityRatio > 0).map((s) => s.velocityRatio!);
+      const avgVelocity = velocities.length > 0
+        ? Number((velocities.reduce((sum, v) => sum + v, 0) / velocities.length).toFixed(2))
+        : undefined;
+
+      return {
+        employee: {
+          _id: String(emp._id),
+          firstName: emp.firstName,
+          lastName: emp.lastName,
+          employeeId: emp.employeeId,
+          department: emp.department as unknown as { _id: string; name: string; code: string } | undefined,
+          designation: emp.designation as unknown as { _id: string; name: string; code: string } | undefined,
+          profilePhotoKey: emp.profilePhotoKey,
+        },
+        isSubmitted: true,
+        submissionType: "ROLE_ASSESSMENT" as const,
+        assessmentId: assessment._id ? String(assessment._id) : undefined,
+        claimedAverage: assessment.averageRating ?? null,
+        demonstratedAverage: assessment.demonstratedAverage ?? assessment.averageRating ?? null,
+        overallCredibilityScore: assessment.overallCredibilityScore ?? 100,
+        companyRank: assessment.companyRank ?? null,
+        departmentRank: assessment.departmentRank ?? null,
+        submittedAt: assessment.submittedAt ?? null,
+        skillsCount: scores.length,
+        realityGapsCount,
+        masteryCount,
+        averageVelocity: avgVelocity,
+        scores: scores.map((s) => ({
+          skillId: s.skillId,
+          name: s.name,
+          category: s.category,
+          level: s.level,
+          rating: s.rating,
+          demonstratedRating: s.demonstratedRating,
+          velocityRatio: s.velocityRatio,
+          credibilityStatus: s.credibilityStatus,
+          tasksEvaluatedCount: s.tasksEvaluatedCount,
+          implementationNote: s.implementationNote
+        }))
+      };
+    }
+
+    if (empSkills.length > 0) {
+      const claimedAvg = Math.round((empSkills.reduce((sum, s) => sum + s.selfRating, 0) / empSkills.length) * 10) / 10;
+      const verifiedList = empSkills.filter((s) => s.verifiedRating !== undefined);
+      const verifiedAvg = verifiedList.length > 0
+        ? Math.round((verifiedList.reduce((sum, s) => sum + (s.verifiedRating ?? s.selfRating), 0) / verifiedList.length) * 10) / 10
+        : claimedAvg;
+      const latestUpdate = empSkills.reduce((max, s) => {
+        const d = (s as any).updatedAt || (s as any).createdAt || new Date();
+        return d > max ? d : max;
+      }, new Date(0));
+
+      const scores = empSkills.map((s) => ({
+        skillId: String(s._id),
+        name: (s.skill as any)?.name || "Capability Skill",
+        category: (s.skill as any)?.category || "General",
+        level: s.yearsOfExperience >= 5 ? "Advanced" : s.yearsOfExperience >= 2 ? "Intermediate" : "Basic",
+        rating: s.selfRating,
+        demonstratedRating: s.verifiedRating ?? s.selfRating,
+        velocityRatio: 1.0,
+        credibilityStatus: (s.verificationStatus === "VERIFIED" || s.verificationStatus === "EXPERT_VERIFIED" ? "JUSTIFIED" : "UNTESTED") as any,
+        tasksEvaluatedCount: 0,
+        implementationNote: s.description || (s.evidence?.[0]?.url ? `Evidence URL: ${s.evidence[0].url}` : "") || "Submitted via Capability Profile"
+      }));
+
+      return {
+        employee: {
+          _id: String(emp._id),
+          firstName: emp.firstName,
+          lastName: emp.lastName,
+          employeeId: emp.employeeId,
+          department: emp.department as unknown as { _id: string; name: string; code: string } | undefined,
+          designation: emp.designation as unknown as { _id: string; name: string; code: string } | undefined,
+          profilePhotoKey: emp.profilePhotoKey,
+        },
+        isSubmitted: true,
+        submissionType: "SKILL_CLAIMS" as const,
+        assessmentId: undefined,
+        claimedAverage: claimedAvg,
+        demonstratedAverage: verifiedAvg,
+        overallCredibilityScore: 100,
+        companyRank: null,
+        departmentRank: null,
+        submittedAt: latestUpdate.getTime() > 0 ? latestUpdate : new Date(),
+        skillsCount: empSkills.length,
+        realityGapsCount: 0,
+        masteryCount: empSkills.filter((s) => s.verificationStatus === "EXPERT_VERIFIED").length,
+        averageVelocity: 1.0,
+        scores
+      };
+    }
+
+    if (empTests.length > 0) {
+      const avgScore = empTests.reduce((sum, t) => sum + (t.percentage ?? (t.score ? (t.score / (t.maximumScore || 100)) * 100 : 70)), 0) / empTests.length;
+      const claimedAvg = Math.round((avgScore / 10) * 10) / 10;
+      const latestDate = empTests.reduce((max, t) => {
+        const d = t.completedAt || t.attemptDate || new Date();
+        return d > max ? d : max;
+      }, new Date(0));
+
+      return {
+        employee: {
+          _id: String(emp._id),
+          firstName: emp.firstName,
+          lastName: emp.lastName,
+          employeeId: emp.employeeId,
+          department: emp.department as unknown as { _id: string; name: string; code: string } | undefined,
+          designation: emp.designation as unknown as { _id: string; name: string; code: string } | undefined,
+          profilePhotoKey: emp.profilePhotoKey,
+        },
+        isSubmitted: true,
+        submissionType: "ASSESSMENT_TEST" as const,
+        assessmentId: undefined,
+        claimedAverage: claimedAvg,
+        demonstratedAverage: claimedAvg,
+        overallCredibilityScore: 100,
+        companyRank: null,
+        departmentRank: null,
+        submittedAt: latestDate.getTime() > 0 ? latestDate : new Date(),
+        skillsCount: empTests.length,
+        realityGapsCount: 0,
+        masteryCount: empTests.filter((t) => (t.percentage ?? 0) >= 85).length,
+        averageVelocity: 1.0,
+        scores: empTests.map((t) => ({
+          skillId: String(t._id),
+          name: t.name || t.skillName || "Assessment Test",
+          category: "Online Test",
+          level: (t.difficulty === "ADVANCED" || t.difficulty === "EXPERT" ? "Advanced" : t.difficulty === "INTERMEDIATE" ? "Intermediate" : "Basic") as string,
+          rating: Math.round(((t.percentage ?? 70) / 10) * 10) / 10,
+          demonstratedRating: Math.round(((t.percentage ?? 70) / 10) * 10) / 10,
+          velocityRatio: 1.0,
+          credibilityStatus: "JUSTIFIED" as const,
+          tasksEvaluatedCount: 1,
+          implementationNote: `Completed test with score ${t.score ?? 0}/${t.maximumScore ?? 100} (${t.percentage ?? 0}%)`
+        }))
+      };
+    }
 
     return {
       employee: {
@@ -284,30 +563,20 @@ export const listRoleSkillSubmissions = async () => {
         designation: emp.designation as unknown as { _id: string; name: string; code: string } | undefined,
         profilePhotoKey: emp.profilePhotoKey,
       },
-      isSubmitted: Boolean(assessment),
-      assessmentId: assessment?._id ? String(assessment._id) : undefined,
-      claimedAverage: assessment?.averageRating ?? null,
-      demonstratedAverage: assessment?.demonstratedAverage ?? assessment?.averageRating ?? null,
-      overallCredibilityScore: assessment?.overallCredibilityScore ?? (assessment ? 100 : null),
-      companyRank: assessment?.companyRank ?? null,
-      departmentRank: assessment?.departmentRank ?? null,
-      submittedAt: assessment?.submittedAt ?? null,
-      skillsCount: scores.length,
-      realityGapsCount,
-      masteryCount,
-      averageVelocity: avgVelocity,
-      scores: scores.map((s) => ({
-        skillId: s.skillId,
-        name: s.name,
-        category: s.category,
-        level: s.level,
-        rating: s.rating,
-        demonstratedRating: s.demonstratedRating,
-        velocityRatio: s.velocityRatio,
-        credibilityStatus: s.credibilityStatus,
-        tasksEvaluatedCount: s.tasksEvaluatedCount,
-        implementationNote: s.implementationNote
-      }))
+      isSubmitted: false,
+      submissionType: undefined,
+      assessmentId: undefined,
+      claimedAverage: null,
+      demonstratedAverage: null,
+      overallCredibilityScore: null,
+      companyRank: null,
+      departmentRank: null,
+      submittedAt: null,
+      skillsCount: 0,
+      realityGapsCount: 0,
+      masteryCount: 0,
+      averageVelocity: undefined,
+      scores: []
     };
   });
 

@@ -128,6 +128,18 @@ export interface RoleSkillAssessment {
   evidenceAnalytics?: SkillEvidenceAnalytics[];
 }
 
+export interface SubmittedSkillInfo {
+  skillId: string;
+  name: string;
+  category: string;
+  selfRating: number;
+  verifiedRating?: number;
+  yearsOfExperience?: number;
+  verificationStatus: string;
+  description?: string;
+  evidence?: { type: string; url?: string }[];
+}
+
 export interface RoleSkillSubmissionItem {
   employee: {
     _id: string;
@@ -139,6 +151,7 @@ export interface RoleSkillSubmissionItem {
     profilePhotoKey?: string;
   };
   isSubmitted: boolean;
+  submissionType?: "ROLE_ASSESSMENT" | "SKILL_CLAIMS" | "ASSESSMENT_TEST";
   assessmentId?: string;
   claimedAverage: number | null;
   demonstratedAverage: number | null;
@@ -183,6 +196,8 @@ export interface RoleAssessmentData {
   designation: { name: string; code: string };
   employee?: RoleSkillSubmissionItem["employee"];
   pendingConfiguration?: boolean;
+  submittedSkills?: SubmittedSkillInfo[];
+  submissionSource?: "ROLE_ASSESSMENT" | "SKILL_CLAIMS" | "ASSESSMENT_TEST" | null;
 }
 
 export const skillApi = {

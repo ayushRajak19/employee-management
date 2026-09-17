@@ -84,17 +84,29 @@ export const SuperAdminSkillSubmissions = () => {
     return orgQuery.data.designations.find((d) => d._id === simDesignationId) || null;
   }, [simDesignationId, orgQuery.data?.designations]);
 
+  const handleApplyAverageToAll = (average: number) => {
+    const skills = employeeCatalogQuery.data?.catalog || [];
+    const rounded = Math.max(1, Math.min(10, Math.round(average)));
+    const updatedRatings = { ...adminRatings };
+    const updatedNotes = { ...adminNotes };
+    skills.forEach((s) => {
+      if (updatedRatings[s.id] === undefined) {
+        updatedRatings[s.id] = rounded;
+        updatedNotes[s.id] = updatedNotes[s.id] || "Calibrated from employee claimed baseline";
+      }
+    });
+    setAdminRatings(updatedRatings);
+    setAdminNotes(updatedNotes);
+  };
+
   // Submit Mutation
   const adminSubmitMutation = useMutation({
     mutationFn: () => {
       const skills = employeeCatalogQuery.data?.catalog || [];
-      const unrated = skills.filter((s) => adminRatings[s.id] === undefined);
-      if (unrated.length > 0) {
-        throw new Error(`Please select a rating (1–10) for all skills (${unrated.length} unrated).`);
-      }
+      const defaultRating = Math.round(submitEmployee?.claimedAverage || 5);
       const payload = skills.map((s) => ({
         skillId: s.id,
-        rating: adminRatings[s.id]!,
+        rating: adminRatings[s.id] ?? defaultRating,
         implementationNote: adminNotes[s.id]?.trim() || "Calibrated via Super Admin skill manager.",
       }));
       return skillApi.adminSubmitRoleAssessment(submitEmployee!.employee._id, { ratings: payload });
@@ -423,10 +435,27 @@ export const SuperAdminSkillSubmissions = () => {
                       {/* Status */}
                       <td className="px-4 py-4 text-center">
                         {isSubmitted ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700">
-                            <CheckCircle2 size={11} />
-                            Submitted
-                          </span>
+                          <div className="inline-flex flex-col items-center gap-0.5">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700">
+                              <CheckCircle2 size={11} />
+                              Submitted
+                            </span>
+                            {item.submissionType === "SKILL_CLAIMS" && (
+                              <span className="text-[9px] font-semibold text-brand-600 bg-brand-50 rounded px-1.5 py-0.2">
+                                Capability Profile
+                              </span>
+                            )}
+                            {item.submissionType === "ASSESSMENT_TEST" && (
+                              <span className="text-[9px] font-semibold text-purple-600 bg-purple-50 rounded px-1.5 py-0.2">
+                                Assessment Test
+                              </span>
+                            )}
+                            {item.submissionType === "ROLE_ASSESSMENT" && (
+                              <span className="text-[9px] font-semibold text-emerald-600 bg-emerald-50 rounded px-1.5 py-0.2">
+                                Role Assessment
+                              </span>
+                            )}
+                          </div>
                         ) : (
                           <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-bold text-amber-700" title="Employee must submit first during onboarding on a 1–10 scale">
                             <Clock size={11} />
@@ -601,7 +630,48 @@ export const SuperAdminSkillSubmissions = () => {
                 </div>
               ) : (
                 <>
-                  {submitEmployee.isSubmitted ? (
+                  {employeeCatalogQuery.data?.submittedSkills && employeeCatalogQuery.data.submittedSkills.length > 0 ? (
+                    <div className="rounded-2xl border border-brand-200 bg-brand-50/80 p-4">
+                      <div className="flex items-start gap-2.5">
+                        <Sparkles size={18} className="text-brand-600 shrink-0 mt-0.5" />
+                        <div className="text-xs text-brand-950 leading-relaxed flex-1">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <strong className="font-semibold text-brand-900">
+                              Employee Capability Profile Found ({employeeCatalogQuery.data.submittedSkills.length} skills submitted):
+                            </strong>
+                            {submitEmployee.claimedAverage !== null && (
+                              <button
+                                type="button"
+                                onClick={() => handleApplyAverageToAll(submitEmployee.claimedAverage!)}
+                                className="rounded-lg bg-brand-600 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-brand-700 shadow-2xs transition"
+                              >
+                                Pre-fill Remaining with Claimed Avg ({submitEmployee.claimedAverage.toFixed(1)}/10)
+                              </button>
+                            )}
+                          </div>
+                          <span className="block mt-1 text-slate-600">
+                            {submitEmployee.employee.firstName} {submitEmployee.employee.lastName} previously submitted capability skills. Specific matches have been pre-filled into this role&apos;s catalog below:
+                          </span>
+                          <div className="mt-2.5 flex flex-wrap gap-1.5">
+                            {employeeCatalogQuery.data.submittedSkills.map((s, idx) => (
+                              <span
+                                key={idx}
+                                className="inline-flex items-center gap-1.5 rounded-lg bg-white border border-brand-200 px-2 py-1 text-[11px] font-semibold text-slate-800 shadow-2xs"
+                              >
+                                <span>{s.name}</span>
+                                <span className="rounded bg-brand-100 px-1.5 py-0.5 text-[10px] font-bold text-brand-700">
+                                  {s.selfRating}/10
+                                </span>
+                                {s.verificationStatus === "VERIFIED" && (
+                                  <span className="text-emerald-600 text-[10px]" title="Verified">✓</span>
+                                )}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : submitEmployee.isSubmitted ? (
                     <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4">
                       <div className="flex items-start gap-2.5">
                         <CheckCircle2 size={18} className="text-emerald-600 shrink-0 mt-0.5" />
@@ -716,8 +786,7 @@ export const SuperAdminSkillSubmissions = () => {
                   onClick={() => adminSubmitMutation.mutate()}
                   disabled={
                     adminSubmitMutation.isPending ||
-                    !employeeCatalogQuery.data?.catalog.length ||
-                    Object.keys(adminRatings).length < (employeeCatalogQuery.data?.catalog.length || 0)
+                    !employeeCatalogQuery.data?.catalog.length
                   }
                   className="bg-brand-600 hover:bg-brand-700 text-white font-semibold shadow-xs text-xs"
                 >
@@ -725,8 +794,10 @@ export const SuperAdminSkillSubmissions = () => {
                     ? "Saving..."
                     : submitEmployee.isSubmitted
                     ? "Save Calibration"
+                    : employeeCatalogQuery.data?.submittedSkills && employeeCatalogQuery.data.submittedSkills.length > 0
+                    ? "Save Baseline from Employee Submission"
                     : Object.keys(adminRatings).length < (employeeCatalogQuery.data?.catalog.length || 0)
-                    ? `Rate All Skills (${Object.keys(adminRatings).length}/${employeeCatalogQuery.data?.catalog.length || 0})`
+                    ? `Save Baseline (${Object.keys(adminRatings).length}/${employeeCatalogQuery.data?.catalog.length || 0} Rated)`
                     : "Save Baseline On Behalf of Employee"}
                 </Button>
               </div>
