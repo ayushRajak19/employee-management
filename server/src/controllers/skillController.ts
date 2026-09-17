@@ -13,8 +13,47 @@ export const list = async (_request: Request, response: Response): Promise<void>
 export const create = async (request: Request, response: Response): Promise<void> => { response.status(201).json({ success: true, message: "Skill created", data: { item: await service.createSkill(request.body) } }); };
 export const claim = async (request: Request, response: Response): Promise<void> => { response.status(201).json({ success: true, message: "Skill submitted for verification", data: { item: await service.claimSkill(request.user!.id, request.body) } }); };
 export const mine = async (request: Request, response: Response): Promise<void> => { response.json({ success: true, message: "Employee skills retrieved", data: await service.mySkills(request.user!.id) }); };
-export const roleCatalog = async (request: Request, response: Response): Promise<void> => { if (request.user!.role !== "EMPLOYEE") throw new AppError("Role skill self-assessment is available to employees only", 403); response.json({ success: true, message: "Role skill catalog retrieved", data: await service.roleCatalogAssessment(request.user!.id) }); };
-export const submitRoleCatalog = async (request: Request, response: Response): Promise<void> => { if (request.user!.role !== "EMPLOYEE") throw new AppError("Role skill self-assessment is available to employees only", 403); response.status(201).json({ success: true, message: "Role skill assessment submitted. It is now locked.", data: { assessment: await service.submitRoleCatalogAssessment(request.user!.id, request.body, { ip: request.ip, userAgent: request.get("user-agent") }) } }); };
+export const roleCatalog = async (request: Request, response: Response): Promise<void> => {
+  if (request.user!.role !== "EMPLOYEE") {
+    if (request.query.employeeId) {
+      const data = await service.roleCatalogAssessmentByEmployee(String(request.query.employeeId));
+      response.json({ success: true, message: "Role skill catalog retrieved", data });
+      return;
+    }
+    response.json({
+      success: true,
+      message: "Admin role skill catalog view",
+      data: { catalog: [], assessment: null, designation: null, assignedRole: "Administrator" }
+    });
+    return;
+  }
+  response.json({ success: true, message: "Role skill catalog retrieved", data: await service.roleCatalogAssessment(request.user!.id) });
+};
+
+export const submitRoleCatalog = async (request: Request, response: Response): Promise<void> => {
+  if (request.user!.role !== "EMPLOYEE") throw new AppError("Role skill self-assessment is available to employees only", 403);
+  response.status(201).json({ success: true, message: "Role skill assessment submitted. It is now locked.", data: { assessment: await service.submitRoleCatalogAssessment(request.user!.id, request.body, { ip: request.ip, userAgent: request.get("user-agent") }) } });
+};
+
+export const submissions = async (_request: Request, response: Response): Promise<void> => {
+  const data = await service.listRoleSkillSubmissions();
+  response.json({ success: true, message: "Skill assessment submissions retrieved", data });
+};
+
+export const employeeRoleCatalog = async (request: Request, response: Response): Promise<void> => {
+  const data = await service.roleCatalogAssessmentByEmployee(String(request.params.employeeId));
+  response.json({ success: true, message: "Employee role skill catalog retrieved", data });
+};
+
+export const adminSubmitEmployeeRoleCatalog = async (request: Request, response: Response): Promise<void> => {
+  const assessment = await service.submitRoleCatalogAssessmentByEmployee(
+    String(request.params.employeeId),
+    request.body,
+    request.user!.id,
+    { ip: request.ip, userAgent: request.get("user-agent") }
+  );
+  response.status(201).json({ success: true, message: "Role skill assessment submitted successfully", data: { assessment } });
+};
 export const pending = async (_request: Request, response: Response): Promise<void> => { response.json({ success: true, message: "Pending verifications retrieved", data: { items: await service.pendingVerifications() } }); };
 export const verify = async (request: Request, response: Response): Promise<void> => { response.json({ success: true, message: "Skill verification recorded", data: { item: await service.verify(String(request.params.id), request.user!.id, request.body, { ip: request.ip, userAgent: request.get("user-agent") }) } }); };
 export const designationSkills = async (request: Request, response: Response): Promise<void> => { response.json({ success: true, message: "Role skill requirements updated", data: { item: await service.setDesignationSkills(String(request.params.id), request.body.requiredSkills) } }); };

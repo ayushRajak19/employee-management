@@ -10,6 +10,7 @@ import {
   Search,
   ShieldCheck,
   Sparkles,
+  Target,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -18,6 +19,7 @@ import { useAuth } from "@/features/auth/AuthProvider";
 import { skillApi, type SkillClaim } from "@/features/skills/skillApi";
 import { organizationApi } from "@/features/organization/organizationApi";
 import { DesignationSkillsModal } from "@/features/organization/DesignationSkillsModal";
+import { SuperAdminSkillSubmissions } from "@/features/skills/SuperAdminSkillSubmissions";
 import type { NamedEntity } from "@/features/organization/types";
 import { ApiError } from "@/api/client";
 
@@ -38,9 +40,17 @@ export const SkillsPage = () => {
   // Determine active tab
   const isBuilderRoute = location.pathname === "/skills/builder";
   const urlTab = searchParams.get("tab");
-  const [activeTab, setActiveTab] = useState<"builder" | "verifications" | "profile">(
-    isBuilderRoute || urlTab === "builder" ? "builder" : "builder"
-  );
+  const isSuperAdminOrHr = user?.role === "SUPER_ADMIN" || user?.role === "HR_ADMIN";
+  const defaultTab: "submissions" | "builder" | "verifications" | "profile" =
+    urlTab === "submissions" || (!urlTab && !isBuilderRoute && isSuperAdminOrHr)
+      ? "submissions"
+      : isBuilderRoute || urlTab === "builder"
+      ? "builder"
+      : urlTab === "verifications"
+      ? "verifications"
+      : "builder";
+
+  const [activeTab, setActiveTab] = useState<"submissions" | "builder" | "verifications" | "profile">(defaultTab);
 
   // Modals state
   const [showAdd, setShowAdd] = useState(false);
@@ -125,9 +135,17 @@ export const SkillsPage = () => {
     setIsBuilderModalOpen(true);
   };
 
-  const handleTabChange = (tab: "builder" | "verifications" | "profile") => {
+  const handleTabChange = (tab: "submissions" | "builder" | "verifications" | "profile") => {
     setActiveTab(tab);
-    setSearchParams(tab === "builder" ? { tab: "builder" } : tab === "verifications" ? { tab: "verifications" } : {});
+    setSearchParams(
+      tab === "submissions"
+        ? { tab: "submissions" }
+        : tab === "builder"
+        ? { tab: "builder" }
+        : tab === "verifications"
+        ? { tab: "verifications" }
+        : {}
+    );
   };
 
   return (
@@ -169,6 +187,28 @@ export const SkillsPage = () => {
 
         {/* View Tabs */}
         <div className="mt-7 flex flex-wrap items-center gap-2 border-b border-slate-200 pb-3">
+          {(user?.role === "SUPER_ADMIN" || user?.role === "HR_ADMIN" || user?.permissions.includes("skill.verify")) && (
+            <button
+              type="button"
+              className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition ${
+                activeTab === "submissions"
+                  ? "bg-brand-600 text-white shadow-sm"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              }`}
+              onClick={() => handleTabChange("submissions")}
+            >
+              <Target size={14} className={activeTab === "submissions" ? "text-amber-300" : "text-brand-600"} />
+              <span>Skill Submissions & Reality Engine</span>
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10px] ${
+                  activeTab === "submissions" ? "bg-brand-700 text-brand-100" : "bg-white text-slate-700"
+                }`}
+              >
+                USP
+              </span>
+            </button>
+          )}
+
           <button
             type="button"
             className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition ${
@@ -226,6 +266,9 @@ export const SkillsPage = () => {
             </button>
           )}
         </div>
+
+        {/* ──────── TAB 0: SUPERADMIN SKILL SUBMISSIONS & REALITY ENGINE ──────── */}
+        {activeTab === "submissions" && <SuperAdminSkillSubmissions />}
 
         {/* ──────── TAB 1: AI SKILL BUILDER & ROLE ASSESSMENTS ──────── */}
         {activeTab === "builder" && (

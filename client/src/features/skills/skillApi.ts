@@ -125,7 +125,63 @@ export interface RoleSkillAssessment {
   submittedAt: string;
   evidenceAnalytics?: SkillEvidenceAnalytics[];
 }
-export interface RoleAssessmentData { assignedRole?: string; catalog: CatalogSkill[]; assessment: RoleSkillAssessment | null; designation: { name: string; code: string }; pendingConfiguration?: boolean }
+
+export interface RoleSkillSubmissionItem {
+  employee: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    employeeId: string;
+    department?: { _id: string; name: string; code: string };
+    designation?: { _id: string; name: string; code: string };
+    profilePhotoKey?: string;
+  };
+  isSubmitted: boolean;
+  assessmentId?: string;
+  claimedAverage: number | null;
+  demonstratedAverage: number | null;
+  overallCredibilityScore: number | null;
+  companyRank: number | null;
+  departmentRank: number | null;
+  submittedAt: string | null;
+  skillsCount: number;
+  realityGapsCount: number;
+  masteryCount: number;
+  averageVelocity?: number;
+  scores: {
+    skillId: string;
+    name: string;
+    category: string;
+    level: string;
+    rating: number;
+    demonstratedRating?: number;
+    velocityRatio?: number;
+    credibilityStatus?: "EXCEEDED" | "JUSTIFIED" | "GAP_DETECTED" | "UNTESTED";
+    tasksEvaluatedCount?: number;
+    implementationNote?: string;
+  }[];
+}
+
+export interface RoleSkillSubmissionsResponse {
+  items: RoleSkillSubmissionItem[];
+  stats: {
+    totalEmployees: number;
+    submittedCount: number;
+    pendingCount: number;
+    totalRealityGaps: number;
+    totalMastery: number;
+    averageCredibility: number;
+  };
+}
+
+export interface RoleAssessmentData {
+  assignedRole?: string;
+  catalog: CatalogSkill[];
+  assessment: RoleSkillAssessment | null;
+  designation: { name: string; code: string };
+  employee?: RoleSkillSubmissionItem["employee"];
+  pendingConfiguration?: boolean;
+}
 
 export const skillApi = {
   list: () => api.get<{ items: Skill[] }>("/api/v1/skills"),
@@ -134,6 +190,10 @@ export const skillApi = {
   claim: (body: { skill: string; selfRating: number; yearsOfExperience: number; description?: string; evidence: { type: string; url?: string }[] }) => api.post("/api/v1/skills/mine", body),
   roleAssessment: () => api.get<RoleAssessmentData>("/api/v1/skills/role-assessment"),
   submitRoleAssessment: (body: { ratings: { skillId: string; rating: number; implementationNote: string }[] }) => api.post<{ assessment: RoleSkillAssessment }>("/api/v1/skills/role-assessment", body),
+  submissions: () => api.get<RoleSkillSubmissionsResponse>("/api/v1/skills/submissions"),
+  getEmployeeRoleAssessment: (employeeId: string) => api.get<RoleAssessmentData>(`/api/v1/skills/role-assessment/employee/${employeeId}`),
+  adminSubmitRoleAssessment: (employeeId: string, body: { ratings: { skillId: string; rating: number; implementationNote?: string }[] }) =>
+    api.post<{ assessment: RoleSkillAssessment }>(`/api/v1/skills/role-assessment/employee/${employeeId}`, body),
   leaderboard: (limit = 20) => api.get<{ items: import("@mobius-ems/shared").EmployeeSkillRank[] }>(`/api/v1/skills/leaderboard?limit=${limit}`),
   pending: () => api.get<{ items: SkillClaim[] }>("/api/v1/skills/verifications/pending"),
   verify: (id: string, body: { status: string; verifiedRating?: number; method: string; justification: string }) => api.patch(`/api/v1/skills/verifications/${id}`, body),
