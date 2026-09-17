@@ -13,3 +13,6 @@ organizationRouter.get("/skill-catalog/:role", requirePermission("department.vie
 organizationRouter.post("/generate-skills", requirePermission("department.update"), validate(generateSkillsSchema), asyncHandler(controller.generateSkills));
 organizationRouter.post("/auto-structure", requirePermission("employee.update"), asyncHandler(controller.autoStructureHierarchy));
 organizationRouter.patch("/employees/:id/manager", requirePermission("employee.update"), asyncHandler(controller.updateEmployeeManager));
+organizationRouter.get("/subscription", asyncHandler(controller.getSubscription));
+organizationRouter.post("/subscription/upgrade-request", asyncHandler(controller.requestUpgrade));
+

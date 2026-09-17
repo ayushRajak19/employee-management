@@ -89,9 +89,42 @@ export interface SubmitAssessmentInput {
 }
 
 export interface CatalogSkill { id: string; role?: string; level: string; category: string; name: string; tools?: string; description: string; assessmentQuestion?: string }
-export interface RoleSkillScore extends Omit<CatalogSkill, "id" | "role"> { skillId: string; rating: number; implementationNote: string }
-export interface SkillEvidenceAnalytics { skillId: string; status: "JUSTIFIED" | "IN_PROGRESS" | "NEEDS_EVIDENCE"; justificationScore: number; matchedTasks: number; completedTasks: number; onTimeRate: number; averageQuality: number | null; message: string; tasks: { id: string; taskId: string; name: string; status: string; onTime: boolean; qualityRating?: number; overdue: boolean }[] }
-export interface RoleSkillAssessment { _id: string; role: string; designation?: string; scores: RoleSkillScore[]; averageRating: number; submittedAt: string; evidenceAnalytics?: SkillEvidenceAnalytics[] }
+export interface RoleSkillScore extends Omit<CatalogSkill, "id" | "role"> {
+  skillId: string;
+  rating: number;
+  implementationNote: string;
+  demonstratedRating?: number;
+  velocityRatio?: number;
+  credibilityStatus?: "EXCEEDED" | "JUSTIFIED" | "GAP_DETECTED" | "UNTESTED";
+  tasksEvaluatedCount?: number;
+}
+export interface SkillEvidenceAnalytics {
+  skillId: string;
+  status: "EXCEEDED" | "JUSTIFIED" | "GAP_DETECTED" | "UNTESTED" | "IN_PROGRESS" | "NEEDS_EVIDENCE";
+  credibilityStatus?: "EXCEEDED" | "JUSTIFIED" | "GAP_DETECTED" | "UNTESTED";
+  demonstratedRating?: number;
+  velocityRatio?: number;
+  justificationScore: number;
+  matchedTasks: number;
+  completedTasks: number;
+  onTimeRate: number;
+  averageQuality: number | null;
+  message: string;
+  tasks: { id: string; taskId: string; name: string; status: string; estimatedHours?: number; actualHours?: number; onTime: boolean; qualityRating?: number; overdue: boolean }[];
+}
+export interface RoleSkillAssessment {
+  _id: string;
+  role: string;
+  designation?: string;
+  scores: RoleSkillScore[];
+  averageRating: number;
+  demonstratedAverage?: number;
+  overallCredibilityScore?: number;
+  departmentRank?: number;
+  companyRank?: number;
+  submittedAt: string;
+  evidenceAnalytics?: SkillEvidenceAnalytics[];
+}
 export interface RoleAssessmentData { assignedRole?: string; catalog: CatalogSkill[]; assessment: RoleSkillAssessment | null; designation: { name: string; code: string }; pendingConfiguration?: boolean }
 
 export const skillApi = {
@@ -101,6 +134,7 @@ export const skillApi = {
   claim: (body: { skill: string; selfRating: number; yearsOfExperience: number; description?: string; evidence: { type: string; url?: string }[] }) => api.post("/api/v1/skills/mine", body),
   roleAssessment: () => api.get<RoleAssessmentData>("/api/v1/skills/role-assessment"),
   submitRoleAssessment: (body: { ratings: { skillId: string; rating: number; implementationNote: string }[] }) => api.post<{ assessment: RoleSkillAssessment }>("/api/v1/skills/role-assessment", body),
+  leaderboard: (limit = 20) => api.get<{ items: import("@mobius-ems/shared").EmployeeSkillRank[] }>(`/api/v1/skills/leaderboard?limit=${limit}`),
   pending: () => api.get<{ items: SkillClaim[] }>("/api/v1/skills/verifications/pending"),
   verify: (id: string, body: { status: string; verifiedRating?: number; method: string; justification: string }) => api.patch(`/api/v1/skills/verifications/${id}`, body),
   heatmap: () => api.get<{ items: SkillClaim[] }>("/api/v1/skills/heatmap"),

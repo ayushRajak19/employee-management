@@ -12,6 +12,11 @@ export const create = async (request: Request, response: Response): Promise<void
   response.status(201).json({ success: true, message: "Organization provisioned", data: { item } });
 };
 export const updateStatus = async (request: Request, response: Response): Promise<void> => {
-  const item = await tenantService.updateTenantStatus(String(request.params.id), request.body.status, "");
+  const item = await tenantService.updateTenantStatus(String(request.params.id), request.body.status, request.user?.tenantId ?? "");
   response.json({ success: true, message: `Organization ${request.body.status === "ACTIVE" ? "activated" : "suspended"}`, data: { item } });
 };
+export const updateSubscription = async (request: Request, response: Response): Promise<void> => {
+  const item = await tenantService.updateTenantSubscription(String(request.params.id), request.body);
+  response.json({ success: true, message: "Organization subscription updated", data: { item } });
+};
+

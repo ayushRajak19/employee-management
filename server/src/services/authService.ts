@@ -17,27 +17,41 @@ import nodemailer from "nodemailer";
 import { env } from "../config/env.js";
 import { isPlatformAdminEmail } from "../middleware/platformAdmin.js";
 
+import { DEFAULT_PLAN_CONFIGS } from "@mobius-ems/shared";
+
 type PopulatedUser = Awaited<ReturnType<typeof getPopulatedUser>>;
 const getPopulatedUser = async (id: string) => User.findById(id).populate<{ role: RoleDocument }>("role").exec();
 const sessionUser = async (user: NonNullable<PopulatedUser>, tenant: ActiveTenant): Promise<SessionUser> => {
-  const departmentCapabilities = user.role.permissions.includes("sales.view.all")
+  const plan = tenant.plan ?? "STANDARD";
+  const planConfig = DEFAULT_PLAN_CONFIGS[plan] ?? DEFAULT_PLAN_CONFIGS.STANDARD;
+  const features = tenant.features ?? planConfig.features;
+
+  const departmentCapabilities = (user.role.permissions.includes("sales.view.all")
     ? (await Department.exists({ capabilities: "SALES_MODULE", isActive: true }) ? ["SALES_MODULE" as CapabilityName] : [])
-    : ((await Employee.findOne({ user: user._id, isActive: true }).populate<{ department?: { capabilities?: CapabilityName[] } | null }>("department", "capabilities").select("department").lean())?.department?.capabilities ?? []);
+    : ((await Employee.findOne({ user: user._id, isActive: true }).populate<{ department?: { capabilities?: CapabilityName[] } | null }>("department", "capabilities").select("department").lean())?.department?.capabilities ?? []))
+    .filter((cap) => cap !== "SALES_MODULE" || features.salesModuleEnabled);
+
   return ({
-  id: user.id,
-  name: user.name,
-  email: user.email,
-  tenantId: tenant._id.toString(),
-  tenantName: tenant.name,
-  tenantSlug: tenant.slug,
-  isPlatformAdmin: user.role.name === "SUPER_ADMIN" && isPlatformAdminEmail(user.email),
-  role: user.role.name,
-  permissions: user.role.permissions,
-  capabilities: departmentCapabilities,
-  forcePasswordChange: user.forcePasswordChange,
-  onboardingComplete: user.onboardingComplete,
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    tenantId: tenant._id.toString(),
+    tenantName: tenant.name,
+    tenantSlug: tenant.slug,
+    isPlatformAdmin: user.role.name === "SUPER_ADMIN" && isPlatformAdminEmail(user.email),
+    role: user.role.name,
+    permissions: user.role.permissions,
+    capabilities: departmentCapabilities,
+    forcePasswordChange: user.forcePasswordChange,
+    onboardingComplete: user.onboardingComplete,
+    plan,
+    subscriptionStatus: tenant.subscriptionStatus ?? "ACTIVE",
+    maxEmployees: tenant.maxEmployees ?? planConfig.maxEmployees,
+    subscriptionEndsAt: tenant.subscriptionEndsAt?.toISOString(),
+    features,
   });
 };
+
 const requestMeta = (request: Request) => ({ ip: request.ip, userAgent: request.get("user-agent")?.slice(0, 500) });
 const resetHash = (token: string) => createHash("sha256").update(token).digest("hex");
 const resetMessage = "If the account is an eligible Super Admin, a password reset link has been sent.";

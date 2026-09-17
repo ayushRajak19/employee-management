@@ -1,7 +1,13 @@
 import type { Request, Response } from "express";
 import * as service from "../services/skillService.js";
 import { generateAssessmentQuestions } from "../services/assessmentGeneratorService.js";
+import { getSkillCredibilityLeaderboard } from "../services/skillCredibilityService.js";
 import { AppError } from "../utils/AppError.js";
+
+export const leaderboard = async (request: Request, response: Response): Promise<void> => {
+  const items = await getSkillCredibilityLeaderboard(Number(request.query.limit) || 20);
+  response.json({ success: true, message: "Skill credibility leaderboard retrieved", data: { items } });
+};
 
 export const list = async (_request: Request, response: Response): Promise<void> => { response.json({ success: true, message: "Skills retrieved", data: { items: await service.listSkills() } }); };
 export const create = async (request: Request, response: Response): Promise<void> => { response.status(201).json({ success: true, message: "Skill created", data: { item: await service.createSkill(request.body) } }); };

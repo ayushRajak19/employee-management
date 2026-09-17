@@ -65,8 +65,10 @@ const SalesDataPage = lazyWithRetry(() => import("@/features/sales/pages/SalesDa
 const SalesAgentsPage = lazyWithRetry(() => import("@/features/sales/pages/SalesAgentsPage").then((module) => ({ default: module.SalesAgentsPage })));
 const TargetPerformancePage = lazyWithRetry(() => import("@/features/sales/pages/TargetPerformancePage").then((module) => ({ default: module.TargetPerformancePage })));
 const OrgHierarchyPage = lazyWithRetry(() => import("@/pages/OrgHierarchyPage").then((module) => ({ default: module.OrgHierarchyPage })));
+const SubscriptionPage = lazyWithRetry(() => import("@/pages/SubscriptionPage").then((module) => ({ default: module.SubscriptionPage })));
 const TermsPage = lazyWithRetry(() => import("@/pages/TermsPage").then((module) => ({ default: module.TermsPage })));
 const PrivacyPage = lazyWithRetry(() => import("@/pages/PrivacyPage").then((module) => ({ default: module.PrivacyPage })));
+
 
 const PageLoader = () => <div className="space-y-4 p-8" aria-label="Loading page"><Skeleton className="h-9 w-64"/><Skeleton className="h-48 w-full"/><Skeleton className="h-48 w-full"/></div>;
 const AccessDeniedPage = () => <main className="grid min-h-[60vh] flex-1 place-items-center p-8 text-center"><div><p className="text-sm font-semibold text-brand-700">Access restricted</p><h1 className="mt-2 text-3xl font-semibold">This section is not assigned to your role</h1><p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-slate-500">Ask your Super Admin to enable this section in Administration → Access hierarchy.</p></div></main>;
@@ -108,7 +110,9 @@ export const App = () => <Suspense fallback={<PageLoader/>}><ScrollToTop/><Route
     <Route element={<PermissionRoute permissions={["section.people_ops"]}/>}><Route path="people-ops" element={<PeopleOpsPage/>}/></Route>
     <Route element={<PermissionRoute permissions={["section.resume_screener"]}/>}><Route path="resume-screener" element={<ResumeScreenerPage/>}/></Route>
     <Route element={<RoleRoute roles={["SUPER_ADMIN"]}/>}> <Route path="administrators" element={<AdministratorsPage/>}/></Route>
+    <Route element={<RoleRoute roles={["SUPER_ADMIN", "HR_ADMIN"]}/>}> <Route path="subscription" element={<SubscriptionPage/>}/></Route>
     <Route element={<PermissionRoute permissions={["section.email_automation"]}/>}><Route path="email-automation" element={<EmailAutomationPage/>}/></Route>
+
     <Route element={<PermissionRoute permissions={["section.sales"]}/>}>
       <Route element={<PermissionRoute permissions={["sales.analytics.self","sales.analytics.team","sales.analytics.all"]}/>}> <Route path="sales" element={<SalesDashboardPage/>}/></Route>
       <Route element={<PermissionRoute permissions={["sales.analytics.self"]}/>}> <Route path="sales/my-target" element={<TargetPerformancePage/>}/></Route>

@@ -11,6 +11,10 @@ export interface RoleSkillScore {
   assessmentQuestion?: string;
   rating: number;
   implementationNote?: string;
+  demonstratedRating?: number;
+  velocityRatio?: number;
+  credibilityStatus?: "EXCEEDED" | "JUSTIFIED" | "GAP_DETECTED" | "UNTESTED";
+  tasksEvaluatedCount?: number;
 }
 
 export interface RoleSkillAssessmentDocument {
@@ -19,6 +23,10 @@ export interface RoleSkillAssessmentDocument {
   designation?: string;
   scores: RoleSkillScore[];
   averageRating: number;
+  demonstratedAverage?: number;
+  overallCredibilityScore?: number;
+  departmentRank?: number;
+  companyRank?: number;
   submittedAt: Date;
 }
 
@@ -31,7 +39,11 @@ const scoreSchema = new Schema<RoleSkillScore>({
   description: { type: String, required: true, trim: true },
   assessmentQuestion: { type: String, trim: true, maxlength: 1000 },
   rating: { type: Number, required: true, min: 1, max: 10 },
-  implementationNote: { type: String, trim: true, maxlength: 1000 }
+  implementationNote: { type: String, trim: true, maxlength: 1000 },
+  demonstratedRating: { type: Number, min: 1, max: 10 },
+  velocityRatio: { type: Number, min: 0 },
+  credibilityStatus: { type: String, enum: ["EXCEEDED", "JUSTIFIED", "GAP_DETECTED", "UNTESTED"], default: "UNTESTED" },
+  tasksEvaluatedCount: { type: Number, default: 0 }
 }, { _id: false });
 
 const schema = new Schema<RoleSkillAssessmentDocument>({
@@ -40,7 +52,12 @@ const schema = new Schema<RoleSkillAssessmentDocument>({
   designation: { type: String, trim: true, maxlength: 120 },
   scores: { type: [scoreSchema], required: true },
   averageRating: { type: Number, required: true, min: 1, max: 10 },
+  demonstratedAverage: { type: Number, min: 1, max: 10 },
+  overallCredibilityScore: { type: Number, min: 0, max: 200 },
+  departmentRank: { type: Number, min: 1 },
+  companyRank: { type: Number, min: 1 },
   submittedAt: { type: Date, required: true, default: Date.now }
 }, { timestamps: true });
 
 export const RoleSkillAssessment = tenantModel<RoleSkillAssessmentDocument>("RoleSkillAssessment", schema);
+

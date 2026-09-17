@@ -64,6 +64,9 @@ export const TaskDrawer = ({ task, onClose, onRefresh }: { task: Task; onClose: 
           { label: "Reopens", value: task.reopenCount }
         ].map((item) => <div className="min-w-0 overflow-hidden rounded-xl bg-slate-50 p-3" key={item.label}><p className="text-[10px] uppercase text-slate-400">{item.label}</p><p className="mt-1 break-words text-xs font-semibold">{item.value}</p></div>)}</div>
         <p className="mt-4 text-sm text-slate-500">Assigned to <span className="font-semibold text-slate-700">{task.assignedEmployee.firstName} {task.assignedEmployee.lastName}</span></p>
+        {task.skillName && <div className="mt-2.5 inline-flex items-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-800">
+          <span className="text-brand-500 font-normal">⚡ Tested Skill:</span> {task.skillName}
+        </div>}
         {task.description && <p className="mt-6 text-sm leading-6 text-slate-600">{task.description}</p>}
 
         <section className="mt-7 rounded-2xl border p-5">

@@ -1,11 +1,24 @@
 import { api } from "@/api/client";
+import type {
+  PlanTier,
+  SubscriptionStatus,
+  BillingCycle,
+  PlanFeatures,
+  TenantSubscriptionDto,
+} from "@mobius-ems/shared";
 
 export interface TenantItem {
   _id: string;
   name: string;
   slug: string;
   status: "PROVISIONING" | "ACTIVE" | "SUSPENDED";
-  plan: "STANDARD" | "ENTERPRISE";
+  plan: PlanTier;
+  subscriptionStatus?: SubscriptionStatus;
+  billingCycle?: BillingCycle;
+  maxEmployees?: number;
+  subscriptionEndsAt?: string;
+  trialEndsAt?: string;
+  features?: PlanFeatures;
   activatedAt?: string;
   createdAt: string;
   industry?: string;
@@ -21,16 +34,31 @@ export interface TenantItem {
 export interface CreateTenantInput {
   name: string;
   slug?: string;
-  plan: "STANDARD" | "ENTERPRISE";
+  plan: PlanTier;
+  billingCycle?: BillingCycle;
+  maxEmployees?: number;
   adminName: string;
   adminEmail: string;
   temporaryPassword: string;
+}
+
+export interface UpdateSubscriptionInput {
+  plan?: PlanTier;
+  subscriptionStatus?: SubscriptionStatus;
+  billingCycle?: BillingCycle;
+  maxEmployees?: number;
+  subscriptionEndsAt?: string;
+  features?: Partial<PlanFeatures>;
 }
 
 export const tenantApi = {
   list: () => api.get<{ items: TenantItem[] }>("/api/v1/platform/tenants"),
   create: (body: CreateTenantInput) => api.post<{ item: TenantItem }>("/api/v1/platform/tenants", body),
   updateStatus: (id: string, status: "ACTIVE" | "SUSPENDED") => api.patch<{ item: TenantItem }>(`/api/v1/platform/tenants/${id}/status`, { status }),
+  updateSubscription: (id: string, body: UpdateSubscriptionInput) => api.patch<{ item: TenantItem }>(`/api/v1/platform/tenants/${id}/subscription`, body),
   analytics: () => api.get<{ summary: { organizations: number; activeOrganizations: number; suspendedOrganizations: number; users: number }; growth: { month: string; organizations: number; users: number }[]; items: TenantItem[] }>("/api/v1/platform/tenants/analytics"),
   logout: () => api.post("/api/v1/platform/auth/logout"),
+  getOrganizationSubscription: () => api.get<{ subscription: TenantSubscriptionDto }>("/api/v1/organization/subscription"),
+  requestUpgrade: (body: { plan?: string; seats?: number; note?: string }) => api.post<{ message: string }>("/api/v1/organization/subscription/upgrade-request", body),
 };
+

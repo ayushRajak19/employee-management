@@ -2,9 +2,9 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
-  AlertCircle, AlertOctagon, AlertTriangle, ArrowUpRight, Briefcase, CalendarClock,
+  AlertCircle, AlertOctagon, AlertTriangle, ArrowUpRight, Award, Briefcase, CalendarClock,
   ChevronRight, Clock, Eye, Layers, Search, ShieldCheck,
-  Sparkles, Trophy, Users, Zap,
+  Sparkles, Target, Trophy, Users, Zap,
 } from "lucide-react";
 import { api } from "@/api/client";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -13,6 +13,7 @@ import { MoodBreakPanel } from "@/features/ai/AiWorkspacePanels";
 import { GamificationHeader } from "@/features/work/GamificationHeader";
 import { cn } from "@/lib/cn";
 import { AdminAnalytics } from "./AdminAnalytics";
+import { skillApi, type RoleSkillScore } from "@/features/skills/skillApi";
 
 /* ─── Types ─── */
 interface Metric { label: string; value: number | string; detail: string }
@@ -169,8 +170,17 @@ export const DashboardPage = () => {
     queryFn: () => api.get<Summary>("/api/v1/dashboard/summary"),
   });
 
-  const firstName = data?.greetingName ?? user?.name.split(" ")[0];
   const employeeView = user?.role === "EMPLOYEE";
+
+  const { data: roleAssessmentData } = useQuery({
+    queryKey: ["skills", "role-assessment"],
+    queryFn: () => skillApi.roleAssessment(),
+    enabled: employeeView,
+  });
+
+  const roleAssessment = roleAssessmentData?.assessment;
+
+  const firstName = data?.greetingName ?? user?.name.split(" ")[0];
   const metrics = data?.metrics;
   const performance = data?.performanceEvidence;
   const subordinateWork = data?.subordinateWork;
@@ -360,6 +370,157 @@ export const DashboardPage = () => {
                 );
               })}
         </section>
+
+        {/* ────── Employee Skill Credibility & Delivery Velocity ────── */}
+        {employeeView && (
+          <section
+            aria-label="Skill credibility and velocity rank"
+            className="animate-fadeInUp anim-delay-2 mt-7 overflow-hidden rounded-2xl border border-brand-100 bg-white shadow-soft transition-all duration-300 hover:shadow-soft-lg"
+          >
+            <div className="flex flex-col justify-between gap-4 border-b border-slate-100 bg-gradient-to-r from-violet-50/70 via-brand-50/40 to-white p-5 sm:flex-row sm:items-center sm:p-6">
+              <div className="flex items-center gap-3.5">
+                <div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-violet-600 to-brand-600 text-white shadow-md shadow-brand-200">
+                  <Award size={24} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-bold tracking-tight text-ink sm:text-xl">
+                      Skill Credibility & Delivery Velocity
+                    </h2>
+                    <span className="rounded-full border border-violet-200 bg-violet-50 px-2.5 py-0.5 text-[10px] font-bold text-violet-700">
+                      AI Reality Check
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    Live rank and scoring judged by comparing your claimed skills against real task delivery speed.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => navigate("/skills")}
+                className="inline-flex items-center gap-1.5 self-start rounded-xl border border-brand-200 bg-brand-50/80 px-3.5 py-2 text-xs font-semibold text-brand-700 transition hover:bg-brand-100 sm:self-auto"
+              >
+                <span>Full Skill Breakdown</span>
+                <ChevronRight size={14} />
+              </button>
+            </div>
+
+            {roleAssessment && roleAssessment.scores && roleAssessment.scores.length > 0 ? (
+              <div className="p-5 sm:p-6">
+                {/* 4 Stat Tiles */}
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3.5">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Company Rank</p>
+                    <p className="mt-1 text-2xl font-bold text-ink">
+                      {roleAssessment.companyRank ? `#${roleAssessment.companyRank}` : "Unranked"}
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-slate-500">Across organization</p>
+                  </div>
+
+                  <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3.5">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Department Rank</p>
+                    <p className="mt-1 text-2xl font-bold text-ink">
+                      {roleAssessment.departmentRank ? `#${roleAssessment.departmentRank}` : "Unranked"}
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-slate-500">Within your dept</p>
+                  </div>
+
+                  <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3.5">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Credibility Index</p>
+                    <p className={cn(
+                      "mt-1 text-2xl font-bold",
+                      (roleAssessment.overallCredibilityScore ?? 100) >= 80 ? "text-emerald-600" :
+                      (roleAssessment.overallCredibilityScore ?? 100) >= 65 ? "text-blue-600" : "text-amber-600"
+                    )}>
+                      {Math.round(roleAssessment.overallCredibilityScore ?? 100)}%
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-slate-500">
+                      {(roleAssessment.overallCredibilityScore ?? 100) >= 80 ? "High Credibility" :
+                       (roleAssessment.overallCredibilityScore ?? 100) >= 65 ? "Good Credibility" : "Needs Evidence"}
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3.5">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Claimed vs Verified</p>
+                    <div className="mt-1 flex items-baseline gap-1.5">
+                      <span className="text-2xl font-bold text-ink">
+                        {roleAssessment.demonstratedAverage ? roleAssessment.demonstratedAverage.toFixed(1) : (roleAssessment.averageRating ? roleAssessment.averageRating.toFixed(1) : "-")}
+                      </span>
+                      <span className="text-xs font-medium text-slate-400">/ 10</span>
+                      <span className="text-[11px] text-slate-400">(claimed {roleAssessment.averageRating ? roleAssessment.averageRating.toFixed(1) : "-"})</span>
+                    </div>
+                    <p className="mt-0.5 text-[11px] text-slate-500">Delivery verified</p>
+                  </div>
+                </div>
+
+                {/* Quick Skills Mini-Table / List */}
+                <div className="mt-5 divide-y rounded-xl border border-slate-100">
+                  {roleAssessment.scores.slice(0, 4).map((sc: RoleSkillScore) => {
+                    const claimed = sc.rating;
+                    const demonstrated = sc.demonstratedRating ?? sc.rating;
+                    const status = sc.credibilityStatus ?? "UNTESTED";
+                    return (
+                      <div key={sc.skillId} className="flex flex-wrap items-center justify-between gap-3 p-3.5 text-xs sm:flex-nowrap">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-ink">{sc.name}</span>
+                            <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">
+                              Claimed: {claimed}/10
+                            </span>
+                          </div>
+                          <p className="mt-0.5 text-[11px] text-slate-400">
+                            {sc.tasksEvaluatedCount && sc.tasksEvaluatedCount > 0
+                              ? `Tested in ${sc.tasksEvaluatedCount} tasks · Velocity ratio ${sc.velocityRatio ? sc.velocityRatio.toFixed(2) + "x" : "1.00x"}`
+                              : "No completed tasks evaluated for this skill yet"}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <span className="text-xs font-bold text-ink">{demonstrated.toFixed(1)} / 10</span>
+                            <p className="text-[10px] text-slate-400">Demonstrated</p>
+                          </div>
+                          <span
+                            className={cn(
+                              "rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide",
+                              status === "EXCEEDED"
+                                ? "bg-emerald-100 text-emerald-800"
+                                : status === "GAP_DETECTED"
+                                ? "bg-red-100 text-red-700"
+                                : status === "JUSTIFIED"
+                                ? "bg-blue-100 text-blue-800"
+                                : "bg-slate-100 text-slate-600"
+                            )}
+                          >
+                            {status === "GAP_DETECTED" ? "Reality Gap" : status === "EXCEEDED" ? "Mastery Confirmed" : status === "JUSTIFIED" ? "Justified" : "Untested"}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center p-8 text-center sm:p-10">
+                <Target size={36} className="text-brand-400" />
+                <h3 className="mt-3 text-base font-bold text-ink">Set Your Baseline Skills (1–10 Scale)</h3>
+                <p className="mt-1 max-w-md text-xs leading-5 text-slate-500">
+                  Rate yourself honestly on your designation&apos;s required skills. As you finish assigned tasks, our AI engine monitors your delivery velocity, adjusts your demonstrated score, and ranks you internally.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => navigate("/skills")}
+                  className="mt-4 inline-flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2 text-xs font-semibold text-white shadow transition hover:bg-brand-700"
+                >
+                  <span>Complete Skill Baseline Now</span>
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+            )}
+          </section>
+        )}
 
         {/* ────── Superior's Team Work & Delivery Hub ────── */}
         {isSuperior && subordinateWork && (

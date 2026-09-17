@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>MobiusEMS Complete Enterprise Feature Explanation Manual v2.0</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'neutral',
+    securityLevel: 'loose',
+    flowchart: { useMaxWidth: true, htmlLabels: true, curve: 'basis' },
+    sequence: { useMaxWidth: true, showSequenceNumbers: false }
+  });
+</script>
+<style>
+  @page {
+    size: A4 portrait;
+    margin: 14mm 14mm 14mm 14mm;
+  }
+  * {
+    box-sizing: border-box;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-size: 8.8pt;
+    line-height: 1.48;
+    color: #1e293b;
+    margin: 0;
+    padding: 0;
+    background-color: #ffffff;
+  }
+  
+  /* Running Header & Footer for printed pages */
+  .doc-header {
+    border-bottom: 2px solid #2563eb;
+    padding-bottom: 8px;
+    margin-bottom: 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+  .doc-header-title {
+    font-size: 8pt;
+    font-weight: 700;
+    color: #0f172a;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .doc-header-meta {
+    font-size: 7.5pt;
+    font-weight: 600;
+    color: #64748b;
+  }
+
+  /* Typography */
+  h1, h2, h3, h4, h5, h6 {
+    color: #0f172a;
+    font-weight: 700;
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+  h1 {
+    font-size: 17pt;
+    border-bottom: 2px solid #0f172a;
+    padding-bottom: 6px;
+    margin-top: 26px;
+    margin-bottom: 12px;
+    page-break-before: always;
+  }
+  h1:first-of-type {
+    page-break-before: avoid;
+  }
+  h2 {
+    font-size: 12pt;
+    color: #1e3a8a;
+    border-bottom: 1px solid #cbd5e1;
+    padding-bottom: 4px;
+    margin-top: 18px;
+    margin-bottom: 8px;
+  }
+  h3 {
+    font-size: 10pt;
+    color: #0f172a;
+    margin-top: 14px;
+    margin-bottom: 6px;
+  }
+  h4 {
+    font-size: 9pt;
+    margin-top: 10px;
+    margin-bottom: 4px;
+  }
+  p {
+    margin: 4px 0 8px 0;
+  }
+  
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0 14px 0;
+    font-size: 8.2pt;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  th {
+    background-color: #0f172a;
+    color: #ffffff;
+    font-weight: 700;
+    text-align: left;
+    padding: 6px 8px;
+    border: 1px solid #0f172a;
+  }
+  td {
+    padding: 5px 8px;
+    border: 1px solid #cbd5e1;
+    vertical-align: top;
+  }
+  tr:nth-child(even) td {
+    background-color: #f8fafc;
+  }
+  
+  /* Code & Pre */
+  code {
+    font-family: 'Consolas', 'Menlo', 'Monaco', monospace;
+    font-size: 7.8pt;
+    background-color: #f1f5f9;
+    color: #094c99;
+    padding: 1.5px 4px;
+    border-radius: 3px;
+    border: 1px solid #e2e8f0;
+  }
+  pre {
+    background-color: #0f172a;
+    color: #f8fafc;
+    padding: 10px 12px;
+    border-radius: 5px;
+    font-family: 'Consolas', 'Menlo', 'Monaco', monospace;
+    font-size: 7.5pt;
+    line-height: 1.35;
+    overflow-x: auto;
+    margin: 8px 0 12px 0;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  pre code {
+    background-color: transparent;
+    color: inherit;
+    padding: 0;
+    border: none;
+    font-size: inherit;
+  }
+
+  /* Diagram Cards */
+  .diagram-card {
+    background-color: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin: 12px 0 16px 0;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .diagram-title {
+    font-size: 7.8pt;
+    font-weight: 700;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 8px;
+    border-bottom: 1px dashed #cbd5e1;
+    padding-bottom: 4px;
+  }
+  pre.mermaid {
+    background-color: transparent !important;
+    color: #0f172a !important;
+    padding: 4px 0 !important;
+    margin: 0 !important;
+    display: flex;
+    justify-content: center;
+    overflow: visible;
+  }
+
+  /* Callouts & Badges */
+  .callout {
+    border-left: 4px solid #2563eb;
+    background-color: #eff6ff;
+    padding: 8px 12px;
+    margin: 10px 0 12px 0;
+    border-radius: 0 4px 4px 0;
+    page-break-inside: avoid;
+  }
+  .callout-title {
+    font-weight: 700;
+    font-size: 8pt;
+    text-transform: uppercase;
+    color: #1e3a8a;
+    margin-bottom: 3px;
+  }
+  .callout-important {
+    border-left-color: #f59e0b;
+    background-color: #fffbeb;
+  }
+  .callout-important .callout-title {
+    color: #b45309;
+  }
+  .callout-warning {
+    border-left-color: #ef4444;
+    background-color: #fef2f2;
+  }
+  .callout-warning .callout-title {
+    color: #b91c1c;
+  }
+
+  /* Lists */
+  ul, ol {
+    margin: 4px 0 8px 0;
+    padding-left: 20px;
+  }
+  li {
+    margin-bottom: 2.5px;
+  }
+  
+  /* Horizontal Rules */
+  hr {
+    border: none;
+    border-top: 1px solid #e2e8f0;
+    margin: 16px 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="doc-header">
+  <div class="doc-header-title">Mobius Bloom Venture | MobiusEMS Enterprise System Documentation</div>
+  <div class="doc-header-meta">Platform: https://employee.whalexy.com | v2.0.0-PROD</div>
+</div>
+
+<h1 id="mobiusems-complete-enterprise-feature-explanation-manual">MobiusEMS: Complete Enterprise Feature Explanation Manual</h1>
+<p><strong>A Definitive Functional and Technical Operating Guide to Every System Capability</strong><br />
+<em>Mobius Bloom Venture Pvt Ltd | Global Engineering &amp; Product Division</em><br />
+<em>Product Version: v2.0.0-PROD | Target Platform: <code>https://employee.whalexy.com</code></em><br />
+<em>Target Audience: Executive Leadership, Product Managers, Operations Teams, HR Administrators, Engineering Teams, Auditors</em></p>
+<hr />
+<h1 id="table-of-contents">Table of Contents</h1>
+<ol>
+<li><a href="#chapter-1-executive-summary--architectural-foundations">Executive Summary &amp; Architectural Foundations</a></li>
+<li><a href="#chapter-2-multi-tenancy-platform-administration--identity-management">Multi-Tenancy, Platform Administration &amp; Identity Management</a></li>
+<li><a href="#chapter-3-role-adaptive-executive--employee-cockpit">Role-Adaptive Executive &amp; Employee Cockpit</a></li>
+<li><a href="#chapter-4-workforce--organization-hierarchy">Workforce &amp; Organization Hierarchy</a></li>
+<li><a href="#chapter-5-smart-geofenced-attendance--leave-management">Smart Geofenced Attendance &amp; Leave Management</a></li>
+<li><a href="#chapter-6-project-delivery-task-kanban--activity-auditing">Project Delivery, Task Kanban &amp; Activity Auditing</a></li>
+<li><a href="#chapter-7-local-zero-retention-voice-to-task-capture">Local Zero-Retention Voice-to-Task Capture</a></li>
+<li><a href="#chapter-8-capability-matrix-skill-builder--timed-assessments">Capability Matrix, Skill Builder &amp; Timed Assessments</a></li>
+<li><a href="#chapter-9-objective-performance-management--snapshots">Objective Performance Management &amp; Snapshots</a></li>
+<li><a href="#chapter-10-continuous-contribution-intelligence">Continuous Contribution Intelligence</a></li>
+<li><a href="#chapter-11-commercial-sales-intelligence--7-tier-gis">Commercial Sales Intelligence &amp; 7-Tier GIS</a></li>
+<li><a href="#chapter-12-sales-pipeline-quotas--deduplicated-revenue-ledger">Sales Pipeline, Quotas &amp; Deduplicated Revenue Ledger</a></li>
+<li><a href="#chapter-13-channel-partner-ecosystem">Channel Partner Ecosystem</a></li>
+<li><a href="#chapter-14-talent-acquisition-jd-library--resume-screener">Talent Acquisition, JD Library &amp; Resume Screener</a></li>
+<li><a href="#chapter-15-people-operations-growth-culture--gamification">People Operations, Growth, Culture &amp; Gamification</a></li>
+<li><a href="#chapter-16-enterprise-governance-security--tamper-evident-audit">Enterprise Governance, Security &amp; Tamper-Evident Audit</a></li>
+<li><a href="#chapter-17-ethical-ai-assistant--multi-step-email-automation">Ethical AI Assistant &amp; Multi-Step Email Automation</a></li>
+</ol>
+<hr />
+<h1 id="chapter-1-executive-summary-architectural-foundations">Chapter 1: Executive Summary &amp; Architectural Foundations</h1>
+<h3 id="11-purpose-problem-statement">1.1 Purpose &amp; Problem Statement</h3>
+<p>Growing enterprises face the <strong>"5-Tool Trap"</strong>: using separate, uncoordinated software for biometric attendance, project management (Jira/Trello), annual performance reviews (spreadsheets), commercial CRM (Salesforce/HubSpot), and talent acquisition. This fragmentation leads to:<br />
+* Data silos and manual re-entry errors across HR and finance.<br />
+* Inability to link daily delivery and sprint velocity to quarterly employee evaluations.<br />
+* Disconnected field sales operations where won deals have no relationship to workforce capacity or realized revenue ledgers.<br />
+* Heavy recurring SaaS fees for single-purpose tools.</p>
+<p><strong>MobiusEMS</strong> unifies workforce operations, daily project delivery, verified GPS attendance, commercial territory sales, and human capital growth into a single, multi-tenant operating platform.</p>
+<h3 id="12-the-three-non-negotiable-engineering-principles">1.2 The Three Non-Negotiable Engineering Principles</h3>
+<ol>
+<li><strong>Deterministic Mathematics Over Hallucinatory AI</strong>:<br />
+   All performance scores, attendance validations, sales territory quotas, commission calculations, and contribution percentiles are computed via transparent mathematical formulas. LLMs are strictly relegated to an advisory role (drafting narrative review summaries, handbook Q&amp;A) and are structurally barred from executing binding decisions regarding compensation, promotions, disciplinary measures, or terminations.</li>
+<li><strong>Respectful Accountability Over Invasive Surveillance</strong>:<br />
+   The platform rejects invasive surveillance software (no background keyloggers, screen scrapers, or continuous GPS stalking). Accountability is verified at two clear points:</li>
+<li>Physical presence during shift boundaries via browser-based geofencing within 300 meters of registered offices.</li>
+<li>Verifiable delivery through peer-reviewed tasks, blocker escalation logs, and commercial revenue generation.</li>
+<li><strong>Built-In Data Privacy &amp; Local Zero-Retention Voice</strong>:<br />
+   Speech transcription runs on local hardware using <code>faster-whisper</code>. Ephemeral audio files are processed in memory and shredded from disk in strict <code>finally</code> code blocks, preventing audio retention and eliminating third-party API exposure.</li>
+</ol>
+<hr />
+<h1 id="chapter-2-multi-tenancy-platform-administration-identity-management">Chapter 2: Multi-Tenancy, Platform Administration &amp; Identity Management</h1>
+<h3 id="21-overview-business-purpose">2.1 Overview &amp; Business Purpose</h3>
+<p>MobiusEMS is built from the ground up as a hardened, multi-tenant SaaS application. It allows independent organizations (e.g., Google, Mobius Bloom, Partner Enterprises) to operate within a shared physical database infrastructure while guaranteeing total cryptographic and logical isolation.</p>
+<h3 id="22-system-architecture-tenant-isolation">2.2 System Architecture &amp; Tenant Isolation</h3>
+<ul>
+<li><strong>Isolation Layer</strong>: Built on Node.js <code>AsyncLocalStorage</code> and Mongoose model proxies. When an incoming HTTP request is authenticated, the tenant context is established in execution memory:<br />
+<code>typescript
+  // Tenant context injection in tenancy middleware
+  tenantStorage.run({ tenantId: resolvedTenant.id }, next);</code></li>
+<li><strong>Fail-Closed Design</strong>: Every database query, aggregation pipeline, update, and insert automatically injects <code>{ tenantId }</code>. If an unauthenticated or cross-tenant query is attempted without an active context, the driver immediately throws a <code>403 Forbidden</code> (<code>TENANT_CONTEXT_MISSING</code>). Insecure Direct Object References (IDOR) are structurally impossible.</li>
+</ul>
+<div class="diagram-card"><div class="diagram-title">System Architecture / Workflow Diagram</div><pre class="mermaid">flowchart TD
+    ClientReq[Incoming HTTP Request] --> AuthCheck{JWT Valid?}
+    AuthCheck -- No --> Reject401[401 Unauthorized]
+    AuthCheck -- Yes --> ResolveTenant[Resolve Tenant Context via AsyncLocalStorage]
+    ResolveTenant --> ScopeDB[Mongoose Driver Auto-Appends tenantId to Query]
+    ScopeDB --> DB[(MongoDB Atlas Isolated Scope)]</pre></div>
+
+<h3 id="23-subscription-plans-feature-gating">2.3 Subscription Plans &amp; Feature Gating</h3>
+<p>Organizations are provisioned under explicit plan tiers that govern user seat limits, storage allocations, and module access:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Plan Tier</th>
+<th style="text-align: center;">Max Employees</th>
+<th style="text-align: center;">Max Storage</th>
+<th style="text-align: center;">AI Workspace</th>
+<th style="text-align: center;">Sales CRM &amp; GIS</th>
+<th style="text-align: center;">Email Automation</th>
+<th style="text-align: center;">Custom Roles</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>STARTER</strong></td>
+<td style="text-align: center;">15</td>
+<td style="text-align: center;">2 GB</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>STANDARD</strong></td>
+<td style="text-align: center;">50</td>
+<td style="text-align: center;">10 GB</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>PROFESSIONAL</strong></td>
+<td style="text-align: center;">150</td>
+<td style="text-align: center;">50 GB</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>ENTERPRISE</strong></td>
+<td style="text-align: center;">Unlimited (0)</td>
+<td style="text-align: center;">Unlimited (0)</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>CUSTOM</strong></td>
+<td style="text-align: center;">Tailored</td>
+<td style="text-align: center;">Tailored</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+</tr>
+</tbody>
+</table>
+<h3 id="24-user-onboarding-session-security">2.4 User Onboarding &amp; Session Security</h3>
+<ol>
+<li><strong>Self-Serve Registration &amp; Tenant Provisioning</strong> (<code>/register</code>, <code>/platform/tenants</code>):</li>
+<li>Creates a new <code>Tenant</code> record with a unique slug and provisions the initial <code>SUPER_ADMIN</code> user.</li>
+<li><strong>Employee Provisioning &amp; Invitation</strong>:</li>
+<li>HR or Super Admin creates an employee record with an email address.</li>
+<li>The platform generates a secure, randomized temporary password and emails an invitation.</li>
+<li>Flags <code>forcePasswordChange: true</code> and <code>onboardingComplete: false</code>.</li>
+<li><strong>First-Login Enforcement</strong> (<code>/change-password</code>, <code>/onboarding</code>):</li>
+<li>Authenticated routes redirect the user directly to the password change screen.</li>
+<li>Upon successful password update, the user completes an onboarding wizard (verifying emergency contacts, statutory identity documents, and profile bio).</li>
+<li><strong>Hardened Rotating Session Lifecycle</strong>:</li>
+<li><strong>Access Token</strong>: Short-lived (15 minutes), stateless JWT containing user ID, role, permissions, and tenant ID.</li>
+<li><strong>Refresh Token</strong>: Long-lived (7 days), stored in an <code>HttpOnly</code>, <code>SameSite=Strict</code>, <code>Secure</code> cookie.</li>
+<li><strong>Reuse Detection</strong>: Refresh tokens are tracked in <code>RefreshSession</code>. If a previously used refresh token is presented, the system treats it as a token theft event and invalidates the entire session family immediately.</li>
+</ol>
+<hr />
+<h1 id="chapter-3-role-adaptive-executive-employee-cockpit">Chapter 3: Role-Adaptive Executive &amp; Employee Cockpit</h1>
+<h3 id="31-overview">3.1 Overview</h3>
+<p>The primary landing dashboard (<code>/</code>) dynamically adapts its layout, widgets, and KPI summaries according to the authenticated user's assigned role (<code>SUPER_ADMIN</code>, <code>HR_ADMIN</code>, <code>DEPARTMENT_HEAD</code>, <code>MANAGER</code>, <code>TEAM_LEAD</code>, <code>EMPLOYEE</code>).</p>
+<div class="diagram-card"><div class="diagram-title">System Architecture / Workflow Diagram</div><pre class="mermaid">graph TD
+    UserLogin[User Enters Dashboard] --> RoleCheck{User Role}
+    RoleCheck -->|SUPER_ADMIN| AdminCockpit[Tenant Revenue, Attendance Register, System Audit, Quota Utilization]
+    RoleCheck -->|HR_ADMIN| HRCockpit[Headcount Distribution, Leave Requests, Hiring Pipeline, Skill Gaps]
+    RoleCheck -->|MANAGER / LEAD| ManagerCockpit[Team Attendance, Blocked Tasks, Delivery Velocity, 1-on-1 Schedules]
+    RoleCheck -->|EMPLOYEE| EmployeeCockpit[Today Attendance Card, Assigned Tasks, Target Pacing, Weekly Deliverable Log]</pre></div>
+
+<h3 id="32-key-dashboard-widgets">3.2 Key Dashboard Widgets</h3>
+<ol>
+<li><strong>Attendance Quick-Action Widget</strong>:</li>
+<li>Displays today's date, current office geofence status, and instant "Check In" / "Check Out" buttons with live shift timers.</li>
+<li><strong>Task Delivery &amp; Velocity Summary</strong>:</li>
+<li>Shows active tasks categorized by status (<code>IN_PROGRESS</code>, <code>BLOCKED</code>, <code>IN_REVIEW</code>), highlighting tasks approaching deadline.</li>
+<li><strong>Commercial Pacing (Sales Roles)</strong>:</li>
+<li>For employees with commercial access, renders monthly target quota, achieved revenue, and pacing percentage ($(\text{Achieved} / \text{Target}) \times 100$).</li>
+<li><strong>Executive Health Strip (Admins)</strong>:</li>
+<li>Renders total active headcount, present employees today, open blockers across all projects, and monthly revenue bookings.</li>
+</ol>
+<hr />
+<h1 id="chapter-4-workforce-organization-hierarchy">Chapter 4: Workforce &amp; Organization Hierarchy</h1>
+<h3 id="41-organizational-data-structure">4.1 Organizational Data Structure</h3>
+<p>The organization is modeled as a connected graph across four primary entities:<br />
+1. <strong>Departments</strong> (<code>Department</code>): High-level functional divisions (e.g., Engineering, Sales, Human Resources, Finance) with assigned Department Heads.<br />
+2. <strong>Teams</strong> (<code>Team</code>): Working units within a department led by Team Leads.<br />
+3. <strong>Designations</strong> (<code>Designation</code>): Job titles with defined hierarchy levels, job grades, and required skill profiles.<br />
+4. <strong>Employees</strong> (<code>Employee</code>): Individual personnel profiles linked to a Department, Team, Designation, and a direct Reporting Manager.</p>
+<h3 id="42-visual-organizational-hierarchy-hierarchy">4.2 Visual Organizational Hierarchy (<code>/hierarchy</code>)</h3>
+<ul>
+<li>Renders an interactive, dynamic tree visualization of the entire company reporting structure.</li>
+<li>Supports recursive hierarchy traversing up to $N$ levels from the CEO/Managing Director down to individual contributors.</li>
+<li>Allows managers to inspect sub-teams, headcount distribution, and vacant positions.</li>
+</ul>
+<h3 id="43-employee-360-longitudinal-profile-employeesid">4.3 Employee 360 Longitudinal Profile (<code>/employees/:id</code>)</h3>
+<p>Every employee profile acts as an immutable, lifelong record connecting:<br />
+* <strong>Personal &amp; Statutory Details</strong>: Date of birth, emergency contacts, PAN/Aadhaar/Tax ID, bank account details.<br />
+* <strong>Longitudinal Timeline</strong> (<code>EmployeeTimeline</code>): Chronological log of promotions, designation changes, salary revisions, department transfers, and milestone awards.<br />
+* <strong>Profile Completion Engine</strong> (<code>profileCompletionService.ts</code>):<br />
+  Evaluates required profile attributes to compute an objective profile health percentage:<br />
+  $$\text{Completion \%} = \left( \frac{\text{Completed Mandatory Fields}}{\text{Total Mandatory Fields}} \right) \times 100$$<br />
+  Incomplete profiles trigger automated prompts during weekly check-ins.</p>
+<hr />
+<h1 id="chapter-5-smart-geofenced-attendance-leave-management">Chapter 5: Smart Geofenced Attendance &amp; Leave Management</h1>
+<h3 id="51-overview-value-proposition">5.1 Overview &amp; Value Proposition</h3>
+<p>MobiusEMS eliminates physical biometric fingerprint hardware. Employees check in directly from their mobile or desktop browser. The platform verifies their physical presence at the designated office using mathematical geofencing.</p>
+<h3 id="52-mathematical-formulation-business-rules">5.2 Mathematical Formulation &amp; Business Rules</h3>
+<h4 id="1-the-haversine-spherical-distance-formula">1. The Haversine Spherical Distance Formula</h4>
+<p>When an employee taps <strong>"Check In"</strong>, the browser transmits the device's HTML5 coordinates $(\text{lat}_1, \text{lon}_1)$ along with the estimated accuracy in meters. The server calculates the great-circle distance $d$ to the configured primary office $(\text{lat}_2, \text{lon}_2)$ using Earth's radius $R = 6,371,000\text{ meters}$:</p>
+<p>$$\Delta\phi = \frac{(\text{lat}_2 - \text{lat}_1) \cdot \pi}{180}, \quad \Delta\lambda = \frac{(\text{lon}_2 - \text{lon}_1) \cdot \pi}{180}$$</p>
+<p>$$a = \sin^2\left(\frac{\Delta\phi}{2}\right) + \cos\left(\frac{\text{lat}_1 \cdot \pi}{180}\right) \cdot \cos\left(\frac{\text{lat}_2 \cdot \pi}{180}\right) \cdot \sin^2\left(\frac{\Delta\lambda}{2}\right)$$</p>
+<p>$$d = 2 \cdot R \cdot \operatorname{atan2}\left(\sqrt{a}, \sqrt{1-a}\right)$$</p>
+<h4 id="2-validation-constraints">2. Validation Constraints</h4>
+<ul>
+<li><strong>Geofence Check</strong>: If $d &gt; 300\text{ meters}$, check-in is rejected with HTTP <code>403 Forbidden</code> (<code>OUTSIDE_ATTENDANCE_GEOFENCE</code>).</li>
+<li><strong>GPS Anti-Spoofing Guard</strong>: If the reported device accuracy is $&gt; 200\text{ meters}$, check-in is rejected with HTTP <code>422 Unprocessable Entity</code> (<code>LOCATION_ACCURACY_LOW</code>), preventing the use of software location spoofers and mock location apps.</li>
+<li><strong>Late Arrival Rule</strong>:</li>
+<li>Check-in time evaluated in Indian Standard Time (<code>Asia/Kolkata</code>).</li>
+<li>If $\text{Check-in Time} \le 11:30\text{ AM IST} \implies \text{Status} = \mathbf{PRESENT}$.</li>
+<li>If $\text{Check-in Time} &gt; 11:30\text{ AM IST} \implies \text{Status} = \mathbf{LATE}$.</li>
+<li><strong>Half-Day Shift Demotion</strong>:</li>
+<li>Upon checkout, shift duration is calculated:<br />
+    $$\text{Worked Minutes} = \left\lfloor \frac{\text{Check-Out Timestamp} - \text{Check-In Timestamp}}{60,000} \right\rfloor$$</li>
+<li>If $\text{Worked Minutes} &lt; 240\text{ minutes (4 hours)}$, status is automatically demoted to $\mathbf{HALF_DAY}$.</li>
+</ul>
+<div class="diagram-card"><div class="diagram-title">System Architecture / Workflow Diagram</div><pre class="mermaid">stateDiagram-v2
+    [*] --> CheckInAttempt: Employee clicks Check In
+    CheckInAttempt --> LocationRejected: Distance > 300m OR Accuracy > 200m
+    CheckInAttempt --> PRESENT: Distance <= 300m AND CheckIn <= 11:30 AM
+    CheckInAttempt --> LATE: Distance <= 300m AND CheckIn > 11:30 AM
+    PRESENT --> CheckoutInitiated: Employee clicks Check Out
+    LATE --> CheckoutInitiated: Employee clicks Check Out
+    CheckoutInitiated --> HALF_DAY: Elapsed Time < 240 mins (4 hrs)
+    CheckoutInitiated --> ShiftComplete: Elapsed Time >= 240 mins
+    [*] --> ABSENT: No CheckIn by end of working day
+    ABSENT --> RegularizationPending: Employee files regularization
+    RegularizationPending --> PRESENT: Manager approves
+    RegularizationPending --> ABSENT: Manager rejects</pre></div>
+
+<h3 id="53-attendance-regularization-leave-workflows">5.3 Attendance Regularization &amp; Leave Workflows</h3>
+<ul>
+<li><strong>Regularization</strong>: When field travel or technical failures prevent check-in, employees submit a regularization claim with supporting notes. The request is routed to the direct manager. Approval overrides daily status and writes a permanent record to <code>AuditLog</code>.</li>
+<li><strong>Leave Requests</strong> (<code>LeaveRequest</code>):</li>
+<li><strong>Leave Categories</strong>: Privilege Leave (PL), Casual Leave (CL), Sick Leave (SL), and Unpaid Leave.</li>
+<li><strong>Validation Engine</strong>: Blocks overlapping leave requests; verifies that requested days do not exceed available balance quotas; updates team availability calendars upon approval.</li>
+</ul>
+<hr />
+<h1 id="chapter-6-project-delivery-task-kanban-activity-auditing">Chapter 6: Project Delivery, Task Kanban &amp; Activity Auditing</h1>
+<h3 id="61-overview">6.1 Overview</h3>
+<p>The Work module (<code>/work</code>) provides visual project delivery, sprint tracking, and task lifecycle execution. It bridges the gap between software development/daily task execution and employee performance.</p>
+<h3 id="62-the-7-stage-state-machine">6.2 The 7-Stage State Machine</h3>
+<p>Task transitions are strictly validated in <code>taskTransitions.ts</code>. Invalid jumps (e.g., jumping directly from <code>NOT_STARTED</code> to <code>COMPLETED</code>) are rejected by the API.</p>
+<div class="diagram-card"><div class="diagram-title">System Architecture / Workflow Diagram</div><pre class="mermaid">stateDiagram-v2
+    [*] --> NOT_STARTED
+    NOT_STARTED --> IN_PROGRESS: Developer picks up ticket
+    NOT_STARTED --> BLOCKED: Immediate impediment flagged
+    NOT_STARTED --> CANCELLED: Scope dropped
+    IN_PROGRESS --> BLOCKED: Dependency / blocker identified
+    IN_PROGRESS --> IN_REVIEW: Code / deliverable submitted
+    IN_PROGRESS --> CANCELLED: Dropped
+    BLOCKED --> IN_PROGRESS: Blocker resolved
+    BLOCKED --> CANCELLED: Dropped
+    IN_REVIEW --> COMPLETED: Reviewer / QA signs off
+    IN_REVIEW --> REOPENED: QA failure / rework required
+    IN_REVIEW --> IN_PROGRESS: Minor edits needed
+    COMPLETED --> REOPENED: Bug discovered post-completion
+    REOPENED --> IN_PROGRESS: Developer resumes work
+    REOPENED --> BLOCKED: Blocker encountered
+    REOPENED --> IN_REVIEW: Resubmitted for review
+    REOPENED --> CANCELLED: Abandoned
+    CANCELLED --> [*]
+    COMPLETED --> [*]</pre></div>
+
+<h3 id="63-blocker-escalation-resolution">6.3 Blocker Escalation &amp; Resolution</h3>
+<ul>
+<li>Any team member can flag a task as <code>BLOCKED</code> by selecting a reason:</li>
+<li><code>EXTERNAL_DEPENDENCY</code> (e.g., waiting for client API credentials)</li>
+<li><code>DESIGN_ASSETS</code> (e.g., UI/UX mocks missing)</li>
+<li><code>INFRASTRUCTURE</code> (e.g., staging server outage)</li>
+<li><code>REQUIREMENT_AMBIGUITY</code> (e.g., unclear product logic)</li>
+<li>Flagging a blocker surfaces an immediate alert on the Manager and Department Head dashboards.</li>
+<li>External blockers are flagged as <code>external: true</code>, which exempts the assigned employee from reliability scoring penalties during contribution reviews.</li>
+</ul>
+<h3 id="64-cycle-time-rework-tracking">6.4 Cycle Time &amp; Rework Tracking</h3>
+<ul>
+<li><strong>Cycle Time</strong>: Tracks the elapsed wall-clock hours from first entering <code>IN_PROGRESS</code> to final <code>COMPLETED</code>.</li>
+<li><strong>Rework Counter</strong>: Increments every time a task transitions from <code>IN_REVIEW</code> $\to$ <code>REOPENED</code>. High rework counts flag requirement ambiguities or technical debt without relying on subjective opinions.</li>
+<li><strong>Immutable Activity Stream</strong> (<code>TaskActivity</code>): Every status change, priority alteration, assignee reassignment, and comment is logged with actor metadata.</li>
+</ul>
+<hr />
+<h1 id="chapter-7-local-zero-retention-voice-to-task-capture">Chapter 7: Local Zero-Retention Voice-to-Task Capture</h1>
+<h3 id="71-architecture-ethical-privacy-guarantee">7.1 Architecture &amp; Ethical Privacy Guarantee</h3>
+<p>To eliminate typing friction for field staff and engineers, MobiusEMS integrates speech-to-task capabilities running <strong>100% locally on the host server</strong> using <code>faster-whisper</code>.<br />
+* <strong>Zero Cloud Third-Party Exposure</strong>: Audio is never sent to external cloud APIs (Google Speech, Whisper API, AWS Transcribe).<br />
+* <strong>Guaranteed Audio Shredding</strong>: The browser records speech in WebM format and uploads it via HTTPS. The server writes the bytes to an ephemeral temporary path (<code>/tmp/audio_*.webm</code>), extracts the text transcript, and immediately deletes/shreds the file in a strict <code>finally</code> code block. Audio files are never written to long-term storage or Cloudinary.</p>
+<div class="diagram-card"><div class="diagram-title">System Architecture / Workflow Diagram</div><pre class="mermaid">sequenceDiagram
+    actor User
+    participant Browser
+    participant ExpressAPI as Express Backend
+    participant Whisper as Local faster-whisper
+    participant FS as Local Temp Disk
+
+    User->>Browser: Taps mic and speaks command
+    Browser->>ExpressAPI: POST /api/v1/work/voice (audio/webm)
+    ExpressAPI->>FS: Write ephemeral file /tmp/audio_xyz.webm
+    ExpressAPI->>Whisper: Spawn python faster-whisper process
+    Whisper-->>ExpressAPI: Return text transcript
+    ExpressAPI->>FS: fs.rm(/tmp/audio_xyz.webm) [Strict finally block]
+    ExpressAPI->>ExpressAPI: Run NLP Intent & Entity Parser
+    ExpressAPI-->>Browser: Return structured JSON Draft Task
+    Browser-->>User: Present Editable Confirmation Card
+    User->>Browser: Edits fields & clicks "Confirm"
+    Browser->>ExpressAPI: POST /api/v1/work/tasks (Committed to DB)</pre></div>
+
+<h3 id="72-multilingual-nlp-parser-capabilities">7.2 Multilingual NLP Parser Capabilities</h3>
+<p>The system parses English, Hindi, and 10 regional Indian languages (Bengali, Tamil, Telugu, Marathi, Gujarati, Kannada, Malayalam, Punjabi, Urdu):<br />
+1. <strong>Prospective vs. Retrospective Intent</strong>:<br />
+   - Prospective phrases (<em>"have to complete", "need to finish", "पूरा करना है", "मुடிக்க வேண்டும்"</em>) $\implies$ Sets action to <code>CREATE_TASK</code>.<br />
+   - Retrospective phrases (<em>"completed", "finished", "हो गया", "முடிந்தது"</em>) $\implies$ Sets action to <code>UPDATE_STATUS</code>.<br />
+2. <strong>Spoken Number &amp; Duration Extraction</strong>:<br />
+   - Converts multilingual speech numbers (e.g., <em>"two hours"</em>, <em>"दो घंटे"</em>, <em>"மூன்று மணி நேரம்"</em>) into floating-point numbers (<code>actualHours: 2.0</code>).<br />
+3. <strong>Compound Hinglish Splitting</strong>:<br />
+   - Identifies multiple instructions in a single sentence (e.g., <em>"Ayush ko frontend do aur Priya ko backend do"</em>) and generates distinct draft assignments.<br />
+4. <strong>Human-in-the-Loop Confirmation</strong>:<br />
+   - Transcripts are <strong>never committed automatically</strong>. An editable modal card displays extracted title, priority, assignee, and estimated hours for user review and sign-off.</p>
+<hr />
+<h1 id="chapter-8-capability-matrix-skill-builder-timed-assessments">Chapter 8: Capability Matrix, Skill Builder &amp; Timed Assessments</h1>
+<h3 id="81-skills-inventory-taxonomy-skillsbuilder">8.1 Skills Inventory &amp; Taxonomy (<code>/skills/builder</code>)</h3>
+<ul>
+<li>A standardized competency catalog organized into Technical, Operational, Domain, and Leadership categories.</li>
+<li>Each skill defines 5 proficiency levels (1 = Beginner, 5 = Master/Authority).</li>
+</ul>
+<h3 id="82-two-tier-rating-system">8.2 Two-Tier Rating System</h3>
+<ul>
+<li><strong>Self-Reported Ratings</strong>: Employees rate their own proficiency (1–5) and provide evidence links (GitHub pull requests, project URLs, certifications). These ratings are tagged as <code>UNVERIFIED</code>.</li>
+<li><strong>Manager / Verifier Approval</strong>: Designees inspect the evidence and approve or adjust the rating. Only verified ratings feed into organizational capability heatmaps and promotion readiness scores.</li>
+</ul>
+<h3 id="83-departmental-skill-heatmap-skill-matrix">8.3 Departmental Skill Heatmap (<code>/skill-matrix</code>)</h3>
+<ul>
+<li>Renders a matrix of departments/teams against core skills.</li>
+<li><strong>Single Point of Failure (SPOF) Detection</strong>: Automatically highlights critical skills possessed by only one person in a department, alerting management to cross-training risks.</li>
+</ul>
+<h3 id="84-automated-timed-assessments-assessments">8.4 Automated Timed Assessments (<code>/assessments</code>)</h3>
+<ul>
+<li>Enables HR and technical leads to design standardized tests for candidate screening or employee skill benchmarking.</li>
+<li><strong>Features</strong>:</li>
+<li>Randomized question pools drawn from tagged categories.</li>
+<li>Strict countdown timers with automatic submission upon expiry.</li>
+<li>Automated grading for multiple-choice questions; rubrics for open-ended evaluations.</li>
+<li>Direct candidate assessment portals (<code>APPLICANT</code> role).</li>
+</ul>
+<hr />
+<h1 id="chapter-9-objective-performance-management-snapshots">Chapter 9: Objective Performance Management &amp; Snapshots</h1>
+<h3 id="91-overview-elimination-of-bias">9.1 Overview &amp; Elimination of Bias</h3>
+<p>Traditional annual reviews suffer from recency bias, halo effects, and personal favoritism. MobiusEMS replaces subjective impressions with <strong>deterministic mathematical scoring</strong> anchored in verifiable data collected across the review period.</p>
+<h3 id="92-the-composite-performance-mathematical-formula">9.2 The Composite Performance Mathematical Formula</h3>
+<p>The final performance evaluation score is calculated via weighted deterministic aggregation:</p>
+<p>$$\text{Final Score} = (\text{Goals Score} \times W_g) + (\text{KPI Score} \times W_k) + (\text{Review Competencies} \times W_r)$$</p>
+<p>Where:<br />
+* $W_g + W_k + W_r = 1.0$ (configured organizational weights).<br />
+* <strong>Goals Achievement</strong>: Percentage completion of assigned cascading goals.<br />
+* <strong>KPI Performance</strong>: Bounded achievement across quantifiable key performance indicators:<br />
+  $$\text{KPI Achievement} = \max\left(0, \min\left(200, \frac{\text{Actual Metric}}{\text{Target Metric}} \times 100\right)\right)$$<br />
+* <strong>Review Competencies</strong>: Normalized score (0–100%) from structured 360-degree peer and manager evaluation rubrics.</p>
+<h3 id="93-performance-classification-bands">9.3 Performance Classification Bands</h3>
+<p>The computed final score automatically maps into strict, non-negotiable performance tiers:<br />
+* $\ge \mathbf{90.0\%}$: <strong>Exceptional</strong><br />
+* $\mathbf{75.0\% - 89.9\%}$: <strong>Strong Performer</strong><br />
+* $\mathbf{60.0\% - 74.9\%}$: <strong>Consistent Performer</strong><br />
+* $&lt;\mathbf{60.0\%}$: <strong>Developing / Needs Support</strong></p>
+<h3 id="94-cryptographic-immutable-snapshots-performancesnapshot">9.4 Cryptographic Immutable Snapshots (<code>PerformanceSnapshot</code>)</h3>
+<p>Once a review cycle is closed by HR:<br />
+1. The raw metrics, reviewer feedback, mathematical weights, and final scores are serialized.<br />
+2. The snapshot is marked <code>isImmutable: true</code> in the database.<br />
+3. Any subsequent code updates, goal adjustments, or role changes cannot alter historical review records, ensuring compliance with audit and legal discovery standards.</p>
+<hr />
+<h1 id="chapter-10-continuous-contribution-intelligence">Chapter 10: Continuous Contribution Intelligence</h1>
+<h3 id="101-overview-philosophy">10.1 Overview &amp; Philosophy</h3>
+<p>Performance should not be evaluated only once a year. The Contribution module (<code>/contribution</code>) tracks steady, verifiable weekly delivery.</p>
+<h3 id="102-weekly-check-in-ritual">10.2 Weekly Check-In Ritual</h3>
+<p>Every Friday, employees submit a structured check-in:<br />
+* Completed deliverables with links to work tickets.<br />
+* Key priorities for the upcoming week.<br />
+* Active impediments or blockers.</p>
+<h3 id="103-algorithmic-contribution-percentiles">10.3 Algorithmic Contribution Percentiles</h3>
+<p>The platform computes a normalized contribution percentile across peer cohorts based on:<br />
+1. <strong>Deliverable Velocity</strong>: Ratio of planned deliverables completed on time over rolling 30-day and 90-day windows.<br />
+2. <strong>Reliability Index</strong>: Proportion of commitments fulfilled, explicitly excluding external blockers (<code>reliabilityEligible = !task.blocker?.external</code>).<br />
+3. <strong>Quality &amp; Rework Factor</strong>: Penalties applied only when tasks experience excessive rework cycles ($&gt;2$ rework loops).</p>
+<h3 id="104-the-evidence-coverage-guardrail">10.4 The Evidence-Coverage Guardrail</h3>
+<p>MobiusEMS enforces a strict operational principle: <strong>Never confuse missing documentation with poor delivery.</strong><br />
+* If an employee fails to submit weekly updates, the system flags an <strong>"Information Gap"</strong>.<br />
+* Managers are prompted to verify delivery before an algorithm artificially depresses the employee's contribution score.</p>
+<hr />
+<h1 id="chapter-11-commercial-sales-intelligence-7-tier-gis">Chapter 11: Commercial Sales Intelligence &amp; 7-Tier GIS</h1>
+<h3 id="111-the-7-tier-geographic-information-system-gis-hierarchy">11.1 The 7-Tier Geographic Information System (GIS) Hierarchy</h3>
+<p>Field sales and territory distribution are mapped using a native 7-tier geographic tree (<code>GeoNode</code>):</p>
+<p>$$\text{Global} \longrightarrow \text{Country} \longrightarrow \text{State} \longrightarrow \text{District} \longrightarrow \text{City} \longrightarrow \text{Area} \longrightarrow \text{Pincode}$$</p>
+<p>This hierarchy allows organizations to aggregate sales data, customer concentration, and pipeline value from local pincodes up to national and global levels.</p>
+<h3 id="112-headcount-capacity-territory-math">11.2 Headcount Capacity &amp; Territory Math</h3>
+<p>Territory planning uses deterministic capacity math (<code>salesMath.ts</code>):</p>
+<p>$$\text{Required Headcount} = \left\lceil \frac{\text{Current Lead Load}}{\text{Configured Capacity per Employee}} \right\rceil$$</p>
+<p>$$\text{Headcount Gap} = \max(0, \text{Required Headcount} - \text{Active Headcount})$$</p>
+<p>$$\text{Capacity Utilization \%} = \frac{\text{Current Lead Load}}{\text{Active Headcount} \times \text{Configured Capacity}} \times 100$$</p>
+<p>$$\text{Coverage \%} = \min\left(100, \frac{\text{Active Headcount}}{\text{Required Headcount}} \times 100\right)$$</p>
+<ul>
+<li>When <strong>Capacity Utilization</strong> exceeds $100\%$, territories are flagged as overloaded, prompting leadership to allocate additional sales representatives.</li>
+</ul>
+<h3 id="113-lead-management-sla-tracking">11.3 Lead Management &amp; SLA Tracking</h3>
+<ul>
+<li><strong>Lead Ingestion</strong>: Captures prospective buyers with assigned territory, contact details, and initial commercial value.</li>
+<li><strong>SLA Enforcement</strong>: Measures response times against territory follow-up SLAs.</li>
+<li><strong>Lost Revenue Algorithm</strong>: Automatically computes the estimated lost revenue when leads languish in <code>NEW</code> or <code>CONTACTED</code> status past agreed SLA thresholds, highlighting missed revenue opportunities to sales leadership.</li>
+</ul>
+<hr />
+<h1 id="chapter-12-sales-pipeline-quotas-deduplicated-revenue-ledger">Chapter 12: Sales Pipeline, Quotas &amp; Deduplicated Revenue Ledger</h1>
+<h3 id="121-commercial-opportunity-pipeline">12.1 Commercial Opportunity Pipeline</h3>
+<p>Opportunities move through 5 structured stages:<br />
+$$\text{Prospecting} \longrightarrow \text{Qualification} \longrightarrow \text{Proposal} \longrightarrow \text{Negotiation} \longrightarrow \text{Closed Won} \; / \; \text{Closed Lost}$$</p>
+<ul>
+<li>Moving a deal to <code>Closed Lost</code> mandates entering a verified <code>lossReason</code> (e.g., Competitor Price, Feature Gap, Budget Cancelled) to inform product and sales strategy.</li>
+</ul>
+<h3 id="122-lead-conversion-customer-creation">12.2 Lead Conversion &amp; Customer Creation</h3>
+<p>When a lead reaches <code>CONVERTED</code>:<br />
+1. The system automatically provisions a linked <code>SalesCustomer</code> record.<br />
+2. Contact details, territory, and currency are inherited directly.<br />
+3. Future opportunities and quotes are anchored to this customer profile.</p>
+<h3 id="123-deduplicated-realized-revenue-ledger">12.3 Deduplicated Realized Revenue Ledger</h3>
+<p>When an opportunity is marked <code>Closed Won</code>:<br />
+1. An immutable <code>SalesRevenueTransaction</code> is recorded.<br />
+2. Customer lifetime value ($\text{LTV}$) is updated automatically.<br />
+3. <strong>Idempotency Lock</strong>: The transaction logic checks for existing revenue records for that opportunity ID. Repeated requests cannot generate duplicate revenue entries.<br />
+4. Manual revenue entries are restricted to <code>SUPER_ADMIN</code> with mandatory audit justification.</p>
+<div class="diagram-card"><div class="diagram-title">System Architecture / Workflow Diagram</div><pre class="mermaid">sequenceDiagram
+    actor SalesRep as Sales Representative
+    participant Lead as Sales Lead
+    participant Customer as Sales Customer
+    participant Deal as Opportunity
+    participant Ledger as Revenue Ledger
+
+    SalesRep->>Lead: Create Lead (Assign Territory)
+    SalesRep->>Lead: Qualify & Click "Convert"
+    Lead->>Customer: Auto-generate Customer Profile
+    SalesRep->>Deal: Create Opportunity linked to Customer
+    SalesRep->>Deal: Move to "Closed Won"
+    Deal->>Ledger: Check Idempotency (Has deal been booked?)
+    Ledger-->>Deal: No prior booking found
+    Deal->>Ledger: Book immutable SalesRevenueTransaction
+    Deal->>Customer: Increment Lifetime Value (LTV)
+    Ledger-->>SalesRep: Deal Won & Quota Pacing Updated</pre></div>
+
+<h3 id="124-targets-commitments-reminders">12.4 Targets, Commitments &amp; Reminders</h3>
+<ul>
+<li><strong>Target Allocation</strong>: Sales leadership sets monthly, quarterly, or annual targets for territories and individual reps.</li>
+<li><strong>Digital Sign-Off</strong> (<code>EmployeeTargetCommitment</code>): Sales reps digitally review and accept their assigned quota targets.</li>
+<li><strong>Target Reminders</strong> (<code>TargetReminderLog</code>): Automated background jobs alert reps and managers to quota pacing milestones.</li>
+</ul>
+<h3 id="125-the-multi-tier-sales-compensation-engine">12.5 The Multi-Tier Sales Compensation Engine</h3>
+<p>The platform includes an advanced compensation engine supporting 5 distinct calculation models:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Model</th>
+<th style="text-align: left;">Calculation Method</th>
+<th style="text-align: left;">Use Case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>PROPORTIONAL</strong></td>
+<td style="text-align: left;">Payout scales linearly with quota achievement up to a maximum cap.</td>
+<td style="text-align: left;">Standard inside sales teams.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>COMMISSION_SLABS</strong></td>
+<td style="text-align: left;">Tiered rates (e.g., $0-80\% = 2\%$, $80-100\% = 5\%$, $&gt;100\% = 8\%$).</td>
+<td style="text-align: left;">Enterprise field sales.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>FLAT_COMMISSION</strong></td>
+<td style="text-align: left;">Fixed percentage of all closed-won revenue.</td>
+<td style="text-align: left;">High-velocity transactional sales.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>TARGET_GATE</strong></td>
+<td style="text-align: left;">Zero payout unless $\text{Achievement} \ge 100\%$; accelerated rate thereafter.</td>
+<td style="text-align: left;">High-quota executive sales.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>HYBRID</strong></td>
+<td style="text-align: left;">Fixed base allocation + tiered commission slabs + performance bonus.</td>
+<td style="text-align: left;">Multi-tier distributed sales networks.</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Accelerators &amp; Caps</strong>: Supports performance accelerators (multipliers applied above $100\%$ quota) and floor/ceiling safety caps to protect corporate budgets.</li>
+</ul>
+<hr />
+<h1 id="chapter-13-channel-partner-ecosystem">Chapter 13: Channel Partner Ecosystem</h1>
+<h3 id="131-overview">13.1 Overview</h3>
+<p>Organizations operating indirect sales channels can manage distributor, dealer, and reseller networks inside the same platform (<code>ChannelPartner</code>).</p>
+<h3 id="132-key-capabilities">13.2 Key Capabilities</h3>
+<ul>
+<li><strong>Partner Profiles</strong>: Maintain legal entity details, GSTIN/Tax IDs, commercial agreements, and commission structures.</li>
+<li><strong>Territory Coverage</strong>: Assign channel partners to specific geographic territories (Districts, States, or National).</li>
+<li><strong>Partner-Attributed Revenue</strong>: Connect won opportunities directly to referring partners to compute partner payouts and track indirect revenue contribution.</li>
+</ul>
+<hr />
+<h1 id="chapter-14-talent-acquisition-jd-library-resume-screener">Chapter 14: Talent Acquisition, JD Library &amp; Resume Screener</h1>
+<h3 id="141-standardized-job-description-library-resumes">14.1 Standardized Job Description Library (<code>/resumes</code>)</h3>
+<ul>
+<li>Centralized repository of approved JD templates.</li>
+<li>Defines minimum years of experience, core skill requirements, preferred qualifications, and compensation bands.</li>
+</ul>
+<h3 id="142-candidate-applicant-pipeline-applicants">14.2 Candidate Applicant Pipeline (<code>/applicants</code>)</h3>
+<ul>
+<li>Tracks candidates across defined hiring stages:<br />
+  $$\text{Sourced} \longrightarrow \text{Screened} \longrightarrow \text{Interviewing} \longrightarrow \text{Offer Extended} \longrightarrow \text{Hired} \; / \; \text{Rejected}$$</li>
+<li>Upon moving a candidate to <code>Hired</code>, HR can convert the candidate profile into an active <code>Employee</code> record with a single click, transferring resume data into their Employee 360 profile.</li>
+</ul>
+<h3 id="143-automated-resume-screening-engine-resume-screener">14.3 Automated Resume Screening Engine (<code>/resume-screener</code>)</h3>
+<ol>
+<li>Recruiter uploads candidate resumes in PDF or DOCX format.</li>
+<li>The server extracts raw text using document parsers.</li>
+<li>The screening engine compares candidate text against the target JD's skill taxonomy and experience parameters.</li>
+<li>Generates an <strong>Advisory Qualification Score</strong> detailing:</li>
+<li>Verified matching skills</li>
+<li>Missing required skills</li>
+<li>Years of experience estimate</li>
+<li><strong>Human Recruiter Gate</strong>: The score is strictly advisory. The system does not automatically reject candidates; final interview selections remain in human hands.</li>
+</ol>
+<hr />
+<h1 id="chapter-15-people-operations-growth-culture-gamification">Chapter 15: People Operations, Growth, Culture &amp; Gamification</h1>
+<h3 id="151-structured-1-on-1-workspace-development">15.1 Structured 1-on-1 Workspace (<code>/development</code>)</h3>
+<ul>
+<li>Replaces ad-hoc meetings with structured, recurring 1-on-1 agendas.</li>
+<li>Features shared agendas, mutually agreed action items with due dates, and <strong>Private Manager Notes</strong> for continuous coaching notes.</li>
+</ul>
+<h3 id="152-internal-training-catalog-certifications">15.2 Internal Training Catalog &amp; Certifications</h3>
+<ul>
+<li>Centralized catalog of internal courses, technical workshops, and external training programs.</li>
+<li>Tracks enrollment, attendance, and completion certificates.</li>
+<li>Completed courses automatically link to the employee's profile and update their verified skill matrix.</li>
+</ul>
+<h3 id="153-core-value-peer-recognitions-people-ops">15.3 Core-Value Peer Recognitions (<code>/people-ops</code>)</h3>
+<ul>
+<li>A company-wide recognition board where employees and managers celebrate colleagues who exemplify corporate values (e.g., Integrity, Customer Obsession, Innovation).</li>
+<li>Recognitions are visible across the company and feed into periodic culture awards.</li>
+</ul>
+<h3 id="154-private-daily-to-dos">15.4 Private Daily To-Dos</h3>
+<ul>
+<li>A lightweight personal daily task planner for individual employees.</li>
+<li><strong>Strict Privacy Rule</strong>: Personal to-do lists are private to the individual and are strictly excluded from performance reviews and manager visibility.</li>
+</ul>
+<h3 id="155-employee-gamification-employeegamification">15.5 Employee Gamification (<code>EmployeeGamification</code>)</h3>
+<ul>
+<li>Earn points and badges for timely attendance, sprint completion, skill certifications, and peer recognitions.</li>
+<li>Departmental and company-wide leaderboards encourage healthy engagement.</li>
+</ul>
+<hr />
+<h1 id="chapter-16-enterprise-governance-security-tamper-evident-audit">Chapter 16: Enterprise Governance, Security &amp; Tamper-Evident Audit</h1>
+<h3 id="161-tamper-evident-audit-trail-governance">16.1 Tamper-Evident Audit Trail (<code>/governance</code>)</h3>
+<p>Every critical operation across the platform writes an immutable record to <code>AuditLog</code>:<br />
+* <strong>Actor Metadata</strong>: User ID, assigned role, IP address, user-agent string.<br />
+* <strong>Action Classification</strong>: Check-ins, role changes, salary revisions, task state transitions, AI requests, document downloads.<br />
+* <strong>State Diff</strong>: Full JSON delta capturing <code>oldValue</code> and <code>newValue</code>.<br />
+* <strong>Tamper Resistance</strong>: Audit log records have no update or delete API endpoints.</p>
+<h3 id="162-granular-role-based-access-control-rbac">16.2 Granular Role-Based Access Control (RBAC)</h3>
+<p>Access is enforced across <strong>22 Section Permissions</strong> and fine-grained action keys (<code>PERMISSIONS</code>):</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Permission Domain</th>
+<th style="text-align: center;">Super Admin</th>
+<th style="text-align: center;">HR Admin</th>
+<th style="text-align: center;">Dept Head</th>
+<th style="text-align: center;">Manager</th>
+<th style="text-align: center;">Team Lead</th>
+<th style="text-align: center;">Employee</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Tenant Settings &amp; Subscription</strong></td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">Read Only</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Attendance Register &amp; Config</strong></td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">View All</td>
+<td style="text-align: center;">View Dept</td>
+<td style="text-align: center;">View Team</td>
+<td style="text-align: center;">View Team</td>
+<td style="text-align: center;">Self Only</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Employee Directory &amp; Edits</strong></td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">Read Dept</td>
+<td style="text-align: center;">Read Team</td>
+<td style="text-align: center;">Read Team</td>
+<td style="text-align: center;">Self Profile</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Task Creation &amp; Assignment</strong></td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">Update Own</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Performance Reviews &amp; Scoring</strong></td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">Review Only</td>
+<td style="text-align: center;">View Own</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Sales CRM (Full Operations)</strong></td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">View Only</td>
+<td style="text-align: center;">Team Scope</td>
+<td style="text-align: center;">Team Scope</td>
+<td style="text-align: center;">Team Scope</td>
+<td style="text-align: center;">Self Scope</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Resume Screener &amp; Hiring</strong></td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">Read Only</td>
+<td style="text-align: center;">Read Only</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Audit Logs Inspection</strong></td>
+<td style="text-align: center;">✅</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+<td style="text-align: center;">❌</td>
+</tr>
+</tbody>
+</table>
+<h3 id="163-authenticated-private-document-storage">16.3 Authenticated Private Document Storage</h3>
+<ul>
+<li>Identity proofs, employment contracts, and resumes are stored in Cloudinary private buckets with randomized cryptographic keys.</li>
+<li>Direct public URL access is completely disabled.</li>
+<li>Document access requires an authenticated API request: the backend validates the user's role and tenant, then issues a time-limited (15-minute) signed download URL.</li>
+</ul>
+<hr />
+<h1 id="chapter-17-ethical-ai-assistant-multi-step-email-automation">Chapter 17: Ethical AI Assistant &amp; Multi-Step Email Automation</h1>
+<h3 id="171-company-handbook-policy-qa-assistant-ai-workspace">17.1 Company Handbook &amp; Policy Q&amp;A Assistant (<code>/ai-workspace</code>)</h3>
+<ul>
+<li>Grounded in uploaded company policies, employee handbooks, and leave guidelines.</li>
+<li>Uses retrieval-augmented generation (RAG) to provide exact, cited answers to employee questions (e.g., <em>"How many casual leaves can I carry forward?"</em>).</li>
+<li><strong>Escalation Trigger</strong>: If a question falls outside documented policy, the assistant prompts the employee to raise a ticket with HR rather than guessing.</li>
+</ul>
+<h3 id="172-advisory-review-summaries">17.2 Advisory Review Summaries</h3>
+<ul>
+<li>Synthesizes quarterly raw data (completed tasks, blocker logs, attendance percentages, KPI attainment) into a coherent review draft for managers.</li>
+<li><strong>Ethical Boundary</strong>: Managers must manually review, edit, and sign off on all drafts. The system bars AI from executing automated grading or personnel actions.</li>
+</ul>
+<h3 id="173-multi-step-email-drip-automation-email-automation">17.3 Multi-Step Email Drip Automation (<code>/email-automation</code>)</h3>
+<ul>
+<li>Designed for candidate communications, vendor outreach, and customer nurturing.</li>
+<li>Integrates with Brevo via transactional APIs.</li>
+<li><strong>Workflow Logic</strong>:</li>
+<li>Multi-step sequence steps with configurable delays (e.g., Day 1: Welcome $\to$ Day 3: Follow-Up).</li>
+<li><strong>Automatic Stop Conditions</strong>: Sequences immediately halt if the recipient replies, unsubscribes, or if the email bounces.</li>
+</ul>
+<hr />
+<h1 id="chapter-18-operational-verification-quality-checklist">Chapter 18: Operational Verification &amp; Quality Checklist</h1>
+<p>For quality assurance and systems audits, verify every module against the following operational criteria:</p>
+<ol>
+<li><strong>Multi-Tenancy</strong>: Ensure no database query can execute without an authenticated tenant context.</li>
+<li><strong>Attendance</strong>: Verify that coordinates outside 300 meters or accuracy $&gt;200\text{m}$ are rejected with appropriate error codes.</li>
+<li><strong>Voice Shredding</strong>: Inspect server temp directories to ensure no audio files persist after voice-to-task commands.</li>
+<li><strong>Performance Calculations</strong>: Verify that performance scores match the mathematical formula within $0.1\%$ precision.</li>
+<li><strong>Revenue Ledger</strong>: Verify that moving an opportunity to <code>Closed Won</code> books exactly one revenue transaction, and that repeated submissions are rejected.</li>
+<li><strong>Audit Trail</strong>: Confirm that all sensitive mutations generate a corresponding <code>AuditLog</code> entry.</li>
+</ol>
+<hr />
+<p><em>End of MobiusEMS Complete Enterprise Feature Explanation Manual v2.0</em></p>
+
+</body>
+</html>

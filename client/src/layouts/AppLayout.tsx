@@ -1,10 +1,10 @@
 import { useEffect, useState, type ComponentType } from "react";
 import logoMark from "@/assets/mobius-mark.svg";
 import { useMutation } from "@tanstack/react-query";
-import type { CapabilityName, PermissionName, RoleName, SectionPermissionName } from "@mobius-ems/shared";
+import type { CapabilityName, PermissionName, RoleName, SectionPermissionName, PlanFeatures } from "@mobius-ems/shared";
 import {
   BarChart3, Bot, BrainCircuit, BriefcaseBusiness, Building2, CalendarCheck2,
-  ChevronLeft, CircleGauge, FileText, GraduationCap, ListTodo, LogOut, Menu,
+  ChevronLeft, CircleGauge, CreditCard, FileText, GraduationCap, ListTodo, LogOut, Menu,
   MailPlus, MapPinned, Route, ShieldCheck, Sparkles, Target, TrendingUp, UserCog, UserPlus, UserRound, Users, Workflow, X,
 } from "lucide-react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -25,6 +25,7 @@ type NavItem = {
   capability?: CapabilityName;
   platformOnly?: boolean;
   section?: SectionPermissionName;
+  requiredFeature?: keyof PlanFeatures;
 };
 
 const superAdminRole: RoleName[] = ["SUPER_ADMIN"];
@@ -35,9 +36,10 @@ const groups: { label: string; items: NavItem[] }[] = [
     items: [
       { label: "Dashboard", icon: CircleGauge, path: "/", section: "section.dashboard" },
       { label: "My profile", icon: UserRound, path: "/me", section: "section.profile" },
-      { label: "AI Workspace", icon: Bot, path: "/ai-workspace", section: "section.ai_workspace" },
+      { label: "AI Workspace", icon: Bot, path: "/ai-workspace", section: "section.ai_workspace", requiredFeature: "aiEnabled" },
     ],
   },
+
   {
     label: "People & HR",
     items: [
@@ -92,10 +94,11 @@ const groups: { label: string; items: NavItem[] }[] = [
   {
     label: "Administration",
     items: [
+      { label: "Subscription & Plan", icon: CreditCard, path: "/subscription", roles: ["SUPER_ADMIN", "HR_ADMIN"] },
       { label: "Administrators", icon: UserCog, path: "/administrators", roles: superAdminRole },
       { label: "Documents & reports", icon: FileText, path: "/governance", section: "section.governance" },
-        { label: "Access & audit", icon: ShieldCheck, path: "/governance?tab=audit", permission: "audit.view", section: "section.governance" },
-      { label: "Email automation", icon: MailPlus, path: "/email-automation", section: "section.email_automation" },
+      { label: "Access & audit", icon: ShieldCheck, path: "/governance?tab=audit", permission: "audit.view", section: "section.governance" },
+      { label: "Email automation", icon: MailPlus, path: "/email-automation", section: "section.email_automation", requiredFeature: "emailAutomationEnabled" },
     ],
   },
 ];
@@ -131,10 +134,12 @@ export const AppLayout = () => {
           (!item.permission || user!.permissions.includes(item.permission)) &&
           (!item.permissions || item.permissions.some((permission) => user!.permissions.includes(permission))) &&
           (!item.capability || user!.capabilities.includes(item.capability)) &&
-          (!item.platformOnly || user!.isPlatformAdmin)
+          (!item.platformOnly || user!.isPlatformAdmin) &&
+          (!item.requiredFeature || user!.features?.[item.requiredFeature])
       ),
     }))
     .filter((group) => group.items.length);
+
 
   const allVisiblePaths = visibleGroups.flatMap((g) => g.items.map((i) => i.path));
 

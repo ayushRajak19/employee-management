@@ -5,6 +5,7 @@ import { roleSkillCatalog } from "../data/roleSkillCatalog.js";
 import { RoleSkillAssessment } from "../models/RoleSkillAssessment.js";
 import { Task } from "../models/Task.js";
 import { buildSkillEvidence } from "./skillEvidence.js";
+import { recalculateAllRanks } from "./skillCredibilityService.js";
 import bcrypt from "bcrypt";
 import { randomBytes } from "node:crypto";
 import { AssessmentCandidate } from "../models/AssessmentCandidate.js";
@@ -50,8 +51,8 @@ export const roleCatalogAssessment = async (userId: string) => {
     }
   }
 
-  const taskEvidence = assessment ? await Task.find({ assignedEmployee: employee._id, isActive: true }).select("taskId name description completionNote status deadline completionDate qualityRating").sort({ updatedAt: -1 }).lean() : [];
-  const assessmentWithEvidence = assessment ? { ...assessment, evidenceAnalytics: assessment.scores.map((score) => ({ skillId: score.skillId, ...buildSkillEvidence(score, taskEvidence) })) } : null;
+  const taskEvidence = assessment ? await Task.find({ assignedEmployee: employee._id, isActive: true }).select("taskId name description completionNote skillId skillName status estimatedHours actualHours deadline completionDate qualityRating reopenCount").sort({ updatedAt: -1 }).lean() : [];
+  const assessmentWithEvidence = assessment ? { ...assessment, evidenceAnalytics: assessment.scores.map((score) => ({ skillId: score.skillId, ...buildSkillEvidence(score, taskEvidence as any) })) } : null;
   return {
     catalog: assessment ? [] : catalogItems,
     assessment: assessmentWithEvidence,
@@ -114,6 +115,7 @@ export const submitRoleCatalogAssessment = async (userId: string, input: { ratin
 
   const averageRating = Math.round(scores.reduce((sum, item) => sum + item.rating, 0) / scores.length * 10) / 10;
   const assessment = await RoleSkillAssessment.create({ employee: employee._id, role: roleName, designation: employee.designation.name, scores, averageRating, submittedAt: new Date() });
+  await recalculateAllRanks();
   await writeAudit({ user: userId, action: "ROLE_SKILL_ASSESSMENT_SUBMITTED", entityType: "RoleSkillAssessment", entityId: assessment.id, newValue: { role: roleName, skillCount: scores.length, averageRating }, ipAddress: meta.ip, userAgent: meta.userAgent });
   return assessment;
 };

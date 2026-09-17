@@ -1,6 +1,7 @@
 import { Router, type RequestHandler } from "express";
 import * as controller from "../controllers/salesController.js";
 import { authenticate, requireAnyPermission, requirePermission } from "../middleware/auth.js";
+import { requireFeature, requireActiveSubscription } from "../middleware/subscriptionGuard.js";
 import { validate } from "../middleware/validate.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import {
@@ -35,6 +36,9 @@ import type { SalesEntityName } from "../services/salesDataService.js";
 
 export const salesRouter = Router();
 salesRouter.use(authenticate);
+salesRouter.use(requireActiveSubscription);
+salesRouter.use(requireFeature("salesModuleEnabled"));
+
 
 const salesView = requireAnyPermission("sales.view.self", "sales.view.team", "sales.view.all");
 const salesAnalytics = requireAnyPermission("sales.analytics.self", "sales.analytics.team", "sales.analytics.all");

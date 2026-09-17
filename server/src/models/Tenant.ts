@@ -1,7 +1,19 @@
 import { Schema, model, type Types } from "mongoose";
+import {
+  PLAN_TIERS,
+  SUBSCRIPTION_STATUSES,
+  BILLING_CYCLES,
+  DEFAULT_PLAN_CONFIGS,
+  type PlanTier,
+  type SubscriptionStatus,
+  type BillingCycle,
+  type PlanFeatures,
+} from "@mobius-ems/shared";
 
 export const TENANT_STATUSES = ["PROVISIONING", "ACTIVE", "SUSPENDED"] as const;
 export type TenantStatus = typeof TENANT_STATUSES[number];
+
+export { PLAN_TIERS, SUBSCRIPTION_STATUSES, BILLING_CYCLES, type PlanTier, type SubscriptionStatus, type BillingCycle, type PlanFeatures };
 
 export interface TenantDocument {
   name: string;
@@ -13,7 +25,14 @@ export interface TenantDocument {
   referralSource?: string;
   primaryUseCase?: string;
   status: TenantStatus;
-  plan: "STANDARD" | "ENTERPRISE";
+  plan: PlanTier;
+  subscriptionStatus: SubscriptionStatus;
+  billingCycle: BillingCycle;
+  maxEmployees: number; // 0 = unlimited
+  maxStorageMb: number; // 0 = unlimited
+  trialEndsAt?: Date;
+  subscriptionEndsAt?: Date;
+  features: PlanFeatures;
   createdBy?: Types.ObjectId;
   activatedAt?: Date;
   emailSendingProvider?: "BREVO" | "GMAIL" | "NONE";
@@ -28,6 +47,8 @@ export interface TenantDocument {
   };
 }
 
+const defaultFeatures = DEFAULT_PLAN_CONFIGS.STANDARD.features;
+
 const schema = new Schema<TenantDocument>({
   name: { type: String, required: true, trim: true, minlength: 2, maxlength: 120 },
   slug: { type: String, required: true, unique: true, lowercase: true, trim: true, match: /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/ },
@@ -38,7 +59,21 @@ const schema = new Schema<TenantDocument>({
   referralSource: { type: String, trim: true, maxlength: 80 },
   primaryUseCase: { type: String, trim: true, maxlength: 120 },
   status: { type: String, enum: TENANT_STATUSES, default: "PROVISIONING", index: true },
-  plan: { type: String, enum: ["STANDARD", "ENTERPRISE"], default: "STANDARD" },
+  plan: { type: String, enum: PLAN_TIERS, default: "STANDARD", index: true },
+  subscriptionStatus: { type: String, enum: SUBSCRIPTION_STATUSES, default: "ACTIVE", index: true },
+  billingCycle: { type: String, enum: BILLING_CYCLES, default: "MONTHLY" },
+  maxEmployees: { type: Number, default: 50 },
+  maxStorageMb: { type: Number, default: 10240 },
+  trialEndsAt: Date,
+  subscriptionEndsAt: Date,
+  features: {
+    aiEnabled: { type: Boolean, default: defaultFeatures.aiEnabled },
+    salesModuleEnabled: { type: Boolean, default: defaultFeatures.salesModuleEnabled },
+    emailAutomationEnabled: { type: Boolean, default: defaultFeatures.emailAutomationEnabled },
+    voiceTasksEnabled: { type: Boolean, default: defaultFeatures.voiceTasksEnabled },
+    advancedAnalyticsEnabled: { type: Boolean, default: defaultFeatures.advancedAnalyticsEnabled },
+    customRolesEnabled: { type: Boolean, default: defaultFeatures.customRolesEnabled },
+  },
   createdBy: { type: Schema.Types.ObjectId, ref: "User" },
   activatedAt: Date,
   emailSendingProvider: { type: String, enum: ["BREVO", "GMAIL", "NONE"] },
@@ -53,5 +88,6 @@ const schema = new Schema<TenantDocument>({
   },
 }, { timestamps: true });
 
-schema.index({ status: 1, createdAt: -1 });
+schema.index({ status: 1, subscriptionStatus: 1, createdAt: -1 });
 export const Tenant = model<TenantDocument>("Tenant", schema);
+

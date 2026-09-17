@@ -8,11 +8,32 @@ import { deletePrivateObject, deleteProfilePhoto, profilePhotoUrl, uploadProfile
 import { Assessment } from "../models/Assessment.js"; import { AssessmentResult } from "../models/AssessmentResult.js"; import { Attendance } from "../models/Attendance.js"; import { AiEmployeeSummary } from "../models/AiEmployeeSummary.js"; import { ContributionReview } from "../models/ContributionReview.js"; import { ContributionSnapshot } from "../models/ContributionSnapshot.js"; import { DailyTodo } from "../models/DailyTodo.js"; import { LeaveRequest } from "../models/LeaveRequest.js"; import { Notification } from "../models/Notification.js"; import { OneToOne } from "../models/OneToOne.js"; import { PerformanceReview } from "../models/PerformanceReview.js"; import { RefreshSession } from "../models/RefreshSession.js"; import { SkillVerification } from "../models/SkillVerification.js"; import { TaskActivity } from "../models/TaskActivity.js"; import { WeeklyUpdate } from "../models/WeeklyUpdate.js"; import { AuditLog } from "../models/AuditLog.js";
 import { employeeAnalytics } from "./salesAnalyticsService.js";
 import { GeoNode } from "../models/GeoNode.js";
+import { Tenant } from "../models/Tenant.js";
+import { requireTenantId } from "../tenancy/tenantContext.js";
 interface CreateEmployeeInput { employeeId: string; firstName: string; lastName: string; officialEmail: string; phone?: string; department: string; team?: string; designation: string; reportingManager?: string; dateOfJoining: Date; employmentType: EmployeeDocument["employmentType"]; officeLocation?: string; workLocation?: { geoNode: string; coordinates?: { type: "Point"; coordinates: [number, number] } }; role: RoleName; status: EmployeeDocument["status"] }
 const temporaryPassword = () => `Mb!${randomBytes(9).toString("base64url")}7a`;
 const employeeId = () => `MB-${new Date().getFullYear()}-${randomBytes(3).toString("hex").toUpperCase()}`;
 export const createEmployee = async (input: CreateEmployeeInput, actorId: string, meta: { ip?: string; userAgent?: string }) => {
+  const tenantId = requireTenantId();
+  const tenant = await Tenant.findById(tenantId).lean();
+  if (tenant) {
+    if (tenant.subscriptionStatus === "EXPIRED" || tenant.subscriptionStatus === "CANCELLED") {
+      throw new AppError("Your organization's subscription has expired. Please renew your subscription to add employees.", 402, "SUBSCRIPTION_EXPIRED");
+    }
+    const maxEmployees = tenant.maxEmployees ?? 50;
+    if (maxEmployees > 0) {
+      const currentCount = await Employee.countDocuments({ isActive: true });
+      if (currentCount >= maxEmployees) {
+        throw new AppError(
+          `Your organization has reached the maximum seat limit (${maxEmployees} employees) for the ${tenant.plan ?? "current"} plan. Please upgrade your subscription to onboard more employees.`,
+          403,
+          "PLAN_SEAT_LIMIT_EXCEEDED"
+        );
+      }
+    }
+  }
   const [department, designation, role] = await Promise.all([Department.findOne({ _id: input.department, isActive: true }), Designation.findOne({ _id: input.designation, isActive: true }), Role.findOne({ name: input.role })]);
+
   if (!department) throw new AppError("Department not found", 404); if (!designation) throw new AppError("Designation not found", 404); if (!role) throw new AppError("Role not found; run the seed command", 400);
   if (input.team && !await Team.exists({ _id: input.team, department: input.department, isActive: true })) throw new AppError("Team does not belong to the selected department", 422, "INVALID_TEAM");
   if (input.workLocation && !await GeoNode.exists({ _id: input.workLocation.geoNode, isActive: true })) throw new AppError("Work geography not found", 404);

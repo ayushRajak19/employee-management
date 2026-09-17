@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>MobiusEMS - The Smarter Way to Manage People, Work & Growth</title>
+<style>
+  @page {
+    size: A4 portrait;
+    margin: 10mm 12mm 10mm 12mm;
+  }
+  * {
+    box-sizing: border-box;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    color: #1e293b;
+    font-size: 8.8pt;
+    line-height: 1.48;
+    margin: 0;
+    padding: 0;
+    background: #ffffff;
+  }
+  
+  /* Top Corporate Header Strip */
+  .brand-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2.5px solid #2563eb;
+    padding-bottom: 2.8mm;
+    margin-bottom: 4.5mm;
+  }
+  .brand-logo-area {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .brand-badge {
+    background: #2563eb;
+    color: #ffffff;
+    font-weight: 900;
+    font-size: 10pt;
+    padding: 3px 8px;
+    border-radius: 5px;
+    letter-spacing: 0.5px;
+  }
+  .brand-title {
+    font-size: 10.5pt;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: 0.2px;
+  }
+  .brand-sub {
+    font-size: 7.2pt;
+    color: #64748b;
+    font-weight: 500;
+  }
+  .brand-meta-tag {
+    font-size: 7.4pt;
+    font-weight: 600;
+    color: #1d4ed8;
+    background: #eff6ff;
+    padding: 2.5px 8px;
+    border-radius: 4px;
+    border: 1px solid #bfdbfe;
+    text-align: right;
+  }
+
+  /* Headings & Section Banners */
+  h1:first-of-type {
+    font-size: 18pt;
+    font-weight: 900;
+    color: #0f172a;
+    margin: 2mm 0 1mm 0;
+    letter-spacing: -0.4px;
+    line-height: 1.25;
+  }
+
+  /* Numbered section banners styled like Whalexy presentation slides */
+  h1[id^="1-"], h1[id^="2-"], h1[id^="3-"], h1[id^="4-"],
+  h1[id^="5-"], h1[id^="6-"], h1[id^="7-"], h1[id^="8-"],
+  h1[id^="9-"], h1[id^="10-"], h1[id^="11-"], h1[id^="12-"],
+  h1[id^="13-"], h1[id^="14-"], h1[id^="15-"], h1[id^="16-"],
+  h1[id^="17-"], h1[id^="18-"], h1[id^="19-"], h1[id^="20-"] {
+    background: linear-gradient(90deg, #0f172a 0%, #1e3a8a 100%);
+    color: #ffffff;
+    padding: 2.8mm 4.5mm;
+    border-radius: 5px;
+    font-size: 10.5pt;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    margin-top: 5.5mm;
+    margin-bottom: 2.8mm;
+    page-break-after: avoid;
+    break-after: avoid;
+    box-shadow: 0 2px 4px rgba(15, 23, 42, 0.08);
+  }
+
+  h2 {
+    font-size: 10.8pt;
+    font-weight: 800;
+    color: #1e3a8a;
+    border-bottom: 1.5px solid #e2e8f0;
+    padding-bottom: 1.2mm;
+    margin-top: 3.5mm;
+    margin-bottom: 2mm;
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  h3 {
+    font-size: 9.4pt;
+    font-weight: 750;
+    color: #0f172a;
+    background: #f8fafc;
+    border-left: 3.5px solid #2563eb;
+    padding: 1.8mm 3.2mm;
+    margin-top: 2.8mm;
+    margin-bottom: 1.5mm;
+    page-break-after: avoid;
+    break-after: avoid;
+    border-radius: 0 4px 4px 0;
+  }
+
+  p {
+    margin: 1.2mm 0 1.8mm 0;
+    color: #334155;
+  }
+
+  strong {
+    color: #0f172a;
+    font-weight: 700;
+  }
+
+  ul, ol {
+    margin: 1.2mm 0 2mm 0;
+    padding-left: 17px;
+    color: #334155;
+  }
+
+  li {
+    margin-bottom: 1mm;
+  }
+
+  /* Whalexy-style clean tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 2.5mm 0 3.5mm 0;
+    font-size: 7.8pt;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  th {
+    background-color: #0f172a;
+    color: #ffffff;
+    font-weight: 700;
+    text-align: left;
+    padding: 2.4mm 3.2mm;
+    border: 1px solid #0f172a;
+    font-size: 8pt;
+  }
+  td {
+    padding: 2mm 3.2mm;
+    border: 1px solid #cbd5e1;
+    vertical-align: top;
+    color: #1e293b;
+  }
+  tr:nth-child(even) td {
+    background-color: #f8fafc;
+  }
+
+  hr {
+    border: none;
+    border-top: 1px solid #e2e8f0;
+    margin: 3.8mm 0;
+  }
+
+  code {
+    background-color: #f1f5f9;
+    color: #0f172a;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 8.2pt;
+  }
+
+  /* High-impact highlight callout */
+  .highlight-card {
+    background: #f0f7ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 6px;
+    padding: 3mm 4mm;
+    margin: 2.5mm 0;
+    color: #1e3a8a;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+
+<div class="brand-header">
+  <div class="brand-logo-area">
+    <div class="brand-badge">WHALEXY</div>
+    <div>
+      <div class="brand-title">MobiusEMS | Enterprise Operating System</div>
+      <div class="brand-sub">Mobius Bloom Venture Pvt Ltd &bull; Raipur, India</div>
+    </div>
+  </div>
+  <div class="brand-meta-tag">
+    Official Product Brochure &bull; employee.whalexy.com
+  </div>
+</div>
+
+<h1 id="mobiusems-product-brochure-feature-guide">MobiusEMS: Product Brochure &amp; Feature Guide</h1>
+<p><strong>The Smarter Way to Manage People, Work &amp; Growth</strong><br />
+<em>Mobius Bloom Venture Pvt Ltd | Deployment: https://employee.whalexy.com</em><br />
+<em>Product Release: v2.0-PROD | Classification: Official Product Brochure</em></p>
+<hr />
+<h1 id="1-why-growing-companies-need-mobiusems">1. Why Growing Companies Need MobiusEMS</h1>
+<p>Running a growing business is hard when your everyday tools don't talk to each other. Most teams end up trapped in a daily juggling act:<br />
+* <strong>The Biometric Headache</strong>: Fingerprint machines fail, create long morning lines at the door, and are completely useless for field staff or remote days.<br />
+* <strong>Work Chaos on Chat</strong>: Important tasks get lost in WhatsApp chats and messy spreadsheets. Nobody knows who is working on what until a deadline is missed.<br />
+* <strong>Biased Year-End Appraisals</strong>: Annual performance reviews turn into popularity contests and memory games because managers don't have records of what was actually delivered.<br />
+* <strong>Disconnected Sales Teams</strong>: Sales reps log leads in expensive standalone CRMs that have no clue about employee availability, leave days, or verified accounting.<br />
+* <strong>Scattered Files &amp; Resumes</strong>: Candidate resumes sit buried in HR inboxes, training records live in separate Excel files, and there is no single source of truth.</p>
+<h3 id="what-is-mobiusems">What is MobiusEMS?</h3>
+<p><strong>MobiusEMS</strong> is an all-in-one workforce operating system built by Whalexy. It unifies your attendance, project execution, talent recruitment, skill development, objective performance appraisals, and commercial sales into one clean, role-based platform.</p>
+<h3 id="built-around-three-core-values">Built Around Three Core Values:</h3>
+<ol>
+<li><strong>Real Data, Zero Office Politics</strong>: Performance, KPI achievement, and attendance are tracked through transparent, objective calculations. AI is here to assist, never to make hiring, firing, or promotion decisions.</li>
+<li><strong>Respectful Accountability, Not Surveillance</strong>: No secret screen recording, no creepy keystroke loggers, and no 24/7 GPS tracking. We verify physical presence when your shift starts, and track real deliverables that get finished.</li>
+<li><strong>Total Voice Privacy</strong>: When you speak tasks into MobiusEMS, audio is transcribed on your local server and immediately deleted from memory. Nothing is ever sent to third-party cloud speech providers or saved on disk.</li>
+</ol>
+<hr />
+<h1 id="2-people-organization-management">2. People &amp; Organization Management</h1>
+<h3 id="complete-employee-360-profiles">Complete Employee 360 Profiles</h3>
+<ul>
+<li><strong>Single Source of Truth</strong>: Keep every employee's personal details, government IDs (PAN, Aadhaar, Tax IDs), bank details, emergency contacts, active projects, and verified skills in one secure place.</li>
+<li><strong>Living Career Timeline</strong>: A permanent chronological history of every promotion, title change, salary adjustment, department transfer, and award earned throughout the employee's journey.</li>
+<li><strong>Profile Health Score</strong>: A clear visual meter showing profile completeness, encouraging team members during weekly check-ins to keep their details up to date.</li>
+</ul>
+<h3 id="interactive-company-hierarchy-visual-org-chart">Interactive Company Hierarchy &amp; Visual Org Chart</h3>
+<ul>
+<li><strong>Configurable Departments &amp; Teams</strong>: Build custom departments, sub-teams, and designations that match how your business actually runs.</li>
+<li><strong>Visual Org Chart</strong>: Click through your company reporting hierarchy from senior executives down to individual team members. Easily spot open positions, view reporting lines, and balance team sizes.</li>
+</ul>
+<h3 id="smooth-onboarding-first-day-security">Smooth Onboarding &amp; First-Day Security</h3>
+<ul>
+<li><strong>Quick HR Invites</strong>: HR creates a profile in minutes and sends the new hire an invitation link with temporary login details.</li>
+<li><strong>Mandatory Password Reset on First Login</strong>: Keeps company data safe by requiring new hires to set a private, secure password before accessing anything.</li>
+<li><strong>Resumable Onboarding Steps</strong>: New employees can fill in their background, upload ID proofs, and add emergency contacts at their own pace without losing entered data.</li>
+</ul>
+<hr />
+<h1 id="3-smart-geofenced-attendance-leave-tracking">3. Smart Geofenced Attendance &amp; Leave Tracking</h1>
+<h3 id="your-phone-is-your-punch-card-no-hardware-required">Your Phone is Your Punch Card (No Hardware Required)</h3>
+<ul>
+<li><strong>Zero Machine Costs</strong>: No biometric machines to buy, install, wire, or fix when they break. Employees check in using their phone or laptop browser.</li>
+<li><strong>Smart 300-Meter Office Geofence</strong>: The system checks the employee's location when they hit Check-In, confirming they are within 300 meters of the office.</li>
+<li><strong>Anti-Spoofing Filter</strong>: Automatically blocks fake GPS apps and mock location emulators by discarding low-accuracy signals (above 200m).</li>
+</ul>
+<h3 id="automatic-shift-rules-that-save-hr-hours">Automatic Shift Rules That Save HR Hours</h3>
+<ul>
+<li><strong>11:30 AM Late Cutoff</strong>: Anyone punching in after 11:30 AM is automatically marked Late, eliminating manual morning log checks.</li>
+<li><strong>4-Hour Minimum Half-Day Rule</strong>: If an employee works less than 240 minutes (4 hours) between check-in and checkout, the day automatically logs as a Half-Day.</li>
+<li><strong>Clear Daily Statuses</strong>: Every day is neatly tagged as Present, Late, Half-Day, On Leave, or Absent.</li>
+</ul>
+<h3 id="self-service-regularization-leave-management">Self-Service Regularization &amp; Leave Management</h3>
+<ul>
+<li><strong>Easy Regularization</strong>: Traveling for a client meeting or stuck in bad transit? Employees submit a quick note explaining the delay. Once their manager clicks approve, the daily record updates automatically.</li>
+<li><strong>Custom Leave Quotas</strong>: Manage yearly allowances for Casual Leave, Sick Leave, Paid Leave, Unpaid Leave, and Work-From-Home days.</li>
+<li><strong>Overlap Protection</strong>: Prevents duplicate or overlapping leave applications automatically.</li>
+<li><strong>Team Leave Calendar</strong>: Managers and team members can see upcoming approved leaves at a glance, making sprint planning straightforward.</li>
+</ul>
+<hr />
+<h1 id="4-project-delivery-kanban-daily-work">4. Project Delivery, Kanban &amp; Daily Work</h1>
+<h3 id="visual-7-stage-kanban-boards">Visual 7-Stage Kanban Boards</h3>
+<ul>
+<li><strong>Clear Stages of Work</strong>: Tasks flow naturally through validated stages:<br />
+<strong>Not Started → In Progress → In Review → Completed</strong><br />
+<em>(with special handling for Blocked, Reopened, or Cancelled tasks)</em>.</li>
+<li><strong>Prevents Cheating the Workflow</strong>: Tasks cannot jump straight from Not Started to Completed without going through work and review stages.</li>
+</ul>
+<h3 id="instant-roadblock-alerts-blocker-escalation">Instant Roadblock Alerts (Blocker Escalation)</h3>
+<ul>
+<li><strong>Flag What's Stuck Immediately</strong>: When a team member hits a wall, they flag the task as Blocked and select the exact reason:</li>
+<li>Waiting on External Dependency (client feedback, vendor API, credentials)</li>
+<li>Missing Assets (designs, copy, files)</li>
+<li>Server / Infrastructure Outage</li>
+<li>Unclear Requirements</li>
+<li><strong>Protects Employees from Unfair Blame</strong>: If a project stalls because a client hasn't sent credentials, the task is marked as an external blocker so the team member's delivery score isn't penalized.</li>
+</ul>
+<h3 id="cycle-time-quality-rework-tracking">Cycle Time &amp; Quality Rework Tracking</h3>
+<ul>
+<li><strong>Delivery Speed</strong>: Measures how many hours or days it takes from starting a task to getting it approved.</li>
+<li><strong>Rework Counter</strong>: Automatically tracks whenever a task fails review and gets sent back to In Progress, helping teams spot confusing requirements early.</li>
+</ul>
+<h3 id="company-task-tracker-grid">Company Task Tracker Grid</h3>
+<ul>
+<li><strong>Sort &amp; Filter Everything</strong>: View tasks across projects by owner, priority (Low, Medium, High, Critical), status, and due date.</li>
+<li><strong>Activity Audit History</strong>: Every status shift, priority update, and comment is logged with the user's name and exact time.</li>
+</ul>
+<hr />
+<h1 id="5-local-zero-retention-voice-to-task-ai">5. Local Zero-Retention Voice-to-Task AI</h1>
+<h3 id="speak-naturally-in-11-indian-languages-english">Speak Naturally in 11 Indian Languages + English</h3>
+<ul>
+<li><strong>Multilingual Input</strong>: Team members in the field or in the office can speak in English, Hindi, Bengali, Tamil, Telugu, Marathi, Gujarati, Kannada, Malayalam, Punjabi, or Urdu.</li>
+</ul>
+<h3 id="turn-speech-into-tasks-in-seconds">Turn Speech into Tasks in Seconds</h3>
+<ul>
+<li><strong>Understands Intent</strong>:</li>
+<li>Say <em>"Need to create the quarterly presentation by tomorrow afternoon"</em> → Creates a new task in To-Do with tomorrow's due date.</li>
+<li>Say <em>"Spent three hours fixing the invoice calculation bug"</em> → Moves the task to In Review and logs 3 hours of actual work.</li>
+<li><strong>Understands Everyday Hinglish</strong>: Intelligently handles mixed language commands and splits compound instructions (e.g. assigning one part to Priya and another to Rahul).</li>
+</ul>
+<h3 id="100-private-audio-deleted-immediately">100% Private — Audio Deleted Immediately</h3>
+<ul>
+<li><strong>Zero Cloud Exposure</strong>: Audio processing runs locally on your host server. The voice recording is processed in memory and shredded instantly. Nothing is ever sent to third-party cloud APIs or saved on disk.</li>
+<li><strong>Editable Preview Card</strong>: Before anything is saved, an editable confirmation card pops up so the user can verify the title, assignee, and hours with a single click.</li>
+</ul>
+<hr />
+<h1 id="6-talent-acquisition-ai-resume-screener">6. Talent Acquisition &amp; AI Resume Screener</h1>
+<h3 id="job-requisition-library">Job Requisition Library</h3>
+<ul>
+<li><strong>Standardized Job Posts</strong>: Maintain approved job openings with required experience, key skills, and expected responsibilities.</li>
+</ul>
+<h3 id="visual-hiring-pipeline">Visual Hiring Pipeline</h3>
+<ul>
+<li><strong>Track Candidates from First Contact to Hire</strong>:<br />
+<strong>Sourced → Screened → Interviewing → Offer Extended → Hired / Rejected</strong>.</li>
+</ul>
+<h3 id="intelligent-resume-screening">Intelligent Resume Screening</h3>
+<ul>
+<li><strong>Instant Resume Parsing</strong>: Drop candidate resumes in PDF or Word (.docx) format directly into the screener.</li>
+<li><strong>Automated Match Scoring</strong>: The system extracts skills, education, and years of experience, comparing them against your job requirements to give an advisory match percentage.</li>
+<li><strong>Humans Always Make the Call</strong>: The screening score is purely a time-saving guide for interviewers. The system never rejects candidates on its own.</li>
+</ul>
+<h3 id="1-click-hired-to-employee-conversion">1-Click Hired-to-Employee Conversion</h3>
+<ul>
+<li><strong>No Retyping Needed</strong>: Once you mark a candidate as Hired, click "Convert to Employee". Their contact details, resume, and skills automatically populate a new Employee 360 profile, ready for onboarding.</li>
+</ul>
+<hr />
+<h1 id="6-talent-acquisition-ai-resume-screener_1">6. Talent Acquisition &amp; AI Resume Screener</h1>
+<h3 id="job-requisition-library_1">Job Requisition Library</h3>
+<ul>
+<li><strong>Standardized Job Posts</strong>: Maintain approved job openings with required experience, key skills, and expected responsibilities.</li>
+</ul>
+<h3 id="visual-hiring-pipeline_1">Visual Hiring Pipeline</h3>
+<ul>
+<li><strong>Track Candidates from First Contact to Hire</strong>:<br />
+<strong>Sourced → Screened → Interviewing → Offer Extended → Hired / Rejected</strong>.</li>
+</ul>
+<h3 id="intelligent-resume-screening_1">Intelligent Resume Screening</h3>
+<ul>
+<li><strong>Instant Resume Parsing</strong>: Drop candidate resumes in PDF or Word (.docx) format directly into the screener.</li>
+<li><strong>Automated Match Scoring</strong>: The system extracts skills, education, and years of experience, comparing them against your job requirements to give an advisory match percentage.</li>
+<li><strong>Humans Always Make the Call</strong>: The screening score is purely a time-saving guide for interviewers. The system never rejects candidates on its own.</li>
+</ul>
+<h3 id="1-click-hired-to-employee-conversion_1">1-Click Hired-to-Employee Conversion</h3>
+<ul>
+<li><strong>No Retyping Needed</strong>: Once you mark a candidate as Hired, click "Convert to Employee". Their contact details, resume, and skills automatically populate a new Employee 360 profile, ready for onboarding.</li>
+</ul>
+<hr />
+<h1 id="7-ai-assessment-maker-secure-applicant-testing">7. AI Assessment Maker &amp; Secure Applicant Testing</h1>
+<h3 id="instant-ai-test-generation-from-any-job-description-jd">Instant AI Test Generation from Any Job Description (JD)</h3>
+<ul>
+<li><strong>Generate Tests in Seconds with AI</strong>: Super Admins and hiring managers can enter a role title or paste an entire Job Description, and MobiusEMS AI instantly generates a complete, tailored assessment with multiple-choice questions, detailed answer keys, and technical explanations.</li>
+<li><strong>Granular Exam Controls</strong>: Customize difficulty (Beginner, Intermediate, Advanced, Expert), question count, strict time limits (e.g., 30 or 60 minutes), and custom passing percentages (e.g., 70%).</li>
+<li><strong>Custom Question Builder</strong>: Add custom domain scenarios, coding questions, or company-specific situational prompts alongside AI-generated questions.</li>
+</ul>
+<h3 id="secure-applicant-portal-with-auto-generated-credentials">Secure Applicant Portal with Auto-Generated Credentials</h3>
+<ul>
+<li><strong>Dedicated Testing Credentials for Candidates</strong>: When evaluating new applicants, the system provisions an external candidate profile with dedicated, temporary login credentials (email &amp; password).</li>
+<li><strong>Restricted Applicant Environment</strong>: When an applicant logs in, they are locked exclusively into the secure Assessment environment and cannot view any internal company data.</li>
+<li><strong>Timed Test Runner with Live Auto-Grading</strong>: Candidates take the test against a live countdown timer. Upon submission, the engine instantly grades their answers, calculates their final percentage score, and issues a detailed scorecard (Passed vs. Needs Improvement).</li>
+</ul>
+<h3 id="internal-employee-upskilling-benchmark-testing">Internal Employee Upskilling &amp; Benchmark Testing</h3>
+<ul>
+<li><strong>Targeted Employee Testing</strong>: Assign specific assessments to individual employees or entire departments to benchmark technical proficiency, evaluate training outcomes, or qualify staff for promotions.</li>
+</ul>
+<hr />
+<h1 id="8-onboarding-skill-justification-ai-evidence-ranking">8. Onboarding Skill Justification &amp; AI Evidence Ranking</h1>
+<h3 id="mandatory-onboarding-domain-skill-assessment">Mandatory Onboarding Domain Skill Assessment</h3>
+<ul>
+<li><strong>Role-Specific Skill Catalog</strong>: When an employee is onboarded, their assigned designation triggers a mandatory, domain-specific skill catalog configured by the Super Admin.</li>
+<li><strong>1–10 Skill Rating with Mandatory Written Justification</strong>: For every skill in their domain, the employee must rate their proficiency from 1 to 10 AND provide a detailed, written implementation justification note (explaining Situation, Action, Result, and practical evidence).</li>
+<li><strong>Permanent Submission Lock</strong>: Once submitted during onboarding, the self-ratings and justification notes are permanently locked and cannot be edited.</li>
+</ul>
+<h3 id="continuous-ai-work-evidence-monitor">Continuous AI Work-Evidence Monitor</h3>
+<ul>
+<li><strong>Automated Output Tracking</strong>: As the employee works day-to-day, an internal AI monitor continuously compares their claimed 1–10 ratings against their actual completed tasks, on-time delivery rates, and manager quality review scores.</li>
+<li><strong>Real-Time Justification Status</strong>: Every skill rating is automatically categorized:</li>
+<li><strong>Justified</strong>: Tangible completed deliverables and high quality scores corroborate the claimed rating.</li>
+<li><strong>In Progress</strong>: Work is actively underway with positive velocity.</li>
+<li><strong>Needs Evidence</strong>: Daily deliverable output does not yet substantiate the self-claimed rating.</li>
+</ul>
+<h3 id="super-admin-justification-leaderboard-ranking">Super Admin Justification Leaderboard &amp; Ranking</h3>
+<ul>
+<li><strong>Transparency for Leadership</strong>: Super Admins and leadership have a dedicated dashboard ranking employees by their <strong>Evidence Confidence Score (%)</strong> and rating justification ratio (e.g., 8 of 10 skills justified).</li>
+<li><strong>Eliminates Resume &amp; Rating Inflation</strong>: Ensures hiring and appraisal decisions are backed by measurable output, highlighting who truly delivers at the level they claimed.</li>
+</ul>
+<hr />
+<h1 id="9-skills-matrix-heatmaps-capability-intelligence">9. Skills Matrix, Heatmaps &amp; Capability Intelligence</h1>
+<h3 id="skills-inventory-competency-catalog">Skills Inventory &amp; Competency Catalog</h3>
+<ul>
+<li><strong>Company-Wide Taxonomy</strong>: Track technical, operational, and leadership competencies across all departments with verified rating histories.</li>
+<li><strong>Two-Step Verification</strong>: Employees attach real proof (project links, GitHub repositories, certifications), and team leads verify the evidence before ratings count toward organizational capability metrics.</li>
+</ul>
+<h3 id="departmental-competency-heatmaps-knowledge-gap-alerts">Departmental Competency Heatmaps &amp; Knowledge Gap Alerts</h3>
+<ul>
+<li><strong>Team Depth at a Glance</strong>: Color-coded heatmaps show exactly where your team excels and where skill gaps exist.</li>
+<li><strong>Single Point of Failure (SPOF) Detection</strong>: Instantly alerts managers when only one person in the company possesses a mission-critical skill, enabling proactive cross-training before knowledge bottlenecks occur.</li>
+</ul>
+<hr />
+<h1 id="10-fair-data-backed-performance-reviews">10. Fair, Data-Backed Performance Reviews</h1>
+<h3 id="strategic-goals-measurable-kpis">Strategic Goals &amp; Measurable KPIs</h3>
+<ul>
+<li><strong>Cascading Goals</strong>: Connect high-level company milestones down to departments and individual contributors.</li>
+<li><strong>Clear Numbers, Not Vague Feedback</strong>: KPIs track actual numbers against target benchmarks, bounded between 0% and 200% achievement.</li>
+</ul>
+<h3 id="360-degree-review-rubrics">360-Degree Review Rubrics</h3>
+<ul>
+<li><strong>Balanced Input</strong>: Evaluates feedback across managers, peers, and self-reviews using structured competency rubrics (execution, teamwork, communication, and ownership).</li>
+</ul>
+<h3 id="transparent-mathematical-scoring">Transparent Mathematical Scoring</h3>
+<ul>
+<li><strong>Clear Formula</strong>: Your team's performance rating is calculated objectively:<br />
+<strong>Overall Rating = (Goal Achievement × Weight) + (KPI Results × Weight) + (360 Peer Reviews × Weight)</strong></li>
+<li><strong>Objective Performance Tiers</strong>:</li>
+<li>90%+ : <strong>Exceptional Performer</strong></li>
+<li>75% – 89.9% : <strong>Strong Performer</strong></li>
+<li>60% – 74.9% : <strong>Consistent Performer</strong></li>
+<li>Below 60% : <strong>Developing / Support Needed</strong></li>
+</ul>
+<h3 id="immutable-review-records">Immutable Review Records</h3>
+<ul>
+<li><strong>Locked for Accuracy</strong>: Once an appraisal cycle closes, all scores, reviews, and weighting calculations are permanently locked. They cannot be edited after the fact, ensuring complete audit integrity.</li>
+</ul>
+<hr />
+<h1 id="11-workload-balancing-smart-staffing">11. Workload Balancing &amp; Smart Staffing</h1>
+<h3 id="workload-burnout-radar">Workload &amp; Burnout Radar</h3>
+<ul>
+<li><strong>Real-Time Capacity Visibility</strong>: See every team member's active tasks, estimated hours remaining, urgent deadlines, and overdue work.</li>
+<li><strong>Status Tags</strong>: Automatically highlights team members who are <strong>Overloaded</strong>, on <strong>High Workload</strong>, or <strong>Balanced</strong>, helping managers reallocate tickets before burnout happens.</li>
+</ul>
+<h3 id="training-catalog-skill-growth">Training Catalog &amp; Skill Growth</h3>
+<ul>
+<li><strong>Course Catalog</strong>: Maintain a library of internal training modules and external courses.</li>
+<li><strong>Targeted Assignments</strong>: Managers assign training directly to help employees close identified skill gaps.</li>
+<li><strong>Track Skill Growth Over Time</strong>: See how team members have improved year-over-year with historical rating comparisons.</li>
+</ul>
+<h3 id="smart-project-staffing-suggestions">Smart Project Staffing Suggestions</h3>
+<ul>
+<li><strong>Objective Team Selection</strong>: Need to staff a new project? MobiusEMS suggests the best team members by weighing verified skill match (70%), current workload availability (15%), and past delivery performance (15%).</li>
+</ul>
+<hr />
+<h1 id="12-weekly-check-ins-contribution-velocity">12. Weekly Check-Ins &amp; Contribution Velocity</h1>
+<h3 id="the-3-minute-friday-check-in">The 3-Minute Friday Check-In</h3>
+<ul>
+<li><strong>Simple Weekly Routine</strong>: Every Friday afternoon, employees take 3 minutes to log three simple things:</li>
+<li>What they completed this week</li>
+<li>What they plan to tackle next week</li>
+<li>Any blockers or help needed</li>
+</ul>
+<h3 id="measured-deliverable-velocity">Measured Deliverable Velocity</h3>
+<ul>
+<li><strong>Focus on Output, Not Seat Time</strong>: Tracks real deliverable completion rates over rolling 30-day and 90-day periods.</li>
+</ul>
+<h3 id="fair-peer-comparisons">Fair Peer Comparisons</h3>
+<ul>
+<li><strong>Cohort Benchmarking</strong>: Compares output volume, on-time reliability, and rework frequency across peers in similar roles.</li>
+</ul>
+<h3 id="the-missing-information-guardrail">The Missing Information Guardrail</h3>
+<ul>
+<li><strong>Fairness First</strong>: If an employee misses a weekly check-in because they were out sick or on leave, the system flags an "Information Gap" instead of unfairly lowering their performance score.</li>
+</ul>
+<hr />
+<h1 id="13-commercial-sales-crm-7-tier-gis">13. Commercial Sales CRM &amp; 7-Tier GIS</h1>
+<h3 id="7-tier-geographic-territory-mapping">7-Tier Geographic Territory Mapping</h3>
+<ul>
+<li><strong>From Country to Pincode</strong>: Map sales leads, customers, and field reps across seven levels:<br />
+<strong>Global → Country → State → District → City → Area → Pincode</strong>.</li>
+</ul>
+<h3 id="interactive-regional-sales-maps">Interactive Regional Sales Maps</h3>
+<ul>
+<li><strong>Visual Territory Coverage</strong>: Explore interactive maps showing customer density, active sales reps, lead volumes, and revenue numbers across different states and districts.</li>
+</ul>
+<h3 id="territory-capacity-planning">Territory Capacity Planning</h3>
+<ul>
+<li><strong>Never Let Leads Go Cold</strong>: The system compares incoming lead volume with your rep capacity:<br />
+<strong>Required Sales Reps = [Current Lead Volume / Capacity per Rep]</strong></li>
+<li><strong>Understaffing Alerts</strong>: Flags territories where reps have too many leads to handle, so you can hire or reassign staff before conversion drops.</li>
+</ul>
+<h3 id="lead-management-sla-lost-revenue-alerts">Lead Management &amp; SLA Lost Revenue Alerts</h3>
+<ul>
+<li><strong>Clear Lead Pipeline</strong>: Guide prospects through New → Contacted → Qualified → Converted / Lost.</li>
+<li><strong>SLA Revenue Alerts</strong>: Calculates estimated revenue at risk when sales leads sit untouched past agreed response times.</li>
+</ul>
+<h3 id="customer-accounts-lifetime-value-ltv">Customer Accounts &amp; Lifetime Value (LTV)</h3>
+<ul>
+<li><strong>Automatic Customer Creation</strong>: Converting a qualified lead automatically creates a linked Customer account, carrying over territory, currency, and lifetime sales history.</li>
+</ul>
+<h3 id="opportunity-pipeline-winloss-tracking">Opportunity Pipeline &amp; Win/Loss Tracking</h3>
+<ul>
+<li><strong>Deal Pacing</strong>: Track deals through Prospecting → Qualification → Proposal → Negotiation → Closed Won / Closed Lost.</li>
+<li><strong>Mandatory Loss Reasons</strong>: When a deal is marked lost, reps select why (pricing, missing feature, competitor, budget cut) to give leadership clear market feedback.</li>
+</ul>
+<h3 id="deduplicated-won-revenue-ledger">Deduplicated Won Revenue Ledger</h3>
+<ul>
+<li><strong>Accurate Accounting</strong>: Moving a deal to Closed Won automatically logs an entry into the realized revenue ledger, with built-in locks to prevent accidental duplicate entries.</li>
+</ul>
+<h3 id="quotas-compensation-simulation">Quotas &amp; Compensation Simulation</h3>
+<ul>
+<li><strong>Digital Target Sign-Off</strong>: Sales reps review and digitally sign off on their monthly or quarterly targets right on their dashboard.</li>
+<li><strong>Incentive Simulation</strong>: Model commission payouts at 50%, 80%, 100%, and 150% quota achievement before rolling them out.</li>
+</ul>
+<h3 id="channel-partner-management">Channel Partner Management</h3>
+<ul>
+<li><strong>Partner Network</strong>: Manage distributors, dealers, and value-added resellers (VARs) with territory assignments, contract terms, and partner-generated revenue tracking.</li>
+</ul>
+<hr />
+<h1 id="14-everyday-workplace-experience-culture">14. Everyday Workplace Experience &amp; Culture</h1>
+<h3 id="self-service-leave-approvals">Self-Service Leave Approvals</h3>
+<ul>
+<li><strong>Quick Leave Requests</strong>: Employees pick dates, select leave type, and add a brief note. Managers receive instant notifications and can approve or decline in one click.</li>
+</ul>
+<h3 id="data-backed-recognition-badges">Data-Backed Recognition Badges</h3>
+<ul>
+<li><strong>Meaningful Recognition</strong>: Managers award verified badges (Top Performer, Quality Champion, Skill Master, Fast Learner, On-Time Delivery, Customer Champion, Mentor) backed by specific project milestones.</li>
+</ul>
+<h3 id="private-daily-to-do-lists">Private Daily To-Do Lists</h3>
+<ul>
+<li><strong>Personal Daily Focus</strong>: Built-in daily checklist for employees to organize their morning priorities.</li>
+<li><strong>100% Private</strong>: An employee's personal to-do list is strictly private. It is never visible on manager dashboards or in performance reviews.</li>
+</ul>
+<h3 id="work-streaks-engagement-header">Work Streaks &amp; Engagement Header</h3>
+<ul>
+<li><strong>Gamified Momentum</strong>: Employees see their daily streak, completed task count, and progress bar at the top of their workspace, celebrating consistent daily effort.</li>
+</ul>
+<hr />
+<h1 id="15-ai-workspace-ethical-boundaries">15. AI Workspace &amp; Ethical Boundaries</h1>
+<h3 id="floating-company-handbook-assistant">Floating Company Handbook Assistant</h3>
+<ul>
+<li><strong>Instant Policy Answers</strong>: An unobtrusive AI helper button sits in the bottom corner of the screen to answer questions about company policies, leave guidelines, and office timings.</li>
+<li><strong>Never Guesses</strong>: If an employee asks a question not covered in uploaded company policies, the assistant automatically routes the question to HR.</li>
+</ul>
+<h3 id="pre-review-ai-summaries">Pre-Review AI Summaries</h3>
+<ul>
+<li><strong>Saves Managers Hours</strong>: Compiles an employee's completed deliverables, logged hours, and peer feedback into a clean draft summary before review meetings.</li>
+</ul>
+<h3 id="strict-ethical-guardrail">Strict Ethical Guardrail</h3>
+<ul>
+<li><strong>Humans Always Decide</strong>: AI is strictly an advisory assistant. It is blocked by design from making hiring, firing, salary, or promotion decisions.</li>
+</ul>
+<h3 id="mood-break-wellbeing-panel">Mood Break Wellbeing Panel</h3>
+<ul>
+<li><strong>Mid-Day Mental Reset</strong>: A built-in wellbeing panel offering quick breathing exercises and mental break activities during busy workdays.</li>
+</ul>
+<hr />
+<h1 id="16-email-automation-brevo-integration">16. Email Automation (Brevo Integration)</h1>
+<h3 id="vendor-introduction-sequences">Vendor Introduction Sequences</h3>
+<ul>
+<li><strong>Automated Partner Outreach</strong>: Set up multi-step introduction emails for approved vendor contacts with custom waiting periods between messages.</li>
+<li><strong>Automatic Stop on Reply</strong>: The email sequence automatically halts the moment a vendor responds or unsubscribes.</li>
+</ul>
+<h3 id="excel-vendor-contact-import">Excel Vendor Contact Import</h3>
+<ul>
+<li><strong>Simple Spreadsheet Upload</strong>: Upload your vendor list in Excel (.xlsx), map columns (Name, Email, Company, Source), verify consent, and preview before importing.</li>
+</ul>
+<h3 id="live-delivery-telemetry">Live Delivery Telemetry</h3>
+<ul>
+<li><strong>Real-Time Stats</strong>: Live dashboard tracking email sent counts, delivery rates, open rates, and replies.</li>
+</ul>
+<hr />
+<h1 id="17-security-governance-audit-trails">17. Security, Governance &amp; Audit Trails</h1>
+<h3 id="permanent-audit-trail">Permanent Audit Trail</h3>
+<ul>
+<li><strong>Track Sensitive Changes</strong>: Every role modification, check-in override, salary update, and system setting change is permanently logged with the user ID, timestamp, IP address, and before-and-after values.</li>
+</ul>
+<h3 id="22-section-role-based-access-control">22-Section Role-Based Access Control</h3>
+<ul>
+<li><strong>Right Access for Every Role</strong>: Granular permission settings tailored for Super Admins, HR Admins, Department Heads, Team Managers, Employees, and Job Applicants.</li>
+</ul>
+<h3 id="secure-private-document-storage">Secure Private Document Storage</h3>
+<ul>
+<li><strong>Protected Files</strong>: Identity documents, employment contracts, and candidate resumes are stored securely with encrypted keys. Downloads require authenticated permissions and generate temporary, expiring links.</li>
+</ul>
+<h3 id="complete-organization-data-isolation">Complete Organization Data Isolation</h3>
+<ul>
+<li><strong>Zero Data Leakage</strong>: Every company on MobiusEMS runs in complete digital isolation. Your data is never mixed with or accessible by any other organization.</li>
+</ul>
+<hr />
+<h1 id="18-plan-options-pricing-tiers">18. Plan Options &amp; Pricing Tiers</h1>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Feature Comparison</th>
+<th style="text-align: center;">STARTER</th>
+<th style="text-align: center;">STANDARD</th>
+<th style="text-align: center;">PROFESSIONAL</th>
+<th style="text-align: center;">ENTERPRISE</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Team Size</strong></td>
+<td style="text-align: center;">Up to 15</td>
+<td style="text-align: center;">Up to 50</td>
+<td style="text-align: center;">Up to 150</td>
+<td style="text-align: center;"><strong>Unlimited</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Document Storage</strong></td>
+<td style="text-align: center;">2 GB</td>
+<td style="text-align: center;">10 GB</td>
+<td style="text-align: center;">50 GB</td>
+<td style="text-align: center;"><strong>Unlimited</strong></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Geofenced Attendance</strong></td>
+<td style="text-align: center;">Included</td>
+<td style="text-align: center;">Included</td>
+<td style="text-align: center;">Included</td>
+<td style="text-align: center;">Included</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Visual Kanban &amp; Projects</strong></td>
+<td style="text-align: center;">Included</td>
+<td style="text-align: center;">Included</td>
+<td style="text-align: center;">Included</td>
+<td style="text-align: center;">Included</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Local Voice-to-Task AI</strong></td>
+<td style="text-align: center;">Included</td>
+<td style="text-align: center;">Included</td>
+<td style="text-align: center;">Included</td>
+<td style="text-align: center;">Included</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>AI Assessment Maker &amp; Tests</strong></td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">Included</td>
+<td style="text-align: center;">Included</td>
+<td style="text-align: center;">Included</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Onboarding AI Skill Ranking</strong></td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">Included</td>
+<td style="text-align: center;">Included</td>
+<td style="text-align: center;">Included</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Performance Reviews</strong></td>
+<td style="text-align: center;">Basic Goals</td>
+<td style="text-align: center;">Full Reviews</td>
+<td style="text-align: center;">Full Reviews</td>
+<td style="text-align: center;">Full Reviews + History</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Skills Matrix &amp; Heatmaps</strong></td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">Included</td>
+<td style="text-align: center;">Included</td>
+<td style="text-align: center;">Included</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Company Policy AI</strong></td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">Included</td>
+<td style="text-align: center;">Included</td>
+<td style="text-align: center;">Included</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Sales CRM &amp; 7-Tier GIS</strong></td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">Included</td>
+<td style="text-align: center;">Included</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Vendor Email Sequences</strong></td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">Included</td>
+<td style="text-align: center;">Included</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Custom Access Roles</strong></td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">Included</td>
+<td style="text-align: center;">Included</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Support SLA</strong></td>
+<td style="text-align: center;">Standard Email</td>
+<td style="text-align: center;">Email &amp; Chat</td>
+<td style="text-align: center;">Priority Assistance</td>
+<td style="text-align: center;"><strong>Dedicated 24/7 Team</strong></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h1 id="19-the-old-way-vs-the-mobiusems-way">19. The Old Way vs The MobiusEMS Way</h1>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Workplace Function</th>
+<th style="text-align: left;">The Traditional Way</th>
+<th style="text-align: left;">The MobiusEMS Way</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Attendance Punching</strong></td>
+<td style="text-align: left;">Expensive fingerprint scanners, long morning lines, and broken devices.</td>
+<td style="text-align: left;">Mobile browser check-in with a 300-meter GPS fence. Zero hardware.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Creating Daily Tasks</strong></td>
+<td style="text-align: left;">Typing forms on a laptop or sending unstructured messages on WhatsApp.</td>
+<td style="text-align: left;">Speak naturally in 11 Indian languages. Instant task setup with zero audio saved.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Managing Work</strong></td>
+<td style="text-align: left;">Scattered Excel sheets, missed deadlines, and unflagged roadblocks.</td>
+<td style="text-align: left;">7-stage visual Kanban board with instant blocker alerts that protect team scores.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Evaluating Skills</strong></td>
+<td style="text-align: left;">Self-claimed resume bullet points with zero verification.</td>
+<td style="text-align: left;">Mandatory 1–10 skill justification at onboarding with continuous AI work-evidence tracking &amp; admin ranking.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Candidate Testing</strong></td>
+<td style="text-align: left;">Sending generic Google Forms or scheduling endless initial screening calls.</td>
+<td style="text-align: left;">AI Assessment Maker generates tailored tests from JDs with auto-generated candidate credentials.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Performance Reviews</strong></td>
+<td style="text-align: left;">Once-a-year popularity contests based on memory and recency bias.</td>
+<td style="text-align: left;">Continuous reviews combining goals, KPIs, and peer feedback in transparent math.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Hiring &amp; Screening</strong></td>
+<td style="text-align: left;">Sifting through hundreds of resumes by hand in messy email inboxes.</td>
+<td style="text-align: left;">Visual applicant pipeline with AI resume screening and 1-click employee onboarding.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Sales Operations</strong></td>
+<td style="text-align: left;">Costly standalone CRMs disconnected from team leave and company ledgers.</td>
+<td style="text-align: left;">Integrated 7-tier GIS, lead SLA warnings, rep capacity math, and won revenue ledgers.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h1 id="20-contact-our-team">20. Contact Our Team</h1>
+<p>Ready to streamline your workplace, eliminate hardware hassles, and give your team clear, objective clarity? We would love to walk you through a live demonstration.</p>
+<ul>
+<li>📞 <strong>Direct Phone</strong>: <code>+91 9171115206</code></li>
+<li>🌐 <strong>Website</strong>: <a href="https://www.whalexy.com">www.whalexy.com</a> | <a href="https://employee.whalexy.com">employee.whalexy.com</a></li>
+<li>✉️ <strong>Inquiries</strong>: <code>connect@whalexy.com</code> | <code>arbusiness1909@gmail.com</code></li>
+<li>🏢 <strong>Headquarters</strong>: 3rd Floor, Shivnath Business Centre, Raipur, Chhattisgarh</li>
+</ul>
+
+</body>
+</html>

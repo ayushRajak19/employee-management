@@ -80,6 +80,113 @@ export const ROLE_PERMISSIONS: Record<RoleName, readonly PermissionName[]> = {
   APPLICANT: ["section.assessments"]
 };
 
+export const PLAN_TIERS = ["STARTER", "STANDARD", "PROFESSIONAL", "ENTERPRISE", "CUSTOM"] as const;
+export type PlanTier = (typeof PLAN_TIERS)[number];
+
+export const SUBSCRIPTION_STATUSES = ["TRIAL", "ACTIVE", "PAST_DUE", "EXPIRED", "CANCELLED"] as const;
+export type SubscriptionStatus = (typeof SUBSCRIPTION_STATUSES)[number];
+
+export const BILLING_CYCLES = ["MONTHLY", "ANNUAL", "LIFETIME", "CUSTOM"] as const;
+export type BillingCycle = (typeof BILLING_CYCLES)[number];
+
+export interface PlanFeatures {
+  aiEnabled: boolean;
+  salesModuleEnabled: boolean;
+  emailAutomationEnabled: boolean;
+  voiceTasksEnabled: boolean;
+  advancedAnalyticsEnabled: boolean;
+  customRolesEnabled: boolean;
+}
+
+export const DEFAULT_PLAN_CONFIGS: Record<PlanTier, { name: string; description: string; maxEmployees: number; maxStorageMb: number; features: PlanFeatures }> = {
+  STARTER: {
+    name: "Starter",
+    description: "Core HR, attendance, task tracking, and goals for small teams.",
+    maxEmployees: 15,
+    maxStorageMb: 2048,
+    features: {
+      aiEnabled: false,
+      salesModuleEnabled: false,
+      emailAutomationEnabled: false,
+      voiceTasksEnabled: true,
+      advancedAnalyticsEnabled: false,
+      customRolesEnabled: false,
+    },
+  },
+  STANDARD: {
+    name: "Standard",
+    description: "Balanced employee management, AI assistant, skill builder, and evaluations for growing teams.",
+    maxEmployees: 50,
+    maxStorageMb: 10240,
+    features: {
+      aiEnabled: true,
+      salesModuleEnabled: false,
+      emailAutomationEnabled: false,
+      voiceTasksEnabled: true,
+      advancedAnalyticsEnabled: true,
+      customRolesEnabled: false,
+    },
+  },
+  PROFESSIONAL: {
+    name: "Professional",
+    description: "Full workforce intelligence including Sales CRM pipeline, commissions, and automated emails.",
+    maxEmployees: 150,
+    maxStorageMb: 51200,
+    features: {
+      aiEnabled: true,
+      salesModuleEnabled: true,
+      emailAutomationEnabled: true,
+      voiceTasksEnabled: true,
+      advancedAnalyticsEnabled: true,
+      customRolesEnabled: true,
+    },
+  },
+  ENTERPRISE: {
+    name: "Enterprise",
+    description: "Unlimited scalability, dedicated features, complete governance, GeoSales, and priority support.",
+    maxEmployees: 0, // 0 = unlimited
+    maxStorageMb: 0,
+    features: {
+      aiEnabled: true,
+      salesModuleEnabled: true,
+      emailAutomationEnabled: true,
+      voiceTasksEnabled: true,
+      advancedAnalyticsEnabled: true,
+      customRolesEnabled: true,
+    },
+  },
+  CUSTOM: {
+    name: "Custom Contract",
+    description: "Tailored seat limits and customized feature access.",
+    maxEmployees: 50,
+    maxStorageMb: 10240,
+    features: {
+      aiEnabled: true,
+      salesModuleEnabled: true,
+      emailAutomationEnabled: true,
+      voiceTasksEnabled: true,
+      advancedAnalyticsEnabled: true,
+      customRolesEnabled: true,
+    },
+  },
+};
+
+export interface TenantSubscriptionDto {
+  plan: PlanTier;
+  planName: string;
+  planDescription: string;
+  subscriptionStatus: SubscriptionStatus;
+  billingCycle: BillingCycle;
+  maxEmployees: number;
+  activeEmployeeCount: number;
+  seatsRemaining: number;
+  isUnlimited: boolean;
+  trialEndsAt?: string;
+  subscriptionEndsAt?: string;
+  daysRemaining?: number;
+  features: PlanFeatures;
+}
+
 export interface SessionUser {
   id: string;
   name: string;
@@ -93,6 +200,11 @@ export interface SessionUser {
   capabilities: CapabilityName[];
   forcePasswordChange: boolean;
   onboardingComplete: boolean;
+  plan?: PlanTier;
+  subscriptionStatus?: SubscriptionStatus;
+  maxEmployees?: number;
+  subscriptionEndsAt?: string;
+  features?: PlanFeatures;
 }
 
 export interface ApiResponse<T> { success: boolean; message: string; data?: T; errors?: Record<string, string[]> }
@@ -214,4 +326,34 @@ export type HeatmapPointTuple = [number, number, number]; // [lat, lng, intensit
 export interface HeatmapPointsResponse {
   type: "leads" | "customers" | "revenue" | "quantity";
   points: HeatmapPointTuple[];
+}
+
+export type CredibilityStatus = "EXCEEDED" | "JUSTIFIED" | "GAP_DETECTED" | "UNTESTED";
+
+export interface SkillCredibilityAnalytics {
+  skillId: string;
+  name: string;
+  level: string;
+  category: string;
+  rating: number; // Claimed score 1-10
+  demonstratedRating?: number; // 1-10 verified performance score
+  velocityRatio?: number; // Estimated hours / Actual hours
+  onTimeRate?: number;
+  averageQuality?: number;
+  credibilityStatus: CredibilityStatus;
+  tasksEvaluatedCount: number;
+}
+
+export interface EmployeeSkillRank {
+  employeeId: string;
+  employeeName: string;
+  designationName: string;
+  departmentName: string;
+  departmentRank: number;
+  companyRank: number;
+  overallCredibilityScore: number;
+  demonstratedAverage: number;
+  claimedAverage: number;
+  completedTasksCount: number;
+  velocityRatio: number;
 }

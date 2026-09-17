@@ -23,6 +23,7 @@ skillRouter.get("/", asyncHandler(controller.list));
 skillRouter.post("/", requirePermission("skill.create"), validate(skillSchema), asyncHandler(controller.create));
 skillRouter.get("/role-assessment", asyncHandler(controller.roleCatalog));
 skillRouter.post("/role-assessment", validate(roleSkillAssessmentSchema), asyncHandler(controller.submitRoleCatalog));
+skillRouter.get("/leaderboard", asyncHandler(controller.leaderboard));
 skillRouter.get("/mine", asyncHandler(controller.mine));
 skillRouter.post("/mine", validate(claimSkillSchema), asyncHandler(controller.claim));
 skillRouter.get("/verifications/pending", requirePermission("skill.verify"), asyncHandler(controller.pending));

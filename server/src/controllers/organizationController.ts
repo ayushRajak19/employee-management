@@ -62,3 +62,28 @@ export const updateEmployeeManager = async (request: Request, response: Response
     data: { employee: updated },
   });
 };
+
+export const getSubscription = async (request: Request, response: Response): Promise<void> => {
+  const { getTenantSubscriptionSummary } = await import("../services/tenantService.js");
+  const tenantId = request.user!.tenantId;
+  const subscription = await getTenantSubscriptionSummary(tenantId);
+  response.json({ success: true, message: "Subscription retrieved", data: { subscription } });
+};
+
+export const requestUpgrade = async (request: Request, response: Response): Promise<void> => {
+  const { plan, seats, note } = request.body as { plan?: string; seats?: number; note?: string };
+  await writeAudit({
+    user: request.user!.id,
+    action: "SUBSCRIPTION_UPGRADE_REQUESTED",
+    entityType: "Tenant",
+    entityId: request.user!.tenantId,
+    newValue: { requestedPlan: plan, requestedSeats: seats, note },
+    ipAddress: request.ip,
+    userAgent: request.get("user-agent")
+  });
+  response.json({
+    success: true,
+    message: "Your subscription upgrade request has been submitted to the platform administrators. Our team will contact you shortly."
+  });
+};
+

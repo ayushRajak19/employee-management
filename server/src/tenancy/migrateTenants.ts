@@ -90,11 +90,27 @@ export interface TenantMigrationReport {
   gridFsFilesMigrated: number;
 }
 
+import { DEFAULT_PLAN_CONFIGS } from "@mobius-ems/shared";
+
 export const ensureDefaultTenant = async () => Tenant.findOneAndUpdate(
   { slug: env.DEFAULT_TENANT_SLUG },
-  { $setOnInsert: { name: env.DEFAULT_TENANT_NAME, slug: env.DEFAULT_TENANT_SLUG, status: "ACTIVE", plan: "ENTERPRISE", activatedAt: new Date() } },
+  {
+    $setOnInsert: {
+      name: env.DEFAULT_TENANT_NAME,
+      slug: env.DEFAULT_TENANT_SLUG,
+      status: "ACTIVE",
+      plan: "ENTERPRISE",
+      subscriptionStatus: "ACTIVE",
+      billingCycle: "LIFETIME",
+      maxEmployees: 0,
+      maxStorageMb: 0,
+      features: DEFAULT_PLAN_CONFIGS.ENTERPRISE.features,
+      activatedAt: new Date(),
+    }
+  },
   { upsert: true, new: true, runValidators: true },
 );
+
 
 export const migrateExistingRecordsToDefaultTenant = async (tenantId: Types.ObjectId): Promise<TenantMigrationReport> => {
   const report: TenantMigrationReport = { tenantId: tenantId.toString(), collections: [], gridFsFilesMigrated: 0 };

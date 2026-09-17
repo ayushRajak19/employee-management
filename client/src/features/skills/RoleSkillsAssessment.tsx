@@ -8,26 +8,106 @@ import { skillApi, type CatalogSkill, type RoleSkillAssessment, type RoleSkillSc
 const levelStyle: Record<string, string> = { Basic: "bg-sky-50 text-sky-700", Intermediate: "bg-amber-50 text-amber-700", Advanced: "bg-violet-50 text-violet-700" };
 const groupByLevel = <T extends { level: string }>(items: T[]) => Object.entries(items.reduce<Record<string, T[]>>((groups, item) => { (groups[item.level] ??= []).push(item); return groups; }, {}));
 
-const evidenceStyle = { JUSTIFIED: "bg-emerald-50 text-emerald-700", IN_PROGRESS: "bg-blue-50 text-blue-700", NEEDS_EVIDENCE: "bg-amber-50 text-amber-700" };
-const SavedSkill = ({ skill, evidence }: { skill: RoleSkillScore; evidence?: NonNullable<RoleSkillAssessment["evidenceAnalytics"]>[number] }) => <div className="p-5">
-  <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-    <div className="min-w-0 flex-1"><p className="font-semibold">{skill.name}</p><p className="mt-1 text-xs leading-5 text-slate-500">{skill.description}</p><p className="mt-1 text-[11px] text-slate-400">{skill.category} · {skill.tools}</p></div>
-    <div className="shrink-0 rounded-xl bg-brand-50 px-4 py-2 text-center"><p className="text-xl font-semibold text-brand-700">{skill.rating}/10</p><p className="text-[10px] text-brand-600">Self-score</p></div>
-  </div>
-  {skill.implementationNote && <div className="mt-4 rounded-xl border bg-slate-50 p-3"><p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">How I implemented this skill</p><p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-slate-600">{skill.implementationNote}</p></div>}
-  {evidence && <div className="mt-4 rounded-xl border p-4"><div className="flex flex-wrap items-center gap-2"><span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${evidenceStyle[evidence.status]}`}>{evidence.status.replaceAll("_", " ")}</span><span className="text-xs text-slate-500">Evidence confidence {evidence.justificationScore}%</span><span className="ml-auto text-xs text-slate-500">{evidence.completedTasks} completed · {evidence.onTimeRate}% on time{evidence.averageQuality ? ` · ${evidence.averageQuality}/5 quality` : ""}</span></div><p className="mt-2 text-xs leading-5 text-slate-600">{evidence.message}</p>{evidence.tasks.length > 0 && <div className="mt-3 space-y-2">{evidence.tasks.map((task) => <div className="flex items-center gap-2 text-xs" key={task.id}>{task.status === "COMPLETED" ? <CheckCircle2 size={13} className="text-emerald-600"/> : task.overdue ? <AlertTriangle size={13} className="text-red-500"/> : <Clock3 size={13} className="text-blue-500"/>}<span className="font-medium text-slate-700">{task.taskId}</span><span className="min-w-0 truncate text-slate-500">{task.name}</span><span className="ml-auto shrink-0 text-slate-400">{task.status.replaceAll("_", " ")}</span></div>)}</div>}</div>}
-</div>;
+const evidenceStyle: Record<string, string> = {
+  EXCEEDED: "bg-purple-50 text-purple-700 border border-purple-200",
+  JUSTIFIED: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+  GAP_DETECTED: "bg-red-50 text-red-700 border border-red-200",
+  UNTESTED: "bg-slate-100 text-slate-600 border border-slate-200",
+  IN_PROGRESS: "bg-blue-50 text-blue-700 border border-blue-200",
+  NEEDS_EVIDENCE: "bg-amber-50 text-amber-700 border border-amber-200"
+};
+
+const SavedSkill = ({ skill, evidence }: { skill: RoleSkillScore; evidence?: NonNullable<RoleSkillAssessment["evidenceAnalytics"]>[number] }) => {
+  const demonstrated = evidence?.demonstratedRating ?? skill.demonstratedRating;
+  const velocity = evidence?.velocityRatio ?? skill.velocityRatio;
+  const status = evidence?.credibilityStatus ?? skill.credibilityStatus ?? "UNTESTED";
+
+  return <div className="p-5">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="font-semibold text-slate-800">{skill.name}</p>
+          {status && status !== "UNTESTED" && (
+            <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${evidenceStyle[status] || "bg-slate-100 text-slate-600"}`}>
+              {status === "GAP_DETECTED" ? "⚠️ Reality Gap" : status === "EXCEEDED" ? "⚡ Mastery Confirmed" : "✓ Justified"}
+            </span>
+          )}
+        </div>
+        <p className="mt-1 text-xs leading-5 text-slate-500">{skill.description}</p>
+        <p className="mt-1 text-[11px] text-slate-400">{skill.category} · {skill.tools}</p>
+      </div>
+
+      <div className="flex items-center gap-2 shrink-0">
+        <div className="rounded-xl bg-slate-100 px-3.5 py-2 text-center">
+          <p className="text-lg font-bold text-slate-700">{skill.rating}/10</p>
+          <p className="text-[10px] text-slate-500">Claimed</p>
+        </div>
+
+        {demonstrated !== undefined && (
+          <div className={`rounded-xl px-3.5 py-2 text-center ${status === "GAP_DETECTED" ? "bg-red-50 text-red-700 border border-red-200" : "bg-brand-50 text-brand-700"}`}>
+            <p className="text-lg font-bold">{demonstrated}/10</p>
+            <p className="text-[10px]">Demonstrated</p>
+          </div>
+        )}
+
+        {velocity !== undefined && velocity > 0 && (
+          <div className="rounded-xl bg-slate-50 px-3 py-2 text-center border">
+            <p className="text-sm font-semibold text-slate-700">{velocity}x</p>
+            <p className="text-[10px] text-slate-400">Velocity</p>
+          </div>
+        )}
+      </div>
+    </div>
+    {skill.implementationNote && <div className="mt-4 rounded-xl border bg-slate-50 p-3"><p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">How I implemented this skill</p><p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-slate-600">{skill.implementationNote}</p></div>}
+    {evidence && <div className="mt-4 rounded-xl border p-4"><div className="flex flex-wrap items-center gap-2"><span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${evidenceStyle[evidence.status]}`}>{evidence.status.replaceAll("_", " ")}</span><span className="text-xs text-slate-500">Evidence confidence {evidence.justificationScore}%</span><span className="ml-auto text-xs text-slate-500">{evidence.completedTasks} completed · {evidence.onTimeRate}% on time{evidence.averageQuality ? ` · ${evidence.averageQuality}/5 quality` : ""}</span></div><p className="mt-2 text-xs leading-5 text-slate-600">{evidence.message}</p>{evidence.tasks.length > 0 && <div className="mt-3 space-y-2">{evidence.tasks.map((task) => <div className="flex items-center gap-2 text-xs" key={task.id}>{task.status === "COMPLETED" ? <CheckCircle2 size={13} className="text-emerald-600"/> : task.overdue ? <AlertTriangle size={13} className="text-red-500"/> : <Clock3 size={13} className="text-blue-500"/>}<span className="font-medium text-slate-700">{task.taskId}</span><span className="min-w-0 truncate text-slate-500">{task.name}</span><span className="ml-auto shrink-0 text-slate-400">{task.status.replaceAll("_", " ")}</span></div>)}</div>}</div>}
+  </div>;
+};
 
 const Results = ({ assessment }: { assessment: RoleSkillAssessment }) => {
   const groups = useMemo(() => groupByLevel(assessment.scores), [assessment.scores]);
   const analytics = useMemo(() => new Map(assessment.evidenceAnalytics?.map((item) => [item.skillId, item]) ?? []), [assessment.evidenceAnalytics]);
-  const justified = assessment.evidenceAnalytics?.filter((item) => item.status === "JUSTIFIED").length ?? 0;
+  const justified = assessment.evidenceAnalytics?.filter((item) => item.status === "JUSTIFIED" || item.status === "EXCEEDED").length ?? 0;
+  const gaps = assessment.evidenceAnalytics?.filter((item) => item.status === "GAP_DETECTED").length ?? 0;
+
   return <div className="mx-auto max-w-[1440px]">
-    <section className="rounded-3xl border bg-white p-6 shadow-soft sm:p-8"><div className="flex flex-col gap-5 sm:flex-row sm:items-center"><div className="grid size-12 place-items-center rounded-2xl bg-emerald-50 text-emerald-700"><CheckCircle2 size={24}/></div><div><p className="text-sm font-medium text-emerald-700">Assessment completed</p><h1 className="mt-1 text-3xl font-semibold">{assessment.role}</h1>{assessment.designation && <p className="mt-1 text-sm font-medium text-slate-600">Designation: {assessment.designation}</p>}<p className="mt-2 text-sm text-slate-500">Submitted {new Date(assessment.submittedAt).toLocaleString()} · Your answers are locked and cannot be edited.</p></div><div className="sm:ml-auto sm:text-right"><p className="text-xs uppercase tracking-wide text-slate-400">Overall self-score</p><p className="mt-1 text-3xl font-semibold text-brand-700">{assessment.averageRating}<span className="text-base text-slate-400"> / 10</span></p></div></div></section>
-    {assessment.evidenceAnalytics && <section className="mt-5 rounded-2xl border bg-white p-5 shadow-soft"><div className="flex items-center gap-3"><div className="grid size-10 place-items-center rounded-xl bg-brand-50 text-brand-700"><Sparkles size={18}/></div><div><h2 className="font-semibold">AI work-evidence monitor</h2><p className="text-xs text-slate-500">Continuously compares your ratings with related assigned tasks, delivery time and manager quality reviews.</p></div><div className="ml-auto text-right"><p className="text-2xl font-semibold text-brand-700">{justified}/{assessment.scores.length}</p><p className="text-[10px] text-slate-400">ratings justified</p></div></div></section>}
+    <section className="rounded-3xl border bg-white p-6 shadow-soft sm:p-8">
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+        <div className="grid size-12 place-items-center rounded-2xl bg-emerald-50 text-emerald-700"><CheckCircle2 size={24}/></div>
+        <div>
+          <p className="text-sm font-medium text-emerald-700">Assessment completed</p>
+          <h1 className="mt-1 text-3xl font-semibold">{assessment.role}</h1>
+          {assessment.designation && <p className="mt-1 text-sm font-medium text-slate-600">Designation: {assessment.designation}</p>}
+          <p className="mt-2 text-sm text-slate-500">Submitted {new Date(assessment.submittedAt).toLocaleString()} · Your baseline claims are locked and continuously evaluated against real task delivery.</p>
+        </div>
+      </div>
+
+      <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-4 pt-6 border-t">
+        <div className="rounded-2xl border bg-slate-50 p-4 text-center">
+          <p className="text-xs uppercase text-slate-400 font-medium">Claimed Average</p>
+          <p className="text-2xl font-bold text-slate-700 mt-1">{assessment.averageRating}<span className="text-sm text-slate-400 font-normal"> / 10</span></p>
+        </div>
+        <div className="rounded-2xl border bg-brand-50 p-4 text-center">
+          <p className="text-xs uppercase text-brand-600 font-medium">Demonstrated Score</p>
+          <p className="text-2xl font-bold text-brand-700 mt-1">{assessment.demonstratedAverage ?? assessment.averageRating}<span className="text-sm text-brand-400 font-normal"> / 10</span></p>
+        </div>
+        <div className="rounded-2xl border bg-emerald-50 p-4 text-center">
+          <p className="text-xs uppercase text-emerald-700 font-medium">Credibility Index</p>
+          <p className="text-2xl font-bold text-emerald-700 mt-1">{assessment.overallCredibilityScore ?? 100}%</p>
+        </div>
+        <div className="rounded-2xl border bg-purple-50 p-4 text-center">
+          <p className="text-xs uppercase text-purple-700 font-medium">Internal Rank</p>
+          <p className="text-2xl font-bold text-purple-700 mt-1">
+            #{assessment.departmentRank ?? 1} <span className="text-xs font-normal text-purple-600">Dept</span> / #{assessment.companyRank ?? 1} <span className="text-xs font-normal text-purple-600">All</span>
+          </p>
+        </div>
+      </div>
+    </section>
+
+    {assessment.evidenceAnalytics && <section className="mt-5 rounded-2xl border bg-white p-5 shadow-soft"><div className="flex items-center gap-3"><div className="grid size-10 place-items-center rounded-xl bg-brand-50 text-brand-700"><Sparkles size={18}/></div><div><h2 className="font-semibold">AI Skill-Task Reality Monitor</h2><p className="text-xs text-slate-500">Evaluates actual delivery speed (Estimated vs Actual hours), quality ratings, and rework against claimed skill mastery.</p></div><div className="ml-auto flex items-center gap-4 text-right"><div><p className="text-xl font-bold text-brand-700">{justified}/{assessment.scores.length}</p><p className="text-[10px] text-slate-400">ratings verified</p></div>{gaps > 0 && <div><p className="text-xl font-bold text-red-600">{gaps}</p><p className="text-[10px] text-red-500">reality gaps</p></div>}</div></div></section>}
     <div className="mt-5 space-y-5">{groups.map(([level, skills]) => <section className="rounded-2xl border bg-white shadow-soft" key={level}><div className="flex items-center border-b p-5"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${levelStyle[level] ?? "bg-slate-100 text-slate-700"}`}>{level}</span><span className="ml-auto text-xs text-slate-400">{skills.length} skills</span></div><div className="divide-y">{skills.map((skill) => <SavedSkill key={skill.skillId} skill={skill} evidence={analytics.get(skill.skillId)}/>)}</div></section>)}</div>
   </div>;
 };
+
 
 const RatingButtons = ({ skill, value, onChange }: { skill: CatalogSkill; value?: number; onChange: (rating: number) => void }) => <fieldset className="shrink-0"><legend className="mb-2 text-xs font-medium text-slate-500">How good are you? <span className="text-brand-700">{value ? `${value}/10` : "Not rated"}</span></legend><div className="flex flex-wrap gap-1.5">{Array.from({ length: 10 }, (_, index) => index + 1).map((rating) => <button type="button" aria-label={`${skill.name}: ${rating} out of 10`} className={`grid size-9 place-items-center rounded-lg border text-xs font-semibold transition ${value === rating ? "border-brand-600 bg-brand-600 text-white" : "bg-white text-slate-500 hover:border-brand-300 hover:bg-brand-50"}`} key={rating} onClick={() => onChange(rating)}>{rating}</button>)}</div></fieldset>;
 
