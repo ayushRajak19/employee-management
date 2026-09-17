@@ -62,7 +62,7 @@ const groups: { label: string; items: NavItem[] }[] = [
     label: "Performance & growth",
     items: [
       { label: "Goals & performance", icon: Target, path: "/performance", section: "section.performance" },
-      { label: "AI Skill Builder", icon: Sparkles, path: "/skills/builder", section: "section.skills" },
+      { label: "Skills & Verification", icon: Sparkles, path: "/skills", section: "section.skills" },
       { label: "Skill matrix", icon: BarChart3, path: "/skill-matrix", section: "section.skill_matrix" },
       { label: "Assessments", icon: ShieldCheck, path: "/assessments", section: "section.assessments" },
       { label: "Learning & training", icon: GraduationCap, path: "/development", section: "section.development" },
