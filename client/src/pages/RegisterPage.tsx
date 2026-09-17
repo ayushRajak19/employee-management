@@ -1,16 +1,40 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Copy, Eye, EyeOff, RefreshCw, Sparkles } from "lucide-react";
 import { api } from "@/api/client";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Particles } from "@/components/inspira";
 
+const formatSlug = (companyName: string, suffix: string) => {
+  const base = companyName.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 36);
+  return base ? `${base}-${suffix}` : `mb-org-${suffix}`;
+};
+
 export const RegisterPage = () => {
   // Check if loaded with legacy token in hash
   const [legacyToken] = useState(() => new URLSearchParams(window.location.hash.slice(1)).get("token"));
   const [step, setStep] = useState<"org-basics" | "org-profile" | "account" | "otp" | "legacy" | "complete">(() => (legacyToken ? "legacy" : "org-basics"));
-  const [form, setForm] = useState({ name: "", industry: "", companySize: "", country: "", website: "", referralSource: "", primaryUseCase: "", adminName: "", adminEmail: "", password: "", confirmPassword: "", otp: "" });
+  const [orgIdSuffix, setOrgIdSuffix] = useState(() => Math.random().toString(36).slice(2, 8));
+  const [isCopied, setIsCopied] = useState(false);
+  const [form, setForm] = useState(() => {
+    const initialSuffix = Math.random().toString(36).slice(2, 8);
+    return {
+      slug: `mb-org-${initialSuffix}`,
+      name: "",
+      industry: "",
+      companySize: "",
+      country: "",
+      website: "",
+      referralSource: "",
+      primaryUseCase: "",
+      adminName: "",
+      adminEmail: "",
+      password: "",
+      confirmPassword: "",
+      otp: ""
+    };
+  });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [registrationToken, setRegistrationToken] = useState("");
@@ -20,6 +44,25 @@ export const RegisterPage = () => {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [createdSlug, setCreatedSlug] = useState("");
+
+  const handleNameChange = (name: string) => {
+    const slug = formatSlug(name, orgIdSuffix);
+    setForm((prev) => ({ ...prev, name, slug }));
+  };
+
+  const handleRegenerateOrgId = () => {
+    const newSuffix = Math.random().toString(36).slice(2, 8);
+    setOrgIdSuffix(newSuffix);
+    setForm((prev) => ({ ...prev, slug: formatSlug(prev.name, newSuffix) }));
+  };
+
+  const handleCopyOrgId = () => {
+    if (navigator.clipboard) {
+      void navigator.clipboard.writeText(form.slug);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    }
+  };
 
   // Cooldown countdown effect
   useEffect(() => {
@@ -39,6 +82,7 @@ export const RegisterPage = () => {
         emailSent?: boolean;
         directOtp?: string;
       }>("/api/v1/registration/request", {
+        slug: form.slug,
         name: form.name,
         industry: form.industry,
         companySize: form.companySize,
@@ -155,7 +199,7 @@ export const RegisterPage = () => {
             ? "Your email will identify the correct workspace automatically when you sign in."
             : step === "org-profile"
             ? "Help us tailor MobiusEMS to your team's workflow and primary goals."
-            : "Tell us about your company. Your organization ID will be generated automatically."}
+            : "Tell us about your company. Your unique Organization ID is automatically provided below."}
         </p>
 
         {["org-basics", "org-profile", "account"].includes(step) && (
@@ -420,6 +464,47 @@ export const RegisterPage = () => {
               setStep("org-profile");
             }}
           >
+            {/* Organization ID - Provided Automatically by MobiusEMS */}
+            <div className="rounded-xl border border-brand-200 bg-brand-50/50 p-3.5 shadow-xs">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold uppercase tracking-wider text-brand-900 flex items-center gap-1.5">
+                  <Sparkles size={13} className="text-brand-600" />
+                  Organization ID
+                  <span className="rounded-full bg-brand-600/10 px-2 py-0.5 text-[10px] font-semibold text-brand-700 font-sans normal-case tracking-normal">
+                    Provided by MobiusEMS
+                  </span>
+                </label>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    title="Generate another Organization ID"
+                    onClick={handleRegenerateOrgId}
+                    className="flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium text-slate-600 hover:bg-brand-100 hover:text-brand-800 transition"
+                  >
+                    <RefreshCw size={11} />
+                    <span>New ID</span>
+                  </button>
+                  <button
+                    type="button"
+                    title="Copy Organization ID"
+                    onClick={handleCopyOrgId}
+                    className="flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium text-slate-600 hover:bg-brand-100 hover:text-brand-800 transition"
+                  >
+                    {isCopied ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
+                    <span>{isCopied ? "Copied" : "Copy"}</span>
+                  </button>
+                </div>
+              </div>
+              <div className="mt-2 flex items-center rounded-lg border border-brand-200 bg-white px-3 py-2 shadow-xs">
+                <span className="select-all font-mono text-sm font-bold text-brand-950 tracking-tight">
+                  {form.slug}
+                </span>
+              </div>
+              <p className="mt-1.5 text-[11px] text-slate-500">
+                MobiusEMS has reserved this unique workspace identifier for your company.
+              </p>
+            </div>
+
             <label className="block text-sm font-medium">
               Organization name
               <Input
@@ -429,7 +514,7 @@ export const RegisterPage = () => {
                 maxLength={120}
                 placeholder="e.g. Acme Corporation"
                 value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                onChange={(e) => handleNameChange(e.target.value)}
               />
             </label>
             <label className="block text-sm font-medium">
@@ -598,7 +683,7 @@ export const RegisterPage = () => {
             }}
           >
             <div className="rounded-xl bg-brand-50 p-3 text-xs text-brand-800">
-              Your organization ID is assigned automatically and shown after verification. You will sign in using only your email and password.
+              Workspace ID: <strong className="font-mono font-bold text-brand-950">{form.slug}</strong>. You will sign in using only your email and password.
             </div>
             <label className="block text-sm font-medium">
               Your name

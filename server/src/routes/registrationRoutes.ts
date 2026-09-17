@@ -11,9 +11,11 @@ import { AppError } from "../utils/AppError.js";
 import { createTenantSchema } from "../validators/tenantValidators.js";
 import { createTenant, generateTenantSlug } from "../services/tenantService.js";
 import { User } from "../models/User.js";
+import { Tenant } from "../models/Tenant.js";
 
 const baseDetails = createTenantSchema.shape.body.omit({ temporaryPassword: true, plan: true });
-const details = baseDetails.omit({ slug: true }).extend({
+const details = baseDetails.extend({
+  slug: createTenantSchema.shape.body.shape.slug,
   industry: createTenantSchema.shape.body.shape.industry.unwrap(),
   companySize: createTenantSchema.shape.body.shape.companySize.unwrap(),
   country: createTenantSchema.shape.body.shape.country.unwrap(),
@@ -46,6 +48,15 @@ registrationRouter.use(
   })
 );
 
+registrationRouter.get(
+  "/generate-slug",
+  asyncHandler(async (request, response) => {
+    const name = typeof request.query.name === "string" ? request.query.name : "organization";
+    const slug = await generateTenantSlug(name);
+    response.json({ success: true, data: { slug } });
+  })
+);
+
 registrationRouter.post(
   "/request",
   validate(z.object({ body: details })),
@@ -53,7 +64,15 @@ registrationRouter.post(
     const input = details.parse(request.body);
 
     if (await User.collection.findOne({ email: input.adminEmail }, { projection: { _id: 1 } })) throw new AppError("An account already uses this email. Sign in instead or use another email", 409, "EMAIL_EXISTS");
-    const slug = await generateTenantSlug(input.name);
+    
+    let slug = input.slug?.trim().toLowerCase();
+    if (slug) {
+      if (await Tenant.exists({ slug })) {
+        slug = await generateTenantSlug(input.name);
+      }
+    } else {
+      slug = await generateTenantSlug(input.name);
+    }
 
     // Generate 6-digit OTP and secure SHA-256 hash
     const otp = randomInt(100000, 1000000).toString();
