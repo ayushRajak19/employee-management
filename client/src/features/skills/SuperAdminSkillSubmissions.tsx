@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle,
@@ -63,6 +63,21 @@ export const SuperAdminSkillSubmissions = () => {
     enabled: Boolean(submitEmployee),
   });
 
+  // Prepopulate existing ratings only if the employee actually submitted before
+  useEffect(() => {
+    const scores = employeeCatalogQuery.data?.assessment?.scores;
+    if (scores && scores.length > 0) {
+      const existingRatings: Record<string, number> = {};
+      const existingNotes: Record<string, string> = {};
+      scores.forEach((s) => {
+        existingRatings[s.skillId] = s.rating;
+        existingNotes[s.skillId] = s.implementationNote || "";
+      });
+      setAdminRatings(existingRatings);
+      setAdminNotes(existingNotes);
+    }
+  }, [employeeCatalogQuery.data?.assessment]);
+
   // Query for designation skills when simulation modal is open
   const simDesignation = useMemo(() => {
     if (!simDesignationId || !orgQuery.data?.designations) return null;
@@ -73,10 +88,14 @@ export const SuperAdminSkillSubmissions = () => {
   const adminSubmitMutation = useMutation({
     mutationFn: () => {
       const skills = employeeCatalogQuery.data?.catalog || [];
+      const unrated = skills.filter((s) => adminRatings[s.id] === undefined);
+      if (unrated.length > 0) {
+        throw new Error(`Please select a rating (1–10) for all skills (${unrated.length} unrated).`);
+      }
       const payload = skills.map((s) => ({
         skillId: s.id,
-        rating: adminRatings[s.id] ?? 5,
-        implementationNote: adminNotes[s.id]?.trim() || "Submitted via Super Admin skill manager.",
+        rating: adminRatings[s.id]!,
+        implementationNote: adminNotes[s.id]?.trim() || "Calibrated via Super Admin skill manager.",
       }));
       return skillApi.adminSubmitRoleAssessment(submitEmployee!.employee._id, { ratings: payload });
     },
@@ -409,9 +428,9 @@ export const SuperAdminSkillSubmissions = () => {
                             Submitted
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-bold text-amber-700">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-bold text-amber-700" title="Employee must submit first during onboarding on a 1–10 scale">
                             <Clock size={11} />
-                            Pending Claim
+                            Waiting for Employee
                           </span>
                         )}
                       </td>
@@ -493,23 +512,35 @@ export const SuperAdminSkillSubmissions = () => {
                       {/* Actions */}
                       <td className="px-5 py-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          {isSubmitted && (
+                          {isSubmitted ? (
+                            <>
+                              <Button
+                                variant="secondary"
+                                className="h-8 text-[11px] px-2.5"
+                                onClick={() => setInspectItem(item)}
+                              >
+                                <Eye size={12} className="mr-1" />
+                                Inspect
+                              </Button>
+                              <Button
+                                variant="secondary"
+                                className="h-8 text-[11px] px-2.5 border-brand-200 text-brand-700 hover:bg-brand-50"
+                                onClick={() => handleOpenSubmitModal(item)}
+                              >
+                                <Target size={12} className="mr-1" />
+                                Calibrate
+                              </Button>
+                            </>
+                          ) : (
                             <Button
                               variant="secondary"
-                              className="h-8 text-[11px] px-2.5"
-                              onClick={() => setInspectItem(item)}
+                              className="h-8 text-[11px] px-2.5 bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200"
+                              onClick={() => handleOpenSubmitModal(item)}
                             >
-                              <Eye size={12} className="mr-1" />
-                              Inspect
+                              <Target size={12} className="mr-1 text-slate-500" />
+                              Review / Assist
                             </Button>
                           )}
-                          <Button
-                            className="h-8 text-[11px] px-2.5 bg-brand-600 hover:bg-brand-700 text-white"
-                            onClick={() => handleOpenSubmitModal(item)}
-                          >
-                            <Target size={12} className="mr-1" />
-                            {isSubmitted ? "Update Claim" : "Submit Claim"}
-                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -533,7 +564,9 @@ export const SuperAdminSkillSubmissions = () => {
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-ink">
-                    Submit Baseline Skill Assessment (1–10 Scale)
+                    {submitEmployee.isSubmitted
+                      ? "Review & Calibrate Employee Claims (1–10 Scale)"
+                      : "Designation Skills & Baseline Input"}
                   </h3>
                   <p className="text-xs text-slate-500">
                     Employee: <strong>{submitEmployee.employee.firstName} {submitEmployee.employee.lastName}</strong> ({submitEmployee.employee.employeeId}) · Role: <strong>{submitEmployee.employee.designation?.name || "Designation"}</strong>
@@ -568,15 +601,34 @@ export const SuperAdminSkillSubmissions = () => {
                 </div>
               ) : (
                 <>
-                  <div className="rounded-2xl border border-brand-100 bg-brand-50/50 p-4">
-                    <p className="text-xs text-brand-800 leading-relaxed">
-                      💡 <strong>Super Admin Submission Mode</strong>: Rate each required skill honestly on a 1–10 scale. 
-                      This stores the employee&apos;s baseline claim. When tasks are completed, the AI will judge delivery speed against this claim.
-                    </p>
-                  </div>
+                  {submitEmployee.isSubmitted ? (
+                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4">
+                      <div className="flex items-start gap-2.5">
+                        <CheckCircle2 size={18} className="text-emerald-600 shrink-0 mt-0.5" />
+                        <div className="text-xs text-emerald-900 leading-relaxed">
+                          <strong className="font-semibold">Submitted by Employee:</strong> Baseline claimed average is <strong>{submitEmployee.claimedAverage?.toFixed(1) ?? "-"}/10</strong>.
+                          <span className="block mt-1 text-emerald-700">
+                            These are the honest self-ratings submitted by the employee. You can inspect them or calibrate individual ratings below.
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4">
+                      <div className="flex items-start gap-2.5">
+                        <Clock size={18} className="text-amber-600 shrink-0 mt-0.5" />
+                        <div className="text-xs text-amber-900 leading-relaxed">
+                          <strong className="font-semibold">Waiting for Employee Submission:</strong> Under our core USP workflow, the employee submits their own honest 1–10 self-rating first during onboarding or at <code>/skills</code>.
+                          <span className="block mt-1 text-amber-700">
+                            No ratings are preset. You can review this designation&apos;s required skills here, or optionally set a baseline on their behalf if needed.
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {employeeCatalogQuery.data?.catalog.map((skill: CatalogSkill) => {
-                    const currentRating = adminRatings[skill.id] ?? 5;
+                    const currentRating = adminRatings[skill.id];
                     const currentNote = adminNotes[skill.id] ?? "";
                     return (
                       <div key={skill.id} className="rounded-2xl border border-slate-200 bg-slate-50/40 p-5 space-y-3">
@@ -598,7 +650,11 @@ export const SuperAdminSkillSubmissions = () => {
                           <div className="shrink-0">
                             <div className="flex items-center justify-between mb-1.5">
                               <span className="text-[11px] font-semibold text-slate-500">Rating Scale:</span>
-                              <span className="text-xs font-bold text-brand-700">{currentRating} / 10</span>
+                              {currentRating !== undefined ? (
+                                <span className="text-xs font-bold text-brand-700">{currentRating} / 10</span>
+                              ) : (
+                                <span className="text-xs font-medium text-slate-400 italic">Not rated yet</span>
+                              )}
                             </div>
                             <div className="flex flex-wrap gap-1">
                               {Array.from({ length: 10 }, (_, idx) => idx + 1).map((val) => (
@@ -642,18 +698,36 @@ export const SuperAdminSkillSubmissions = () => {
               <div>
                 <p className="text-xs text-slate-500">
                   Total Skills: <strong>{employeeCatalogQuery.data?.catalog.length || 0}</strong>
+                  {Object.keys(adminRatings).length > 0 && (
+                    <span className="ml-2 font-medium text-brand-700">
+                      ({Object.keys(adminRatings).length} rated)
+                    </span>
+                  )}
                 </p>
+                {adminSubmitMutation.isError && (
+                  <p className="mt-1 text-xs text-red-600">{(adminSubmitMutation.error as Error)?.message}</p>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="secondary" onClick={() => setSubmitEmployee(null)}>
-                  Cancel
+                  Close
                 </Button>
                 <Button
                   onClick={() => adminSubmitMutation.mutate()}
-                  disabled={adminSubmitMutation.isPending || !employeeCatalogQuery.data?.catalog.length}
-                  className="bg-brand-600 hover:bg-brand-700 text-white font-semibold shadow-xs"
+                  disabled={
+                    adminSubmitMutation.isPending ||
+                    !employeeCatalogQuery.data?.catalog.length ||
+                    Object.keys(adminRatings).length < (employeeCatalogQuery.data?.catalog.length || 0)
+                  }
+                  className="bg-brand-600 hover:bg-brand-700 text-white font-semibold shadow-xs text-xs"
                 >
-                  {adminSubmitMutation.isPending ? "Submitting..." : "Confirm & Save Assessment"}
+                  {adminSubmitMutation.isPending
+                    ? "Saving..."
+                    : submitEmployee.isSubmitted
+                    ? "Save Calibration"
+                    : Object.keys(adminRatings).length < (employeeCatalogQuery.data?.catalog.length || 0)
+                    ? `Rate All Skills (${Object.keys(adminRatings).length}/${employeeCatalogQuery.data?.catalog.length || 0})`
+                    : "Save Baseline On Behalf of Employee"}
                 </Button>
               </div>
             </div>
