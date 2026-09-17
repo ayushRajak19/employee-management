@@ -342,6 +342,7 @@ export const AssessmentsPage = () => {
                                   ({item.percentage ?? Math.round(((item.score || 0) / (item.maximumScore || 1)) * 100)}%)
                                 </span>
                               </p>
+                              <p className="text-[11px] text-slate-500">{item.timedOut ? "Timed out · " : ""}{item.focusLossCount ?? 0} tab visibility changes</p>
                             </div>
                             <Button
                               variant="secondary"

@@ -100,7 +100,13 @@ export const calculateSnapshot = async (input: { employee: string; period: strin
   const classification = availableWeight ? classifyPerformance(totalScore, thresholds) : "Insufficient Evidence";
   const strengths = components.filter((item) => item.weight > 0 && item.rawScore >= 85).map((item) => `${item.label}: ${item.rawScore}%`);
   const developmentAreas = components.filter((item) => item.weight > 0 && item.rawScore < 60).map((item) => `${item.label}: ${item.rawScore}% with recorded evidence`);
-  const snapshot = await PerformanceSnapshot.findOneAndUpdate({ employee: employee._id, period: input.period, periodType: input.periodType }, { $set: { totalScore, classification, components, strengths, developmentAreas, calculatedBy: actor, calculatedAt: new Date() } }, { upsert: true, new: true, runValidators: true });
+  const snapshotFilter = { employee: employee._id, period: input.period, periodType: input.periodType };
+  let snapshot = await PerformanceSnapshot.findOne(snapshotFilter);
+  if (!snapshot) {
+    try { snapshot = await PerformanceSnapshot.create({ ...snapshotFilter, totalScore, classification, components, strengths, developmentAreas, calculatedBy: actor, calculatedAt: new Date() }); }
+    catch (error) { if ((error as { code?: number }).code !== 11000) throw error; snapshot = await PerformanceSnapshot.findOne(snapshotFilter); }
+  } else return snapshot;
+  if (!snapshot) throw new AppError("Performance snapshot could not be created", 500);
   await writeAudit({ user: actor, action: "PERFORMANCE_SNAPSHOT_CALCULATED", entityType: "PerformanceSnapshot", entityId: snapshot.id, newValue: { employee: employee.employeeId, period: input.period, totalScore, classification } });
   return snapshot;
 };

@@ -533,6 +533,7 @@ export const submitAssessment = async (
   if (assessment.status === "COMPLETED") {
     throw new AppError("This assessment has already been submitted and completed.", 400);
   }
+  if (assessment.status !== "IN_PROGRESS" || !assessment.startedAt) throw new AppError("Start the assessment before submitting answers", 409, "ASSESSMENT_NOT_STARTED");
 
   const answerMap = new Map((input.answers || []).map((a) => [a.questionId, a]));
   let totalEarnedPoints = 0;
@@ -558,15 +559,19 @@ export const submitAssessment = async (
   });
 
   const percentage = maxPoints > 0 ? Math.round((totalEarnedPoints / maxPoints) * 100) : 0;
+  const timedOut = Boolean(assessment.startedAt && Date.now() > assessment.startedAt.getTime() + assessment.timeLimitMinutes * 60_000 + 30_000);
+  if (timedOut) { totalEarnedPoints = 0; for (const answer of evaluatedAnswers) { answer.isCorrect = false; answer.earnedPoints = 0; } }
+  const finalPercentage = timedOut ? 0 : percentage;
   const passingScore = assessment.passingScore <= 100
     ? assessment.passingScore
     : Math.round((assessment.passingScore / (assessment.maximumScore || 100)) * 100);
-  const result = percentage >= passingScore ? "PASSED" : "FAILED";
+  const result = finalPercentage >= passingScore ? "PASSED" : "FAILED";
 
   assessment.answers = evaluatedAnswers as any;
   assessment.score = totalEarnedPoints;
   assessment.maximumScore = maxPoints;
-  assessment.percentage = percentage;
+  assessment.percentage = finalPercentage;
+  assessment.timedOut = timedOut;
   assessment.result = result;
   assessment.status = "COMPLETED";
   assessment.completedAt = new Date();
@@ -581,10 +586,21 @@ export const submitAssessment = async (
     score: totalEarnedPoints,
     result,
     evaluatedBy: viewer.id as any,
-    notes: `Assessment submission: ${totalEarnedPoints}/${maxPoints} points (${percentage}%). Status: ${result}.`
+    notes: `Assessment submission: ${totalEarnedPoints}/${maxPoints} points (${finalPercentage}%). Status: ${result}.${timedOut ? " Submitted after the time limit." : ""} Focus changes: ${assessment.focusLossCount ?? 0}.`
   });
 
   return getAssessmentById(id, viewer);
+};
+
+export const recordAssessmentFocusLoss = async (id: string, viewer: { id: string; role: string }) => {
+  const assessment = await Assessment.findById(id).populate("assignedEmployee", "user").populate("assignedCandidate", "user");
+  if (!assessment) throw new AppError("Assessment not found", 404);
+  const assignedEmp = assessment.assignedEmployee as unknown as { user?: { toString(): string } } | undefined;
+  const assignedCandidate = assessment.assignedCandidate as unknown as { user?: { toString(): string } } | undefined;
+  if (["EMPLOYEE", "APPLICANT"].includes(viewer.role) && assignedEmp?.user?.toString() !== viewer.id && assignedCandidate?.user?.toString() !== viewer.id) throw new AppError("Access denied to this assessment", 403);
+  if (assessment.status !== "IN_PROGRESS") throw new AppError("Assessment is not in progress", 409);
+  const updated = await Assessment.findOneAndUpdate({ _id: id, status: "IN_PROGRESS" }, { $inc: { focusLossCount: 1 } }, { new: true });
+  return updated?.focusLossCount ?? 0;
 };
 
 export const listAssessmentCandidates = async () => AssessmentCandidate.find({ isActive: true }).select("name email position createdAt").sort({ createdAt: -1 }).lean();

@@ -38,6 +38,9 @@ export const GovernancePage = () => {
   const [employee, setEmployee] = useState("");
   const [category, setCategory] = useState<(typeof documentCategories)[number]>("RESUME");
   const [file, setFile] = useState<File | null>(null);
+  const [expiresAt, setExpiresAt] = useState("");
+  const [editingExpiryId, setEditingExpiryId] = useState<string | null>(null);
+  const [editingExpiryValue, setEditingExpiryValue] = useState("");
   const [reportType, setReportType] = useState("EMPLOYEE");
   const [reportRows, setReportRows] = useState<unknown[]>([]);
 
@@ -53,15 +56,18 @@ export const GovernancePage = () => {
       data.append("file", file!);
       data.append("employee", targetEmployee);
       data.append("category", category);
+      if (expiresAt) data.append("expiresAt", expiresAt);
       return governanceApi.upload(data);
     },
     onSuccess: async () => {
       setUploadOpen(false);
       setFile(null);
+      setExpiresAt("");
       await qc.invalidateQueries({ queryKey: ["documents"] });
     }
   });
   const archive = useMutation({ mutationFn: governanceApi.archive, onSuccess: () => qc.invalidateQueries({ queryKey: ["documents"] }) });
+  const updateExpiry = useMutation({ mutationFn: ({ id, value }: { id: string; value: string | null }) => governanceApi.updateDocumentExpiration(id, value), onSuccess: async () => { setEditingExpiryId(null); await qc.invalidateQueries({ queryKey: ["documents"] }); } });
   const report = useMutation({ mutationFn: () => governanceApi.report(reportType), onSuccess: (data) => setReportRows(data.rows) });
   const openDocument = async (id: string) => { const result = await governanceApi.download(id); window.open(result.url, "_blank", "noopener,noreferrer"); };
 
@@ -86,8 +92,9 @@ export const GovernancePage = () => {
         <div className="divide-y">
           {documents.data?.items.length ? documents.data.items.map((item) => <div className="flex items-center p-5" key={item._id}>
             <div className="grid size-10 place-items-center rounded-xl bg-slate-100"><FileText size={17}/></div>
-            <div className="ml-3"><p className="text-sm font-semibold">{item.originalName}</p><p className="text-xs text-slate-400">{item.employee.firstName} {item.employee.lastName} · {item.category.replaceAll("_", " ")} · {(item.size / 1024).toFixed(0)} KB</p></div>
+            <div className="ml-3"><p className="text-sm font-semibold">{item.originalName}</p><p className="text-xs text-slate-400">{item.employee.firstName} {item.employee.lastName} · {item.category.replaceAll("_", " ")} · {(item.size / 1024).toFixed(0)} KB{item.expiresAt ? ` · Expires ${new Date(item.expiresAt).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" })}` : ""}</p>{editingExpiryId === item._id && <div className="mt-2 flex flex-wrap items-center gap-2"><input aria-label="Document expiration date" type="date" className="h-9 rounded-lg border px-2 text-sm" value={editingExpiryValue} onChange={(event) => setEditingExpiryValue(event.target.value)}/><Button disabled={updateExpiry.isPending} onClick={() => updateExpiry.mutate({ id: item._id, value: editingExpiryValue || null })}>Save</Button><Button variant="ghost" onClick={() => setEditingExpiryId(null)}>Cancel</Button>{updateExpiry.error && <span className="text-xs text-red-600">{updateExpiry.error.message}</span>}</div>}</div>
             <div className="ml-auto flex gap-1">
+              {user?.permissions.includes("document.upload") && <Button variant="ghost" className="px-2 text-xs" onClick={() => { setEditingExpiryId(item._id); setEditingExpiryValue(item.expiresAt?.slice(0, 10) ?? ""); updateExpiry.reset(); }}>Expiry</Button>}
               <Button variant="ghost" className="size-9 px-0" aria-label="Download document" onClick={() => void openDocument(item._id)}><Download size={15}/></Button>
               {user?.permissions.includes("document.upload") && <Button variant="ghost" className="size-9 px-0 text-red-600" aria-label="Archive document" onClick={() => { if (window.confirm("Archive this document?")) archive.mutate(item._id); }}><Trash2 size={15}/></Button>}
             </div>
@@ -130,6 +137,9 @@ export const GovernancePage = () => {
           <label className="block text-sm font-medium">File
             <input required type="file" accept=".pdf,.docx,.jpg,.jpeg,.png,.webp" className="mt-2 block w-full rounded-xl border p-2 text-sm" onChange={(event) => setFile(event.target.files?.[0] ?? null)}/>
             <span className="mt-1 block text-xs font-normal text-slate-400">PDF, DOCX or image; maximum 10 MB.</span>
+          </label>
+          <label className="block text-sm font-medium">Expiration date (optional)
+            <input type="date" className="mt-2 block h-11 w-full rounded-xl border px-3" value={expiresAt} onChange={(event) => setExpiresAt(event.target.value)}/>
           </label>
         </div>
         {profile.error && <p className="mt-3 text-sm text-red-600">{profile.error.message}</p>}

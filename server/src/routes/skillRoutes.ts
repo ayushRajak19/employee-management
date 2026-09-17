@@ -41,6 +41,7 @@ skillRouter.post("/assessments/generate", requireAnyPermission("skill.verify", "
 skillRouter.post("/assessments", requireAnyPermission("skill.verify", "skill.create", "employee.update", "department.view"), validate(assessmentSchema), asyncHandler(controller.assignAssessment));
 skillRouter.get("/assessments/:id", validate(assessmentIdParamSchema), asyncHandler(controller.getAssessment));
 skillRouter.post("/assessments/:id/start", validate(assessmentIdParamSchema), asyncHandler(controller.startAssessment));
+skillRouter.post("/assessments/:id/focus-loss", validate(assessmentIdParamSchema), asyncHandler(controller.recordAssessmentFocusLoss));
 skillRouter.post("/assessments/:id/submit", validate(submitAssessmentSchema), asyncHandler(controller.submitAssessment));
 skillRouter.delete("/assessments/:id", requireAnyPermission("skill.verify", "skill.create", "employee.update", "department.view"), validate(assessmentIdParamSchema), asyncHandler(controller.deleteAssessment));
 skillRouter.patch("/assessments/:id/result", requirePermission("skill.verify"), validate(assessmentResultSchema), asyncHandler(controller.recordAssessmentResult));

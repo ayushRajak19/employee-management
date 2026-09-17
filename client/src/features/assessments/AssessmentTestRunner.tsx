@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AlertTriangle,
   Award,
@@ -18,6 +18,7 @@ interface AssessmentTestRunnerProps {
   onClose: () => void;
   onCompleted: () => void;
 }
+const errorMessage = (error: unknown, fallback: string) => error instanceof Error ? error.message : fallback;
 
 export const AssessmentTestRunner = ({
   assessmentId,
@@ -35,12 +36,14 @@ export const AssessmentTestRunner = ({
   const [secondsRemaining, setSecondsRemaining] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const autoSubmitAttempted = useRef(false);
 
   // Load assessment details
   useEffect(() => {
     let mounted = true;
     const load = async () => {
       try {
+        autoSubmitAttempted.current = false;
         setIsLoading(true);
         const res = await skillApi.getAssessment(assessmentId);
         if (mounted) {
@@ -56,11 +59,11 @@ export const AssessmentTestRunner = ({
               }
             });
             setAnswers(existingAnswers);
-            setSecondsRemaining((res.item.timeLimitMinutes || 30) * 60);
+            setSecondsRemaining(res.item.startedAt ? Math.max(0, Math.ceil((new Date(res.item.startedAt).getTime() + (res.item.timeLimitMinutes || 30) * 60_000 - Date.now()) / 1000)) : (res.item.timeLimitMinutes || 30) * 60);
           }
         }
-      } catch (err: any) {
-        if (mounted) setError(err?.message || "Failed to load assessment.");
+      } catch (err: unknown) {
+        if (mounted) setError(errorMessage(err, "Failed to load assessment."));
       } finally {
         if (mounted) setIsLoading(false);
       }
@@ -71,24 +74,12 @@ export const AssessmentTestRunner = ({
     };
   }, [assessmentId]);
 
-  // Live countdown timer
   useEffect(() => {
-    if (testPhase !== "RUNNING" || secondsRemaining <= 0) return;
-
-    const timer = setInterval(() => {
-      setSecondsRemaining((prev: number) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          // Auto-submit when timer expires
-          handleSubmitTest(true);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [testPhase, secondsRemaining]);
+    if (testPhase !== "RUNNING") return;
+    const onHidden = () => { if (document.hidden) void skillApi.recordAssessmentFocusLoss(assessmentId).catch(() => setError("A focus change could not be recorded. Check your connection.")); };
+    document.addEventListener("visibilitychange", onHidden);
+    return () => document.removeEventListener("visibilitychange", onHidden);
+  }, [testPhase, assessmentId]);
 
   const handleStartTest = async () => {
     try {
@@ -96,9 +87,9 @@ export const AssessmentTestRunner = ({
       const res = await skillApi.startAssessment(assessmentId);
       setAssessment(res.item);
       setTestPhase("RUNNING");
-      setSecondsRemaining((res.item.timeLimitMinutes || 30) * 60);
-    } catch (err: any) {
-      setError(err?.message || "Failed to start assessment.");
+      setSecondsRemaining(Math.max(0, Math.ceil((new Date(res.item.startedAt || Date.now()).getTime() + (res.item.timeLimitMinutes || 30) * 60_000 - Date.now()) / 1000)));
+    } catch (err: unknown) {
+      setError(errorMessage(err, "Failed to start assessment."));
     } finally {
       setIsLoading(false);
     }
@@ -111,7 +102,7 @@ export const AssessmentTestRunner = ({
     }));
   };
 
-  const handleSubmitTest = async (_isAutoSubmit = false) => {
+  const handleSubmitTest = useCallback(async () => {
     if (!assessment) return;
     try {
       setIsSubmitting(true);
@@ -128,12 +119,25 @@ export const AssessmentTestRunner = ({
       setTestPhase("SUBMITTED");
       setShowConfirmModal(false);
       onCompleted();
-    } catch (err: any) {
-      alert(err?.message || "Failed to submit assessment answers. Please try again.");
+    } catch (err: unknown) {
+      setError(errorMessage(err, "Failed to submit assessment answers. Please try again."));
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [assessment, answers, onCompleted]);
+
+  // The server start time keeps the countdown correct after reloads or tab suspension.
+  useEffect(() => {
+    if (testPhase !== "RUNNING" || !assessment?.startedAt || isSubmitting) return;
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((new Date(assessment.startedAt!).getTime() + assessment.timeLimitMinutes * 60_000 - Date.now()) / 1000));
+      setSecondsRemaining(remaining);
+      if (remaining === 0 && !autoSubmitAttempted.current) { autoSubmitAttempted.current = true; void handleSubmitTest(); }
+    };
+    tick();
+    const timer = setInterval(tick, 1000);
+    return () => clearInterval(timer);
+  }, [testPhase, assessment?.startedAt, assessment?.timeLimitMinutes, isSubmitting, handleSubmitTest]);
 
   const formatTime = (secs: number) => {
     const mins = Math.floor(secs / 60);
@@ -153,7 +157,7 @@ export const AssessmentTestRunner = ({
     );
   }
 
-  if (error || !assessment) {
+  if (!assessment) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 p-4 backdrop-blur-sm">
         <div className="max-w-md rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-2xl">
@@ -315,6 +319,7 @@ export const AssessmentTestRunner = ({
           </div>
 
           {/* Detailed Question Review List */}
+          {assessment.timedOut && <p role="alert" className="mx-6 mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">This attempt was submitted after the server time limit and was scored as timed out. Contact the assessment owner if a connection problem affected your attempt.</p>}
           <div className="flex-1 overflow-y-auto p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-slate-800">
@@ -468,6 +473,9 @@ export const AssessmentTestRunner = ({
           </div>
         </div>
 
+        <p className="px-6 py-2 text-xs text-slate-500">Leaving this tab is recorded for reviewer context. A focus change alone does not determine misconduct.</p>
+        {error && <p role="alert" className="mx-6 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>}
+
         {/* Question Palette / Progress Bar */}
         <div className="border-b border-slate-100 bg-white px-6 py-2.5">
           <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
@@ -619,7 +627,7 @@ export const AssessmentTestRunner = ({
                   Keep Reviewing
                 </Button>
                 <Button
-                  onClick={() => handleSubmitTest(false)}
+                  onClick={() => void handleSubmitTest()}
                   disabled={isSubmitting}
                   className="bg-brand-600 hover:bg-brand-700 text-white"
                 >

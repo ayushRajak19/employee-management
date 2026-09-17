@@ -29,4 +29,8 @@ const schema = new Schema<ContributionSnapshotDocument>({
   alerts: { type: [alertSchema], default: [] }, calculatedBy: { type: Schema.Types.ObjectId, ref: "User", required: true }, calculatedAt: { type: Date, default: Date.now }
 }, { timestamps: true, versionKey: false });
 schema.index({ employee: 1, period: 1 }, { unique: true });
+const rejectMutation = () => { throw new Error("Frozen contribution snapshots cannot be changed or deleted"); };
+schema.pre(["updateOne", "updateMany", "replaceOne", "findOneAndReplace"], rejectMutation);
+schema.pre("findOneAndUpdate", function () { const update = this.getUpdate() as Record<string, unknown> | null; if (!this.getOptions().upsert || !update || Object.keys(update).some((key) => key !== "$setOnInsert")) rejectMutation(); });
+schema.pre("save", function () { if (!this.isNew) rejectMutation(); });
 export const ContributionSnapshot = tenantModel<ContributionSnapshotDocument>("ContributionSnapshot", schema);

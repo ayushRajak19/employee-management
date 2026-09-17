@@ -6,6 +6,7 @@ export interface DocumentItem {
   originalName: string;
   mimeType: string;
   size: number;
+  expiresAt?: string;
   createdAt: string;
 }
 export interface ResumeItem {
@@ -108,6 +109,7 @@ export const governanceApi = {
     api.delete(`/api/v1/governance/job-descriptions/${id}`),
   documents: () =>
     api.get<{ items: DocumentItem[] }>("/api/v1/governance/documents"),
+  updateDocumentExpiration: (id: string, expiresAt: string | null) => api.patch<{ item: DocumentItem }>(`/api/v1/governance/documents/${id}/expiration`, { expiresAt }),
   upload: (data: FormData) => api.upload("/api/v1/governance/documents", data),
   resumes: (department?: string) =>
     api.get<{ items: ResumeItem[] }>(

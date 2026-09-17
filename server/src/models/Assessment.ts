@@ -42,7 +42,9 @@ export interface AssessmentDocument {
   answers?: AssessmentAnswer[];
   attemptDate?: Date;
   startedAt?: Date;
+  focusLossCount: number;
   completedAt?: Date;
+  timedOut?: boolean;
   score?: number;
   percentage?: number;
   result?: "PENDING" | "PASSED" | "FAILED";
@@ -83,7 +85,9 @@ const schema = new Schema<AssessmentDocument>({
   answers: { type: [answerSchema], default: [] },
   attemptDate: Date,
   startedAt: Date,
+  focusLossCount: { type: Number, default: 0, min: 0 },
   completedAt: Date,
+  timedOut: { type: Boolean, default: false },
   score: { type: Number, min: 0 },
   percentage: { type: Number, min: 0, max: 100 },
   result: { type: String, enum: ["PENDING", "PASSED", "FAILED"], default: "PENDING", index: true }

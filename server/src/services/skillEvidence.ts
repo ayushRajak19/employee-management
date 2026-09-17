@@ -30,12 +30,13 @@ const tokens = (value: string) => new Set(value.toLowerCase().match(/[a-z0-9+#.]
 export const buildSkillEvidence = (skill: SkillEvidenceScore, tasks: SkillEvidenceTask[], now = new Date()) => {
   const skillTokens = tokens(`${skill.name} ${skill.category} ${skill.tools ?? ""}`);
   const matched = tasks.filter((task) => {
-    if (task.skillId && task.skillId === skill.skillId) return true;
+    if (task.skillId) return task.skillId === skill.skillId;
     const taskTokens = tokens(`${task.name} ${task.description ?? ""} ${task.completionNote ?? ""} ${task.skillName ?? ""}`);
     return [...skillTokens].some((word) => taskTokens.has(word));
   });
 
-  const completed = matched.filter((task) => task.status === "COMPLETED");
+  // Only reviewed work with tracked hours can change a person's demonstrated rating.
+  const completed = matched.filter((task) => task.status === "COMPLETED" && task.qualityRating !== undefined && (task.actualHours ?? 0) > 0);
   const onTimeTasks = completed.filter((task) => task.completionDate && task.completionDate <= task.deadline);
   const reviewed = completed.filter((task) => task.qualityRating !== undefined);
 
@@ -54,7 +55,7 @@ export const buildSkillEvidence = (skill: SkillEvidenceScore, tasks: SkillEviden
   // Claim vs Reality Judge
   let credibilityStatus: "EXCEEDED" | "JUSTIFIED" | "GAP_DETECTED" | "UNTESTED" = "UNTESTED";
   let demonstratedRating = skill.rating;
-  let message = "No completed work yet to benchmark delivery speed.";
+  let message = "No completed, reviewed work with tracked hours yet to benchmark delivery.";
 
   if (completed.length > 0) {
     const onTimeFactor = onTimeRate >= 80 ? 1.0 : onTimeRate >= 50 ? 0.85 : 0.7;
@@ -102,7 +103,7 @@ export const buildSkillEvidence = (skill: SkillEvidenceScore, tasks: SkillEviden
   }
 
   const required = skill.rating >= 8 ? 3 : skill.rating >= 6 ? 2 : 1;
-  const evidencePoints = completed.length + reviewed.filter((task) => (task.qualityRating ?? 0) >= 4).length;
+  const evidencePoints = completed.length;
 
   let overallStatus: "EXCEEDED" | "JUSTIFIED" | "GAP_DETECTED" | "UNTESTED" | "IN_PROGRESS" | "NEEDS_EVIDENCE" = credibilityStatus;
   if (credibilityStatus !== "GAP_DETECTED" && evidencePoints < required) {
@@ -151,4 +152,3 @@ export const buildSkillEvidence = (skill: SkillEvidenceScore, tasks: SkillEviden
     }))
   };
 };
-

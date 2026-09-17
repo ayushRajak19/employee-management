@@ -97,6 +97,10 @@ export const startAssessment = async (request: Request, response: Response): Pro
     data: { item }
   });
 };
+export const recordAssessmentFocusLoss = async (request: Request, response: Response): Promise<void> => {
+  const count = await service.recordAssessmentFocusLoss(String(request.params.id), { id: request.user!.id, role: request.user!.role });
+  response.json({ success: true, message: "Focus change recorded", data: { count } });
+};
 
 export const submitAssessment = async (request: Request, response: Response): Promise<void> => {
   const item = await service.submitAssessment(String(request.params.id), {

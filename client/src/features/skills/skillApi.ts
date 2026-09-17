@@ -46,7 +46,9 @@ export interface Assessment {
   percentage?: number;
   result?: "PENDING" | "PASSED" | "FAILED";
   startedAt?: string;
+  focusLossCount?: number;
   completedAt?: string;
+  timedOut?: boolean;
   attemptDate?: string;
   createdAt: string;
 }
@@ -205,6 +207,7 @@ export const skillApi = {
   getAssessment: (id: string) => api.get<{ item: Assessment }>(`/api/v1/skills/assessments/${id}`),
   assignAssessment: (body: AssignAssessmentInput) => api.post("/api/v1/skills/assessments", body),
   startAssessment: (id: string) => api.post<{ item: Assessment }>(`/api/v1/skills/assessments/${id}/start`, {}),
+  recordAssessmentFocusLoss: (id: string) => api.post<{ count: number }>(`/api/v1/skills/assessments/${id}/focus-loss`, {}),
   submitAssessment: (id: string, body: SubmitAssessmentInput) => api.post<{ item: Assessment }>(`/api/v1/skills/assessments/${id}/submit`, body),
   deleteAssessment: (id: string) => api.delete<{ message: string }>(`/api/v1/skills/assessments/${id}`),
   recordResult: (id: string, body: unknown) => api.patch(`/api/v1/skills/assessments/${id}/result`, body)

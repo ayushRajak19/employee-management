@@ -1,5 +1,6 @@
 import { z } from "zod"; import { DOCUMENT_CATEGORIES } from "../models/Document.js"; const objectId = z.string().regex(/^[a-f\d]{24}$/i, "Invalid identifier");
-export const documentMetadataSchema = z.object({ employee: objectId, category: z.enum(DOCUMENT_CATEGORIES) });
+export const documentMetadataSchema = z.object({ employee: objectId, category: z.enum(DOCUMENT_CATEGORIES), expiresAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() });
+export const documentExpirationSchema = z.object({ body: z.object({ expiresAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable() }) });
 export const resumeMetadataSchema = z.object({ employee: objectId });
 export const resumeListSchema = z.object({ query: z.object({ department: objectId.optional() }) });
 export const resumeScreeningSchema = z.object({ jobTitle: z.string().trim().min(2).max(160), jobDescription: z.string().trim().min(100).max(30_000) });

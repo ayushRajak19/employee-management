@@ -40,7 +40,7 @@ const presentGamification = (record: { currentLevel: number; currentLevelXp: num
 type EmployeeGamificationDocumentLike = { earnedBadges: Array<{ badgeKey: string; name: string; description: string; icon: string; awardedAt: Date }> };
 
 export const awardTaskXp = async (task: HydratedDocument<TaskDocument>) => {
-  if (!task.isActive || task.status !== "COMPLETED" || task.assignmentSource !== "MANAGER_ASSIGNED") return null;
+  if (!task.isActive || task.status !== "COMPLETED") return null;
   const now = task.completionDate ?? new Date();
   let record = await EmployeeGamification.findOne({ employeeId: task.assignedEmployee });
   if (!record) record = await EmployeeGamification.findOneAndUpdate({ employeeId: task.assignedEmployee }, { $setOnInsert: { employeeId: task.assignedEmployee } }, { new: true, upsert: true });

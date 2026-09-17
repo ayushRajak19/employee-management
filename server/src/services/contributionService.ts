@@ -84,6 +84,12 @@ export const calculateSnapshot = async (input: { employee: string; period: strin
   if (longBlockers) alerts.push({ type:"BLOCKER", severity:"ATTENTION", title:"Long-running blockers", detail:`${longBlockers} blockers have remained open for more than seven days.`, private:true });
   if (!openTasks.length) alerts.push({ type:"ALLOCATION", severity:"INFO", title:"No active assignment", detail:"Confirm priorities so the employee has clear, meaningful work.", private:true });
   const previous=await ContributionSnapshot.findOne({employee:employee._id,period:{$lt:input.period}}).sort({period:-1}).select("totalScore period").lean(); if(previous&&previous.totalScore-totalScore>15) alerts.push({type:"TREND",severity:"ATTENTION",title:"Contribution trend needs a conversation",detail:`The score moved down ${Number(previous.totalScore-totalScore).toFixed(0)} points since ${previous.period}. Check changing priorities, workload and support needs before drawing conclusions.`,private:true});
-  const snapshot = await ContributionSnapshot.findOneAndUpdate({ employee: employee._id, period: input.period }, { $set: { role: roleName, totalScore, classification, evidenceCoverage: availableWeight, components, alerts, calculatedBy: viewer.id, calculatedAt: new Date() } }, { upsert:true, new:true, runValidators:true });
+  const snapshotFilter = { employee: employee._id, period: input.period };
+  let snapshot = await ContributionSnapshot.findOne(snapshotFilter);
+  if (!snapshot) {
+    try { snapshot = await ContributionSnapshot.create({ ...snapshotFilter, role: roleName, totalScore, classification, evidenceCoverage: availableWeight, components, alerts, calculatedBy: viewer.id, calculatedAt: new Date() }); }
+    catch (error) { if ((error as { code?: number }).code !== 11000) throw error; snapshot = await ContributionSnapshot.findOne(snapshotFilter); }
+  } else return snapshot;
+  if (!snapshot) throw new AppError("Contribution snapshot could not be created", 500);
   await writeAudit({ user: viewer.id, action:"CONTRIBUTION_SNAPSHOT_CALCULATED", entityType:"ContributionSnapshot", entityId:snapshot.id, newValue:{ employee:employee.employeeId, period:input.period, totalScore, evidenceCoverage:availableWeight } }); return snapshot;
 };
