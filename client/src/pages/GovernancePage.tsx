@@ -71,11 +71,11 @@ export const GovernancePage = () => {
   const archive = useMutation({ mutationFn: governanceApi.archive, onSuccess: () => qc.invalidateQueries({ queryKey: ["documents"] }) });
   const updateExpiry = useMutation({ mutationFn: ({ id, value }: { id: string; value: string | null }) => governanceApi.updateDocumentExpiration(id, value), onSuccess: async () => { setEditingExpiryId(null); await qc.invalidateQueries({ queryKey: ["documents"] }); } });
   const report = useMutation({ mutationFn: () => governanceApi.report(reportType, reportEmployee || undefined) });
-  const exportReport = (format: "csv" | "json") => {
-    if (!report.data) return;
+  const exportReport = async (format: "csv" | "json") => {
+    const data = report.data ?? await report.mutateAsync();
     const selected = reportEmployees.data?.items.find((item) => item._id === reportEmployee);
-    const filename = `${reportType.toLowerCase()}-${selected?.employeeId ?? "company"}-${new Date(report.data.generatedAt).toISOString().slice(0, 10)}.${format}`;
-    downloadReport(format === "csv" ? reportCsv(report.data.rows) : JSON.stringify(report.data, null, 2), filename, format === "csv" ? "text/csv;charset=utf-8" : "application/json");
+    const filename = `${reportType.toLowerCase()}-${selected?.employeeId ?? "company"}-${new Date(data.generatedAt).toISOString().slice(0, 10)}.${format}`;
+    downloadReport(format === "csv" ? reportCsv(data.rows) : JSON.stringify(data, null, 2), filename, format === "csv" ? "text/csv;charset=utf-8" : "application/json");
   };
   const openDocument = async (id: string) => { const result = await governanceApi.download(id); window.open(result.url, "_blank", "noopener,noreferrer"); };
 
@@ -120,13 +120,15 @@ export const GovernancePage = () => {
           </select></label>
           <Button className="sm:self-end" onClick={() => report.mutate()} disabled={report.isPending || reportEmployees.isLoading}>{report.isPending ? "Generating…" : "Generate report"}</Button>
         </div>
+        <div className="mt-4 flex flex-wrap items-center gap-2 border-t pt-4">
+          <p className="mr-auto text-sm text-slate-600">Export the selected report for this company or employee.</p>
+          <Button variant="secondary" disabled={report.isPending || reportEmployees.isLoading} onClick={() => void exportReport("csv").catch(() => undefined)}><Download size={15}/> Export CSV / Excel</Button>
+          <Button variant="secondary" disabled={report.isPending || reportEmployees.isLoading} onClick={() => void exportReport("json").catch(() => undefined)}><Download size={15}/> Export JSON</Button>
+        </div>
         {reportEmployees.error && <p role="alert" className="mt-3 text-sm text-red-600">{reportEmployees.error.message}</p>}
         {report.error && <p role="alert" className="mt-3 text-sm text-red-600">{report.error.message}</p>}
         {report.data && <div className="mt-5">
-          <div className="flex flex-wrap items-center gap-2"><p className="mr-auto text-sm text-slate-600">{report.data.rows.length} record{report.data.rows.length === 1 ? "" : "s"} · Generated {new Date(report.data.generatedAt).toLocaleString()}</p>
-            <Button variant="ghost" onClick={() => exportReport("csv")}><Download size={15}/> Export CSV / Excel</Button>
-            <Button variant="ghost" onClick={() => exportReport("json")}><Download size={15}/> Export JSON</Button>
-          </div>
+          <p className="text-sm text-slate-600">{report.data.rows.length} record{report.data.rows.length === 1 ? "" : "s"} · Generated {new Date(report.data.generatedAt).toLocaleString()}</p>
           {report.data.rows.length ? <div className="mt-4 overflow-auto rounded-xl bg-slate-950 p-4 text-xs text-slate-200"><pre>{JSON.stringify(report.data.rows.slice(0, 20), null, 2)}</pre></div> : <p className="mt-4 rounded-xl bg-slate-50 p-5 text-sm text-slate-500">No records for this report and scope. You can still export the empty result.</p>}
           {report.data.rows.length > 20 && <p className="mt-2 text-xs text-slate-500">Preview shows 20 records; exports include all {report.data.rows.length}.</p>}
         </div>}
