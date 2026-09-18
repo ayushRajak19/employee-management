@@ -151,9 +151,10 @@ export const governanceApi = {
     api.patch(`/api/v1/governance/notifications/${id}/read`),
   audit: () =>
     api.get<{ items: AuditItem[] }>("/api/v1/governance/audit?page=1"),
-  report: (type: string) =>
+  reportEmployees: () => api.get<{ items: { _id: string; employeeId: string; firstName: string; lastName: string }[] }>("/api/v1/governance/reports/employees"),
+  report: (type: string, employeeId?: string) =>
     api.get<{ type: string; generatedAt: string; rows: unknown[] }>(
-      `/api/v1/governance/reports?type=${type}`,
+      `/api/v1/governance/reports?type=${encodeURIComponent(type)}${employeeId ? `&employeeId=${encodeURIComponent(employeeId)}` : ""}`,
     ),
   search: (q: string) =>
     api.get<

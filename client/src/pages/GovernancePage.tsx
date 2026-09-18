@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { employeeApi } from "@/features/employees/employeeApi";
 import { governanceApi } from "@/features/governance/governanceApi";
+import { downloadReport, reportCsv } from "@/features/governance/reportExport";
 
 type Tab = "documents" | "reports" | "audit";
 const documentCategories = ["RESUME", "OFFER_LETTER", "JOINING_LETTER", "NDA", "EMPLOYMENT_AGREEMENT", "ID_DOCUMENT", "CERTIFICATE", "EXPERIENCE_LETTER", "APPRAISAL_LETTER", "OTHER"] as const;
@@ -42,12 +43,13 @@ export const GovernancePage = () => {
   const [editingExpiryId, setEditingExpiryId] = useState<string | null>(null);
   const [editingExpiryValue, setEditingExpiryValue] = useState("");
   const [reportType, setReportType] = useState("EMPLOYEE");
-  const [reportRows, setReportRows] = useState<unknown[]>([]);
+  const [reportEmployee, setReportEmployee] = useState("");
 
   const documents = useQuery({ queryKey: ["documents"], queryFn: governanceApi.documents, enabled: tab === "documents" });
   const audit = useQuery({ queryKey: ["audit"], queryFn: governanceApi.audit, enabled: tab === "audit" && user?.permissions.includes("audit.view") });
   const profile = useQuery({ queryKey: ["employee", "me"], queryFn: employeeApi.me, enabled: uploadOpen && isEmployee });
   const employees = useQuery({ queryKey: ["employees", "documents"], queryFn: () => employeeApi.list(new URLSearchParams({ page: "1", limit: "100" })), enabled: uploadOpen && !isEmployee });
+  const reportEmployees = useQuery({ queryKey: ["report-employees"], queryFn: governanceApi.reportEmployees, enabled: tab === "reports" });
   const targetEmployee = isEmployee ? profile.data?.employee._id ?? "" : employee;
 
   const upload = useMutation({
@@ -68,7 +70,13 @@ export const GovernancePage = () => {
   });
   const archive = useMutation({ mutationFn: governanceApi.archive, onSuccess: () => qc.invalidateQueries({ queryKey: ["documents"] }) });
   const updateExpiry = useMutation({ mutationFn: ({ id, value }: { id: string; value: string | null }) => governanceApi.updateDocumentExpiration(id, value), onSuccess: async () => { setEditingExpiryId(null); await qc.invalidateQueries({ queryKey: ["documents"] }); } });
-  const report = useMutation({ mutationFn: () => governanceApi.report(reportType), onSuccess: (data) => setReportRows(data.rows) });
+  const report = useMutation({ mutationFn: () => governanceApi.report(reportType, reportEmployee || undefined) });
+  const exportReport = (format: "csv" | "json") => {
+    if (!report.data) return;
+    const selected = reportEmployees.data?.items.find((item) => item._id === reportEmployee);
+    const filename = `${reportType.toLowerCase()}-${selected?.employeeId ?? "company"}-${new Date(report.data.generatedAt).toISOString().slice(0, 10)}.${format}`;
+    downloadReport(format === "csv" ? reportCsv(report.data.rows) : JSON.stringify(report.data, null, 2), filename, format === "csv" ? "text/csv;charset=utf-8" : "application/json");
+  };
   const openDocument = async (id: string) => { const result = await governanceApi.download(id); window.open(result.url, "_blank", "noopener,noreferrer"); };
 
   return <main className="flex-1 px-5 py-8 sm:px-8">
@@ -103,13 +111,25 @@ export const GovernancePage = () => {
       </section>}
       {tab === "reports" && <section className="mt-5 rounded-2xl border bg-white p-5 shadow-soft">
         <div className="flex flex-col gap-3 sm:flex-row">
-          <select className="h-11 flex-1 rounded-xl border px-3 text-sm" value={reportType} onChange={(event) => setReportType(event.target.value)}>
+          <label className="flex-1 text-sm font-medium">Report type<select className="mt-2 h-11 w-full rounded-xl border px-3 text-sm" value={reportType} onChange={(event) => { setReportType(event.target.value); report.reset(); }}>
             {["EMPLOYEE", "DEPARTMENT", "SKILL", "SKILL_GAP", "TASK_PERFORMANCE", "PROJECT", "PERFORMANCE", "KPI", "GOAL", "TRAINING"].map((value) => <option key={value} value={value}>{value.replaceAll("_", " ")}</option>)}
-          </select>
-          <Button onClick={() => report.mutate()} disabled={report.isPending}>Generate report</Button>
+          </select></label>
+          <label className="flex-1 text-sm font-medium">Scope<select className="mt-2 h-11 w-full rounded-xl border px-3 text-sm" value={reportEmployee} onChange={(event) => { setReportEmployee(event.target.value); report.reset(); }}>
+            <option value="">All employees (company)</option>
+            {reportEmployees.data?.items.map((item) => <option key={item._id} value={item._id}>{item.firstName} {item.lastName} ({item.employeeId})</option>)}
+          </select></label>
+          <Button className="sm:self-end" onClick={() => report.mutate()} disabled={report.isPending || reportEmployees.isLoading}>{report.isPending ? "Generating…" : "Generate report"}</Button>
         </div>
-        <p className="mt-3 text-xs text-slate-400">Report results use reusable structured rows ready for CSV, Excel or PDF exporters.</p>
-        {reportRows.length > 0 && <div className="mt-5 overflow-auto rounded-xl bg-slate-950 p-4 text-xs text-slate-200"><pre>{JSON.stringify(reportRows.slice(0, 20), null, 2)}</pre></div>}
+        {reportEmployees.error && <p role="alert" className="mt-3 text-sm text-red-600">{reportEmployees.error.message}</p>}
+        {report.error && <p role="alert" className="mt-3 text-sm text-red-600">{report.error.message}</p>}
+        {report.data && <div className="mt-5">
+          <div className="flex flex-wrap items-center gap-2"><p className="mr-auto text-sm text-slate-600">{report.data.rows.length} record{report.data.rows.length === 1 ? "" : "s"} · Generated {new Date(report.data.generatedAt).toLocaleString()}</p>
+            <Button variant="ghost" onClick={() => exportReport("csv")}><Download size={15}/> Export CSV / Excel</Button>
+            <Button variant="ghost" onClick={() => exportReport("json")}><Download size={15}/> Export JSON</Button>
+          </div>
+          {report.data.rows.length ? <div className="mt-4 overflow-auto rounded-xl bg-slate-950 p-4 text-xs text-slate-200"><pre>{JSON.stringify(report.data.rows.slice(0, 20), null, 2)}</pre></div> : <p className="mt-4 rounded-xl bg-slate-50 p-5 text-sm text-slate-500">No records for this report and scope. You can still export the empty result.</p>}
+          {report.data.rows.length > 20 && <p className="mt-2 text-xs text-slate-500">Preview shows 20 records; exports include all {report.data.rows.length}.</p>}
+        </div>}
       </section>}
       {tab === "audit" && <section className="mt-5 overflow-hidden rounded-2xl border bg-white shadow-soft">
         <div className="flex items-center border-b p-5"><ShieldCheck size={18} className="text-brand-600"/><h2 className="ml-3 font-semibold">Immutable audit trail</h2></div>
