@@ -2,10 +2,10 @@ import { Router } from "express";
 import * as controller from "../controllers/workController.js";
 import * as voiceController from "../controllers/voiceTaskController.js";
 import { authenticate, requirePermission } from "../middleware/auth.js";
-import { voiceUpload } from "../middleware/upload.js";
+import { leadSheetUpload, voiceUpload } from "../middleware/upload.js";
 import { validate } from "../middleware/validate.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { manualTaskSchema, projectSchema, taskIdSchema, taskReassignSchema, taskReviewSchema, taskSchema, taskTransitionSchema, voiceCommandIdSchema, voiceCommandSchema, voiceTextPreviewSchema } from "../validators/workValidators.js";
+import { leadActivitySchema, leadImportCommitSchema, leadWorkItemSchema, leadWorkListSchema, manualTaskSchema, projectSchema, taskIdSchema, taskReassignSchema, taskReviewSchema, taskSchema, taskTransitionSchema, voiceCommandIdSchema, voiceCommandSchema, voiceTextPreviewSchema } from "../validators/workValidators.js";
 
 export const workRouter = Router();
 workRouter.use(authenticate);
@@ -21,6 +21,13 @@ workRouter.patch("/tasks/:id/review", requirePermission("task.review"), validate
 workRouter.patch("/tasks/:id/reassign", requirePermission("task.assign"), validate(taskReassignSchema), asyncHandler(controller.reassign));
 workRouter.delete("/tasks/:id", requirePermission("task.assign"), validate(taskIdSchema), asyncHandler(controller.remove));
 workRouter.get("/tasks/:id/activity", asyncHandler(controller.activity));
+workRouter.post("/tasks/lead-import/preview", requirePermission("task.create", "task.assign"), leadSheetUpload, asyncHandler(controller.previewLeadImport));
+workRouter.post("/tasks/lead-import", requirePermission("task.create", "task.assign"), validate(leadImportCommitSchema), asyncHandler(controller.commitLeadImport));
+workRouter.get("/tasks/:id/leads", validate(leadWorkListSchema), asyncHandler(controller.leadWorkItems));
+workRouter.get("/tasks/:id/leads/export", requirePermission("report.view"), validate(taskIdSchema), asyncHandler(controller.exportLeadWork));
+workRouter.get("/tasks/:id/lead-summary", validate(taskIdSchema), asyncHandler(controller.leadWorkSummary));
+workRouter.get("/tasks/:id/leads/:workItemId", validate(leadWorkItemSchema), asyncHandler(controller.leadWorkItem));
+workRouter.post("/tasks/:id/leads/:workItemId/activities", requirePermission("task.update"), validate(leadActivitySchema), asyncHandler(controller.logLeadActivity));
 workRouter.get("/voice/history", asyncHandler(voiceController.history));
 workRouter.post("/voice/preview", voiceUpload, asyncHandler(voiceController.previewAudio));
 workRouter.post("/voice/preview-text", validate(voiceTextPreviewSchema), asyncHandler(voiceController.previewText));

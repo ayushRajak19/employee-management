@@ -67,6 +67,8 @@ export const reassignTask = async (id: string, assignedEmployee: string, actor: 
   task.assignedEmployee = nextAssignee._id;
   task.assignedBy = new Types.ObjectId(actor.id);
   await task.save();
+  const { LeadWorkItem } = await import("../models/LeadWorkItem.js");
+  await LeadWorkItem.updateMany({ task: task._id, status: { $nin: ["CONVERTED", "NOT_INTERESTED", "INVALID"] } }, { $set: { assignedEmployee: nextAssignee._id }, $inc: { version: 1 } });
   await Promise.all([
     TaskActivity.create({ task: task._id, action: "TASK_REASSIGNED", oldValue: { assignee: oldAssigneeId }, newValue: { assignee: nextAssignee.id }, performedBy: actor.id }),
     writeAudit({ user: actor.id, action: "TASK_REASSIGNED", entityType: "Task", entityId: task.id, oldValue: { assignedEmployee: oldAssigneeId }, newValue: { assignedEmployee: nextAssignee.id } }),

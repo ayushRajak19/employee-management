@@ -1,0 +1,6 @@
+import { Schema, type Types } from "mongoose";
+import { tenantModel } from "../tenancy/tenantModel.js";
+export interface LeadImportBatchDocument { task: Types.ObjectId; fileName: string; fileHash: string; idempotencyKey: string; importedBy: Types.ObjectId; assignedEmployee: Types.ObjectId; sheetName?: string; totalRows: number; importedRows: number; rejectedRows: number; duplicateLinks: number; columns: string[]; mapping: Record<string, string>; createdAt: Date }
+const schema = new Schema<LeadImportBatchDocument>({ task: { type: Schema.Types.ObjectId, ref: "Task", required: true, index: true }, fileName: { type: String, required: true, maxlength: 255 }, fileHash: { type: String, required: true }, idempotencyKey: { type: String, required: true }, importedBy: { type: Schema.Types.ObjectId, ref: "User", required: true }, assignedEmployee: { type: Schema.Types.ObjectId, ref: "Employee", required: true }, sheetName: { type: String, maxlength: 120 }, totalRows: Number, importedRows: Number, rejectedRows: Number, duplicateLinks: Number, columns: [String], mapping: Schema.Types.Mixed }, { timestamps: true, versionKey: false });
+schema.index({ idempotencyKey: 1 }, { unique: true }); schema.index({ fileHash: 1, assignedEmployee: 1 });
+export const LeadImportBatch = tenantModel<LeadImportBatchDocument>("LeadImportBatch", schema);

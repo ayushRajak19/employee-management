@@ -1,0 +1,9 @@
+import { Schema, type Types } from "mongoose";
+import { tenantModel } from "../tenancy/tenantModel.js";
+import { LEAD_WORK_STATUSES, type LeadWorkStatus } from "./LeadWorkItem.js";
+export const INTERACTION_TYPES = ["PHONE_CALL", "WHATSAPP", "EMAIL", "MEETING", "VIDEO_CALL", "OTHER"] as const;
+export const INTERACTION_OUTCOMES = ["NO_ANSWER", "BUSY", "WRONG_NUMBER", "CONNECTED", "REQUESTED_CALLBACK", "INTERESTED", "QUALIFIED", "NOT_INTERESTED", "CONVERTED", "OTHER"] as const;
+export interface LeadWorkActivityDocument { task: Types.ObjectId; workItem: Types.ObjectId; lead: Types.ObjectId; assignedEmployee: Types.ObjectId; performedBy: Types.ObjectId; interactionType: typeof INTERACTION_TYPES[number]; outcome: typeof INTERACTION_OUTCOMES[number]; fromStatus: LeadWorkStatus; toStatus: LeadWorkStatus; note: string; nextFollowUpAt?: Date; createdAt: Date }
+const schema = new Schema<LeadWorkActivityDocument>({ task: { type: Schema.Types.ObjectId, ref: "Task", required: true, index: true }, workItem: { type: Schema.Types.ObjectId, ref: "LeadWorkItem", required: true, index: true }, lead: { type: Schema.Types.ObjectId, ref: "SalesLead", required: true, index: true }, assignedEmployee: { type: Schema.Types.ObjectId, ref: "Employee", required: true, index: true }, performedBy: { type: Schema.Types.ObjectId, ref: "User", required: true }, interactionType: { type: String, enum: INTERACTION_TYPES, required: true }, outcome: { type: String, enum: INTERACTION_OUTCOMES, required: true }, fromStatus: { type: String, enum: LEAD_WORK_STATUSES, required: true }, toStatus: { type: String, enum: LEAD_WORK_STATUSES, required: true }, note: { type: String, required: true, trim: true, maxlength: 2000 }, nextFollowUpAt: Date }, { timestamps: true, versionKey: false });
+schema.index({ workItem: 1, createdAt: -1 }); schema.index({ task: 1, createdAt: -1 });
+export const LeadWorkActivity = tenantModel<LeadWorkActivityDocument>("LeadWorkActivity", schema);

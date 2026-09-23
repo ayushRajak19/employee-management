@@ -4,6 +4,9 @@ export interface Task { _id: string; taskId: string; name: string; description?:
 export interface Gamification { currentLevel: number; currentLevelXp: number; xpForNextLevel: number; totalLifetimeXp: number; streakDays: number; completedTasksCount: number; tierName: string; xpToNextLevel: number; progressPercent: number; recentAchievement: { badgeKey: string; name: string; description: string; icon: string; awardedAt: string } | null }
 export interface TaskMetrics { total: number; open: number; overdue: number; onTimeRate: number; reworkRate: number; averageQuality: number }
 export interface TaskActivity { _id: string; action: string; oldValue?: unknown; newValue?: unknown; performedBy: { name: string }; createdAt: string }
+export interface LeadImportPreview { fileName: string; fileHash: string; sheets: string[]; selectedSheet?: string; columns: string[]; suggestedMapping: Record<string,string>; totalRows: number; emptyRows: number; rows: Array<{rowNumber:number;values:Record<string,string>}>; allRows: Array<{rowNumber:number;values:Record<string,string>}> }
+export interface LeadWorkItem { _id:string; status:string; attemptCount:number; nextFollowUpAt?:string; lastActivityAt?:string; latestNote?:string; originalData:Record<string,string>; version:number; lead:{_id:string;name:string;phone?:string;email?:string;companyName?:string;market?:string;status:string;notes?:string}; assignedEmployee:{_id:string;firstName:string;lastName:string;employeeId:string} }
+export interface LeadWorkSummary { total:number;worked:number;untouched:number;attempts:number;statuses:Record<string,number>;lastActivity?:string }
 export interface VoiceOption { id: string; label: string; detail?: string; status?: string }
 export interface VoiceDraft { action: "CREATE_TASK" | "UPDATE_STATUS"; name?: string; description?: string; project?: string; assignedEmployee?: string; assigneeHint?: string; verbalAssigner?: string; priority?: string; complexity?: string; estimatedHours?: number; deadline?: string; task?: string; status?: string; actualHours?: number; completionNote?: string; blockerReason?: string; blockerComment?: string }
 export interface VoicePreview { command: { id: string; transcript: string; language?: string; durationSeconds?: number; confidence: number; status: string }; draft: VoiceDraft; drafts: VoiceDraft[]; options: { projects: VoiceOption[]; employees: VoiceOption[]; tasks: VoiceOption[] } }
@@ -20,5 +23,11 @@ export const workApi = {
   voicePreviewText: (transcript: string, language = "auto") => api.post<VoicePreview>("/api/v1/work/voice/preview-text", { transcript, language, timezoneOffsetMinutes: new Date().getTimezoneOffset() }),
   voiceConfirm: (id: string, body: VoiceDraft | { drafts: VoiceDraft[] }) => api.post(`/api/v1/work/voice/${id}/confirm`, body),
   voiceCancel: (id: string) => api.patch(`/api/v1/work/voice/${id}/cancel`),
-  voiceHistory: () => api.get<{ items: VoiceHistory[] }>("/api/v1/work/voice/history")
+  voiceHistory: () => api.get<{ items: VoiceHistory[] }>("/api/v1/work/voice/history"),
+  previewLeadImport: (file:File, sheet?:string) => { const body=new FormData(); body.append("file",file); if(sheet) body.append("sheet",sheet); return api.upload<LeadImportPreview>("/api/v1/work/tasks/lead-import/preview",body); },
+  commitLeadImport: (body:unknown) => api.post<{task:Task;idempotent:boolean}>("/api/v1/work/tasks/lead-import",body),
+  leadItems: (taskId:string, params=new URLSearchParams()) => api.get<{items:LeadWorkItem[];page:number;limit:number;total:number;pages:number}>(`/api/v1/work/tasks/${taskId}/leads?${params}`),
+  leadItem: (taskId:string,id:string) => api.get<{item:LeadWorkItem;activities:Array<{_id:string;interactionType:string;outcome:string;fromStatus:string;toStatus:string;note:string;nextFollowUpAt?:string;createdAt:string;performedBy:{name:string}}>}>(`/api/v1/work/tasks/${taskId}/leads/${id}`),
+  leadSummary: (taskId:string) => api.get<LeadWorkSummary>(`/api/v1/work/tasks/${taskId}/lead-summary`),
+  logLeadActivity: (taskId:string,id:string,body:unknown) => api.post(`/api/v1/work/tasks/${taskId}/leads/${id}/activities`,body)
 };
