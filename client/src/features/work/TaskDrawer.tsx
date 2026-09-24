@@ -13,7 +13,7 @@ const normalizeOptionalUrl = (value: string) => {
   return `https://${trimmed}`;
 };
 
-export const TaskDrawer = ({ task, onClose, onRefresh, onOpenLeadWorkbench }: { task: Task; onClose: () => void; onRefresh: () => Promise<unknown>; onOpenLeadWorkbench?: () => void }) => {
+export const TaskDrawer = ({ task, onClose, onRefresh }: { task: Task; onClose: () => void; onRefresh: () => Promise<unknown> }) => {
   const { user } = useAuth();
   const canReview = user?.permissions.includes("task.review");
   const canManage = user?.permissions.includes("task.assign") ?? false;
@@ -57,7 +57,6 @@ export const TaskDrawer = ({ task, onClose, onRefresh, onOpenLeadWorkbench }: { 
         <button className="ml-auto grid size-9 shrink-0 place-items-center rounded-xl hover:bg-slate-100" aria-label="Close task" onClick={onClose}><X size={18}/></button>
       </header>
       <div className="min-w-0 p-4 sm:p-6">
-        {(task as Task & { taskType?: string }).taskType === "LEAD_LIST" && <div className="mb-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4"><p className="font-semibold text-emerald-900">Lead list assignment</p><p className="mt-1 text-sm text-emerald-700">Work each lead and keep an append-only interaction history.</p><Button className="mt-4" onClick={onOpenLeadWorkbench}>Open lead workbench</Button></div>}
         <div className="grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-4">{[
           { label: "Status", value: task.status.replaceAll("_", " ") },
           { label: "Priority", value: task.priority },

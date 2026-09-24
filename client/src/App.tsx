@@ -42,6 +42,7 @@ const SkillsPage = lazyWithRetry(() => import("@/pages/SkillsRoutePage").then((m
 const SkillMatrixPage = lazyWithRetry(() => import("@/pages/SkillMatrixPage").then((module) => ({ default: module.SkillMatrixPage })));
 const AssessmentsPage = lazyWithRetry(() => import("@/pages/AssessmentsPage").then((module) => ({ default: module.AssessmentsPage })));
 const WorkPage = lazyWithRetry(() => import("@/pages/WorkPage").then((module) => ({ default: module.WorkPage })));
+const LeadWorkPage = lazyWithRetry(() => import("@/pages/LeadWorkPage").then((module) => ({ default: module.LeadWorkPage })));
 const PerformancePage = lazyWithRetry(() => import("@/pages/PerformancePage").then((module) => ({ default: module.PerformancePage })));
 const DevelopmentPage = lazyWithRetry(() => import("@/pages/DevelopmentPage").then((module) => ({ default: module.DevelopmentPage })));
 const GovernancePage = lazyWithRetry(() => import("@/pages/GovernancePage").then((module) => ({ default: module.GovernancePage })));
@@ -99,6 +100,7 @@ export const App = () => <Suspense fallback={<PageLoader/>}><ScrollToTop/><Route
     <Route element={<PermissionRoute permissions={["section.skill_matrix"]}/>}><Route path="skill-matrix" element={<SkillMatrixPage/>}/></Route>
     <Route element={<PermissionRoute permissions={["section.assessments"]}/>}><Route path="assessments" element={<AssessmentsPage/>}/></Route>
     <Route element={<PermissionRoute permissions={["section.work"]}/>}><Route path="work" element={<WorkPage/>}/></Route>
+    <Route element={<PermissionRoute permissions={["section.sales"]}/>}><Route element={<PermissionRoute permissions={["sales.view.self","sales.view.team","sales.view.all"]}/>}><Route path="lead-work" element={<LeadWorkPage/>}/></Route></Route>
     <Route element={<PermissionRoute permissions={["section.attendance"]}/>}><Route path="attendance" element={<AttendancePage/>}/></Route>
     <Route element={<PermissionRoute permissions={["section.performance"]}/>}><Route path="performance" element={<PerformancePage/>}/></Route>
     <Route element={<PermissionRoute permissions={["section.contribution"]}/>}><Route path="contribution" element={<ContributionPage/>}/></Route>

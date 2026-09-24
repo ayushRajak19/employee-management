@@ -4,7 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import type { CapabilityName, PermissionName, RoleName, SectionPermissionName, PlanFeatures } from "@mobius-ems/shared";
 import {
   BarChart3, Bot, BrainCircuit, BriefcaseBusiness, Building2, CalendarCheck2,
-  ChevronLeft, CircleGauge, CreditCard, FileText, GraduationCap, ListTodo, LogOut, Menu,
+  ChevronLeft, CircleGauge, CreditCard, FileSpreadsheet, FileText, GraduationCap, ListTodo, LogOut, Menu,
   MailPlus, MapPinned, Route, ShieldCheck, Sparkles, Target, TrendingUp, UserCog, UserPlus, UserRound, Users, Workflow, X,
 } from "lucide-react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -80,6 +80,7 @@ const groups: { label: string; items: NavItem[] }[] = [
     label: "Sales & CRM",
     items: [
       { label: "Sales dashboard", icon: TrendingUp, path: "/sales", permissions: ["sales.analytics.self", "sales.analytics.team", "sales.analytics.all"], capability: "SALES_MODULE", section: "section.sales" },
+      { label: "Lead Work", icon: FileSpreadsheet, path: "/lead-work", permissions: ["sales.view.self", "sales.view.team", "sales.view.all"], capability: "SALES_MODULE", section: "section.sales" },
       { label: "My target & performance", icon: Target, path: "/sales/my-target", permission: "sales.analytics.self", capability: "SALES_MODULE", section: "section.sales" },
       { label: "Leads", icon: Users, path: "/sales/leads", permissions: ["sales.view.self", "sales.view.team", "sales.view.all"], capability: "SALES_MODULE", section: "section.sales" },
       { label: "Customers", icon: UserRound, path: "/sales/customers", permission: "sales.customer.view", capability: "SALES_MODULE", section: "section.sales" },
