@@ -332,7 +332,7 @@ const LeadPanel = ({
                   "VIDEO_CALL",
                   "OTHER",
                 ].map((x) => (
-                  <option key={x}>{x.replaceAll("_", " ")}</option>
+                  <option key={x} value={x}>{x.replaceAll("_", " ")}</option>
                 ))}
               </select>
             </label>
@@ -355,7 +355,7 @@ const LeadPanel = ({
                   "CONVERTED",
                   "OTHER",
                 ].map((x) => (
-                  <option key={x}>{x.replaceAll("_", " ")}</option>
+                  <option key={x} value={x}>{x.replaceAll("_", " ")}</option>
                 ))}
               </select>
             </label>
@@ -367,7 +367,7 @@ const LeadPanel = ({
                 onChange={(e) => setForm({ ...form, status: e.target.value })}
               >
                 {statuses.map((x) => (
-                  <option key={x}>{x.replaceAll("_", " ")}</option>
+                  <option key={x} value={x}>{x.replaceAll("_", " ")}</option>
                 ))}
               </select>
             </label>
