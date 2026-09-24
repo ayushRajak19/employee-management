@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { workApi, type LeadImportPreview, type Project, type Task } from "./workApi";
 
-const canonical=[['custom','Preserve as imported data'],['name','Lead name'],['phone','Phone'],['email','Email'],['companyName','Company'],['market','City / market'],['source','Source'],['notes','Existing notes / requirement'],['estimatedValue','Lead value']];
+const canonical=[['custom','Preserve as imported data'],['name','Full lead name'],['firstName','First name'],['lastName','Last name'],['phone','Phone'],['email','Email'],['companyName','Company'],['market','City / market'],['source','Source'],['notes','Existing notes / requirement'],['estimatedValue','Lead value']];
 export const LeadImportDialog=({projects,employees,onClose,onCreated}:{projects:Project[];employees:Array<{_id:string;firstName:string;lastName:string;status?:string}>;onClose:()=>void;onCreated:(task:Task)=>Promise<void>})=>{
  const [step,setStep]=useState(1); const [file,setFile]=useState<File>(); const [preview,setPreview]=useState<LeadImportPreview>(); const [mapping,setMapping]=useState<Record<string,string>>({}); const [excluded,setExcluded]=useState<Set<number>>(new Set());
  const [task,setTask]=useState({name:"",description:"",project:"",assignedEmployee:"",priority:"MEDIUM",complexity:"MEDIUM",estimatedHours:4,deadline:new Date(Date.now()+7*86400000).toISOString().slice(0,10)});
