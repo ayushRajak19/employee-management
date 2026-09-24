@@ -147,6 +147,29 @@ export const updateEmployee = async (id: string, input: EmployeeUpdate, actor: s
   await Promise.all(tracked.filter(([key]) => input[key] !== undefined && String(previous[key] ?? "") !== String(input[key] ?? "")).map(([key, type]) => EmployeeTimeline.create({ employee: employee._id, type, title: `${key} updated`, description: `Previous: ${String(previous[key] ?? "none")}; new: ${String(input[key] ?? "none")}`, performedBy: actor })));
   await writeAudit({ user: actor, action: "EMPLOYEE_UPDATED", entityType: "Employee", entityId: employee.id, oldValue: previous, newValue: input }); return employee.populate("department team designation reportingManager", "name code firstName lastName employeeId");
 };
+
+export const resetEmployeePassword = async (id: string, actor: SessionUser, meta: { ip?: string; userAgent?: string }) => {
+  if (actor.role !== "SUPER_ADMIN") throw new AppError("Only a Super Admin can reset employee passwords", 403, "FORBIDDEN");
+  const employee = await Employee.findOne({ _id: id, isActive: true });
+  if (!employee) throw new AppError("Employee not found", 404);
+  if (employee.user.toString() === actor.id) throw new AppError("Use Change password to update your own password", 422, "CANNOT_RESET_OWN_PASSWORD");
+
+  const user = await User.findOne({ _id: employee.user, isActive: true }).populate<{ role: { name: RoleName } }>("role", "name");
+  if (!user) throw new AppError("Employee account not found", 404);
+  if (user.role.name === "SUPER_ADMIN") throw new AppError("Super Admin passwords must be reset through the account recovery flow", 422, "CANNOT_RESET_SUPER_ADMIN");
+
+  const password = temporaryPassword();
+  user.passwordHash = await bcrypt.hash(password, 12);
+  user.forcePasswordChange = true;
+  user.passwordChangedAt = new Date();
+  user.passwordResetTokenHash = undefined;
+  user.passwordResetTokenExpiresAt = undefined;
+  await user.save();
+  await RefreshSession.updateMany({ user: user._id, revokedAt: { $exists: false } }, { $set: { revokedAt: new Date() } });
+  await writeAudit({ user: actor.id, action: "EMPLOYEE_PASSWORD_RESET", entityType: "Employee", entityId: employee.id, newValue: { employeeId: employee.employeeId, forcedChange: true }, ipAddress: meta.ip, userAgent: meta.userAgent });
+  return { email: user.email, password };
+};
+
 export async function deactivateEmployee(id: string, actor: string): Promise<void> {
   const employee = await Employee.findById(id);
   if (!employee) throw new AppError("Employee not found", 404);

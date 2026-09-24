@@ -17,4 +17,5 @@ employeeRouter.get("/", requirePermission("employee.view"), validate(listEmploye
 employeeRouter.post("/", requirePermission("employee.create"), validate(createEmployeeSchema), asyncHandler(controller.create));
 employeeRouter.get("/:id", requirePermission("employee.view"), validate(employeeIdSchema), asyncHandler(controller.profile));
 employeeRouter.patch("/:id", requirePermission("employee.update"), validate(updateEmployeeSchema), asyncHandler(controller.update));
+employeeRouter.post("/:id/reset-password", validate(employeeIdSchema), asyncHandler(controller.resetPassword));
 employeeRouter.delete("/:id", requirePermission("employee.deactivate"), validate(employeeIdSchema), asyncHandler(controller.deactivate));

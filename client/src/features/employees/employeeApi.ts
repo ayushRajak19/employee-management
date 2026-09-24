@@ -32,5 +32,6 @@ export const employeeApi = {
   onboarding: (body: unknown) => api.patch<{ employee: EmployeeRow }>("/api/v1/employees/me/onboarding", body),
   profile: (id: string) => api.get<Employee360>(`/api/v1/employees/${id}`),
   update: (id: string, body: unknown) => api.patch<{ employee: EmployeeRow }>(`/api/v1/employees/${id}`, body),
+  resetPassword: (id: string) => api.post<{ temporaryCredentials: { email: string; password: string } }>(`/api/v1/employees/${id}/reset-password`),
   deactivate: (id: string) => api.delete<Record<string, never>>(`/api/v1/employees/${id}`)
 };
