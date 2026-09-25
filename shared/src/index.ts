@@ -364,11 +364,27 @@ export type ApplicantStage = (typeof APPLICANT_STAGES)[number];
 export const REGULARIZATION_STATUSES = ["PENDING", "APPROVED", "REJECTED"] as const;
 export type RegularizationStatus = (typeof REGULARIZATION_STATUSES)[number];
 
+export interface LeavePolicyItem {
+  _id: string;
+  name: string;
+  code: string;
+  quotaDays: number;
+  isPaid: boolean;
+  description?: string;
+  isActive: boolean;
+  isSystem?: boolean;
+}
+
 export interface LeaveBalanceItem {
+  id?: string;
   type: string;
+  name?: string;
   quotaDays: number;
   usedDays: number;
   remainingDays: number;
+  isPaid?: boolean;
+  isSystem?: boolean;
+  description?: string;
 }
 
 export interface SPOFItem {

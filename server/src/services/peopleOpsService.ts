@@ -1,8 +1,26 @@
-import { randomBytes } from "node:crypto"; import bcrypt from "bcrypt"; import { SECTION_PERMISSIONS, type PermissionName, type SectionPermissionName, type LeaveBalanceItem } from "@mobius-ems/shared"; import { Employee } from "../models/Employee.js"; import { LeaveRequest, type LeaveRequestDocument } from "../models/LeaveRequest.js"; import { Recognition, type RecognitionDocument } from "../models/Recognition.js"; import { Role } from "../models/Role.js"; import { User } from "../models/User.js"; import { AppError } from "../utils/AppError.js"; import { notify } from "./notificationService.js"; import { writeAudit } from "./auditService.js";
+import { randomBytes } from "node:crypto"; import bcrypt from "bcrypt"; import { SECTION_PERMISSIONS, type PermissionName, type SectionPermissionName, type LeaveBalanceItem, type LeavePolicyItem } from "@mobius-ems/shared"; import { Employee } from "../models/Employee.js"; import { LeaveRequest, type LeaveRequestDocument } from "../models/LeaveRequest.js"; import { LeavePolicy, type LeavePolicyDocument } from "../models/LeavePolicy.js"; import { Recognition, type RecognitionDocument } from "../models/Recognition.js"; import { Role } from "../models/Role.js"; import { User } from "../models/User.js"; import { AppError } from "../utils/AppError.js"; import { notify } from "./notificationService.js"; import { writeAudit } from "./auditService.js";
 const scopedEmployees = async (viewer: { id: string; role: string }) => { if (!["EMPLOYEE","MANAGER"].includes(viewer.role)) return Employee.find({ isActive: true }).distinct("_id"); const own = await Employee.findOne({ user: viewer.id }).select("_id"); return viewer.role === "EMPLOYEE" ? own ? [own._id] : [] : Employee.find({ $or: [{ _id: own?._id }, { reportingManager: own?._id }] }).distinct("_id"); };
 export const listLeaves = async (viewer: { id: string; role: string }) => LeaveRequest.find({ employee: { $in: await scopedEmployees(viewer) } }).populate("employee", "firstName lastName employeeId").populate("reviewedBy", "name").sort({ createdAt: -1 }).lean();
 
-export const LEAVE_QUOTAS: Record<LeaveRequestDocument["type"], number> = {
+export const DEFAULT_LEAVE_POLICIES = [
+  { name: "Casual Leave", code: "CASUAL_LEAVE", quotaDays: 12, isPaid: true, isSystem: true, description: "Short-term planned personal leave" },
+  { name: "Sick Leave", code: "SICK_LEAVE", quotaDays: 10, isPaid: true, isSystem: true, description: "Medical and health-related leave" },
+  { name: "Paid Leave", code: "PAID_LEAVE", quotaDays: 15, isPaid: true, isSystem: true, description: "Annual earned privilege leave" },
+  { name: "Work From Home", code: "WORK_FROM_HOME", quotaDays: 24, isPaid: true, isSystem: true, description: "Remote work days quota" },
+  { name: "Unpaid Leave", code: "UNPAID_LEAVE", quotaDays: 999, isPaid: false, isSystem: true, description: "Leave without pay (unlimited policy)" },
+  { name: "Other", code: "OTHER", quotaDays: 10, isPaid: true, isSystem: true, description: "Special circumstance leave" }
+];
+
+export const ensureDefaultLeavePolicies = async () => {
+  const count = await LeavePolicy.countDocuments({ isActive: true });
+  if (count === 0) {
+    for (const p of DEFAULT_LEAVE_POLICIES) {
+      await LeavePolicy.create({ ...p, isActive: true });
+    }
+  }
+};
+
+export const LEAVE_QUOTAS: Record<string, number> = {
   CASUAL_LEAVE: 12,
   SICK_LEAVE: 10,
   PAID_LEAVE: 15,
@@ -11,9 +29,103 @@ export const LEAVE_QUOTAS: Record<LeaveRequestDocument["type"], number> = {
   OTHER: 10
 };
 
+export const listLeavePolicies = async () => {
+  await ensureDefaultLeavePolicies();
+  return LeavePolicy.find({ isActive: true }).sort({ isSystem: -1, createdAt: 1 }).lean();
+};
+
+export const createLeavePolicy = async (input: { name: string; code?: string; quotaDays: number; isPaid?: boolean; description?: string }, actorId: string) => {
+  await ensureDefaultLeavePolicies();
+  let code = (input.code?.trim() || input.name.trim().toUpperCase().replace(/[^A-Z0-9]+/g, "_")).replace(/^_+|_+$/g, "");
+  if (!code) throw new AppError("Invalid policy code", 400);
+
+  const existing = await LeavePolicy.findOne({ code, isActive: true });
+  if (existing) throw new AppError(`A leave policy with code "${code}" already exists`, 409);
+
+  const policy = await LeavePolicy.create({
+    name: input.name.trim(),
+    code,
+    quotaDays: input.quotaDays,
+    isPaid: input.isPaid ?? true,
+    description: input.description?.trim(),
+    isActive: true,
+    isSystem: false
+  });
+
+  await writeAudit({
+    user: actorId,
+    action: "LEAVE_POLICY_CREATED",
+    entityType: "LeavePolicy",
+    entityId: policy.id,
+    newValue: { name: policy.name, code: policy.code, quotaDays: policy.quotaDays, isPaid: policy.isPaid }
+  });
+
+  return policy;
+};
+
+export const updateLeavePolicy = async (id: string, input: { name?: string; quotaDays?: number; isPaid?: boolean; description?: string }, actorId: string) => {
+  const policy = await LeavePolicy.findById(id);
+  if (!policy || !policy.isActive) throw new AppError("Leave policy not found", 404);
+
+  const oldValue = { name: policy.name, quotaDays: policy.quotaDays, isPaid: policy.isPaid, description: policy.description };
+
+  if (input.name !== undefined) policy.name = input.name.trim();
+  if (input.quotaDays !== undefined) policy.quotaDays = input.quotaDays;
+  if (input.isPaid !== undefined) policy.isPaid = input.isPaid;
+  if (input.description !== undefined) policy.description = input.description.trim();
+
+  await policy.save();
+
+  await writeAudit({
+    user: actorId,
+    action: "LEAVE_POLICY_UPDATED",
+    entityType: "LeavePolicy",
+    entityId: policy.id,
+    oldValue,
+    newValue: { name: policy.name, quotaDays: policy.quotaDays, isPaid: policy.isPaid, description: policy.description }
+  });
+
+  return policy;
+};
+
+export const deleteLeavePolicy = async (id: string, actorId: string) => {
+  const policy = await LeavePolicy.findById(id);
+  if (!policy || !policy.isActive) throw new AppError("Leave policy not found", 404);
+  if (policy.isSystem) throw new AppError("System default leave policies cannot be deleted. You can edit their quota days instead.", 400);
+
+  policy.isActive = false;
+  await policy.save();
+
+  await writeAudit({
+    user: actorId,
+    action: "LEAVE_POLICY_DELETED",
+    entityType: "LeavePolicy",
+    entityId: policy.id,
+    oldValue: { name: policy.name, code: policy.code }
+  });
+
+  return policy;
+};
+
 export const getLeaveBalances = async (userId: string, year = new Date().getFullYear()): Promise<LeaveBalanceItem[]> => {
   const employee = await Employee.findOne({ user: userId, isActive: true });
-  if (!employee) throw new AppError("Employee profile not found", 404);
+  await ensureDefaultLeavePolicies();
+  const policies = await LeavePolicy.find({ isActive: true }).sort({ isSystem: -1, createdAt: 1 }).lean();
+
+  if (!employee) {
+    return policies.map((policy) => ({
+      id: policy._id.toString(),
+      type: policy.code,
+      name: policy.name,
+      quotaDays: policy.quotaDays,
+      usedDays: 0,
+      remainingDays: policy.quotaDays,
+      isPaid: policy.isPaid,
+      isSystem: policy.isSystem,
+      description: policy.description
+    }));
+  }
+
   const startOfYear = new Date(year, 0, 1);
   const endOfYear = new Date(year, 11, 31, 23, 59, 59, 999);
 
@@ -23,30 +135,31 @@ export const getLeaveBalances = async (userId: string, year = new Date().getFull
     startDate: { $gte: startOfYear, $lte: endOfYear }
   }).lean();
 
-  const usedMap: Record<string, number> = {
-    CASUAL_LEAVE: 0,
-    SICK_LEAVE: 0,
-    PAID_LEAVE: 0,
-    WORK_FROM_HOME: 0,
-    UNPAID_LEAVE: 0,
-    OTHER: 0
-  };
-
+  const usedMap: Record<string, number> = {};
   for (const l of leaves) {
     const days = Math.max(1, Math.round((new Date(l.endDate).getTime() - new Date(l.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1);
     usedMap[l.type] = (usedMap[l.type] || 0) + days;
   }
 
-  const types: LeaveRequestDocument["type"][] = ["CASUAL_LEAVE", "SICK_LEAVE", "PAID_LEAVE", "WORK_FROM_HOME", "UNPAID_LEAVE", "OTHER"];
-  return types.map((type) => {
-    const quotaDays = LEAVE_QUOTAS[type];
-    const usedDays = usedMap[type] || 0;
-    const remainingDays = type === "UNPAID_LEAVE" ? 999 : Math.max(0, quotaDays - usedDays);
-    return { type, quotaDays, usedDays, remainingDays };
+  return policies.map((policy) => {
+    const quotaDays = policy.quotaDays;
+    const usedDays = usedMap[policy.code] || 0;
+    const remainingDays = !policy.isPaid || policy.quotaDays >= 999 ? 0 : Math.max(0, quotaDays - usedDays);
+    return {
+      id: policy._id.toString(),
+      type: policy.code,
+      name: policy.name,
+      quotaDays,
+      usedDays,
+      remainingDays,
+      isPaid: policy.isPaid,
+      isSystem: policy.isSystem,
+      description: policy.description
+    };
   });
 };
 
-export const requestLeave = async (userId: string, input: { type: LeaveRequestDocument["type"]; startDate: Date; endDate: Date; reason: string }) => {
+export const requestLeave = async (userId: string, input: { type: string; startDate: Date; endDate: Date; reason: string }) => {
   const employee = await Employee.findOne({ user: userId, isActive: true });
   if (!employee) throw new AppError("Employee profile not found", 404);
 
@@ -66,11 +179,12 @@ export const requestLeave = async (userId: string, input: { type: LeaveRequestDo
     throw new AppError("A leave request already exists or overlaps with the selected date range", 409, "LEAVE_OVERLAP_DETECTED");
   }
 
-  if (input.type !== "UNPAID_LEAVE") {
+  const policy = await LeavePolicy.findOne({ code: input.type, isActive: true });
+  if (policy && policy.isPaid && policy.quotaDays < 999) {
     const balances = await getLeaveBalances(userId, start.getFullYear());
     const balance = balances.find((b) => b.type === input.type);
     if (balance && balance.remainingDays < daysRequested) {
-      throw new AppError(`Insufficient leave balance. You have ${balance.remainingDays} days remaining for ${input.type.replaceAll("_", " ")}.`, 422, "INSUFFICIENT_LEAVE_BALANCE");
+      throw new AppError(`Insufficient leave balance. You have ${balance.remainingDays} days remaining for ${policy.name}.`, 422, "INSUFFICIENT_LEAVE_BALANCE");
     }
   }
 

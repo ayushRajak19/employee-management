@@ -8,6 +8,18 @@ export const teamCalendar = async (request: Request, response: Response): Promis
   const month = request.query.month as string | undefined;
   response.json({ success: true, message: "Team leave calendar retrieved", data: { items: await service.getTeamLeaveCalendar(viewer(request), month) } });
 };
+export const leavePolicies = async (_request: Request, response: Response): Promise<void> => {
+  response.json({ success: true, message: "Leave policies retrieved", data: { items: await service.listLeavePolicies() } });
+};
+export const createLeavePolicy = async (request: Request, response: Response): Promise<void> => {
+  response.status(201).json({ success: true, message: "Leave policy created", data: { item: await service.createLeavePolicy(request.body, request.user!.id) } });
+};
+export const updateLeavePolicy = async (request: Request, response: Response): Promise<void> => {
+  response.json({ success: true, message: "Leave policy updated", data: { item: await service.updateLeavePolicy(String(request.params.id), request.body, request.user!.id) } });
+};
+export const deleteLeavePolicy = async (request: Request, response: Response): Promise<void> => {
+  response.json({ success: true, message: "Leave policy deleted", data: { item: await service.deleteLeavePolicy(String(request.params.id), request.user!.id) } });
+};
 export const requestLeave = async (request: Request, response: Response): Promise<void> => { if (request.user!.role !== "EMPLOYEE") throw new AppError("Only employees can request leave", 403); response.status(201).json({ success: true, message: "Leave request submitted", data: { item: await service.requestLeave(request.user!.id, request.body) } }); };
 export const reviewLeave = async (request: Request, response: Response): Promise<void> => { response.json({ success: true, message: "Leave request reviewed", data: { item: await service.reviewLeave(String(request.params.id), request.body, viewer(request)) } }); };
 export const recognition = async (request: Request, response: Response): Promise<void> => { response.json({ success: true, message: "Recognition retrieved", data: { items: await service.listRecognition(viewer(request)) } }); };

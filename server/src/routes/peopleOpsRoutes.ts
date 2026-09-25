@@ -1,8 +1,12 @@
-import { Router } from "express"; import * as controller from "../controllers/peopleOpsController.js"; import { authenticate, requirePermission } from "../middleware/auth.js"; import { validate } from "../middleware/validate.js"; import { asyncHandler } from "../utils/asyncHandler.js"; import { administratorSchema, leaveReviewSchema, leaveSchema, recognitionSchema, rolePermissionsSchema, roleSectionAccessSchema } from "../validators/peopleOpsValidators.js";
+import { Router } from "express"; import * as controller from "../controllers/peopleOpsController.js"; import { authenticate, requirePermission } from "../middleware/auth.js"; import { validate } from "../middleware/validate.js"; import { asyncHandler } from "../utils/asyncHandler.js"; import { administratorSchema, createLeavePolicySchema, leavePolicyIdSchema, leaveReviewSchema, leaveSchema, recognitionSchema, rolePermissionsSchema, roleSectionAccessSchema, updateLeavePolicySchema } from "../validators/peopleOpsValidators.js";
 export const peopleOpsRouter = Router(); peopleOpsRouter.use(authenticate);
 peopleOpsRouter.get("/leaves", asyncHandler(controller.leaves));
 peopleOpsRouter.get("/leaves/balances", asyncHandler(controller.leaveBalances));
 peopleOpsRouter.get("/leaves/team-calendar", asyncHandler(controller.teamCalendar));
+peopleOpsRouter.get("/leave-policies", asyncHandler(controller.leavePolicies));
+peopleOpsRouter.post("/leave-policies", requirePermission("settings.manage"), validate(createLeavePolicySchema), asyncHandler(controller.createLeavePolicy));
+peopleOpsRouter.patch("/leave-policies/:id", requirePermission("settings.manage"), validate(updateLeavePolicySchema), asyncHandler(controller.updateLeavePolicy));
+peopleOpsRouter.delete("/leave-policies/:id", requirePermission("settings.manage"), validate(leavePolicyIdSchema), asyncHandler(controller.deleteLeavePolicy));
 peopleOpsRouter.post("/leaves", validate(leaveSchema), asyncHandler(controller.requestLeave));
 peopleOpsRouter.patch("/leaves/:id/review", requirePermission("performance.review"), validate(leaveReviewSchema), asyncHandler(controller.reviewLeave));
 peopleOpsRouter.get("/recognition", asyncHandler(controller.recognition)); peopleOpsRouter.post("/recognition", requirePermission("performance.review"), validate(recognitionSchema), asyncHandler(controller.award));

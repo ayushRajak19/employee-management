@@ -1,4 +1,4 @@
-import { api } from "@/api/client"; import type { PermissionName, SectionPermissionName, LeaveBalanceItem } from "@mobius-ems/shared";
+import { api } from "@/api/client"; import type { PermissionName, SectionPermissionName, LeaveBalanceItem, LeavePolicyItem } from "@mobius-ems/shared";
 export interface LeaveItem { _id: string; employee: { _id: string; firstName: string; lastName: string; employeeId: string; department?: { _id: string; name: string } }; type: string; startDate: string; endDate: string; reason: string; status: string; reviewComment?: string }
 export interface RecognitionItem { _id: string; employee: { firstName: string; lastName: string }; badge: string; explanation: string; awardedAt: string }
 export interface RoleItem { _id: string; name: string; description: string; permissions: PermissionName[]; isSystem: boolean }
@@ -8,6 +8,10 @@ export const peopleOpsApi = {
   leaves: () => api.get<{ items: LeaveItem[] }>("/api/v1/people-ops/leaves"),
   leaveBalances: (year?: number) => api.get<{ items: LeaveBalanceItem[] }>(`/api/v1/people-ops/leaves/balances${year ? `?year=${year}` : ""}`),
   teamCalendar: (month?: string) => api.get<{ items: LeaveItem[] }>(`/api/v1/people-ops/leaves/team-calendar${month ? `?month=${month}` : ""}`),
+  policies: () => api.get<{ items: LeavePolicyItem[] }>("/api/v1/people-ops/leave-policies"),
+  createPolicy: (body: { name: string; code?: string; quotaDays: number; isPaid?: boolean; description?: string }) => api.post<{ item: LeavePolicyItem }>("/api/v1/people-ops/leave-policies", body),
+  updatePolicy: (id: string, body: { name?: string; quotaDays?: number; isPaid?: boolean; description?: string }) => api.patch<{ item: LeavePolicyItem }>(`/api/v1/people-ops/leave-policies/${id}`, body),
+  deletePolicy: (id: string) => api.delete<{ item: LeavePolicyItem }>(`/api/v1/people-ops/leave-policies/${id}`),
   requestLeave: (body: unknown) => api.post("/api/v1/people-ops/leaves", body),
   reviewLeave: (id: string, body: unknown) => api.patch(`/api/v1/people-ops/leaves/${id}/review`, body),
   recognition: () => api.get<{ items: RecognitionItem[] }>("/api/v1/people-ops/recognition"),
