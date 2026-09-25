@@ -1,7 +1,7 @@
 import { useEffect, useState, type ComponentType } from "react";
 import logo from "@/assets/mobius-ems-official-logo.png";
 import logoMark from "@/assets/mobius-ems-official-mark.png";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { CapabilityName, PermissionName, RoleName, SectionPermissionName, PlanFeatures } from "@mobius-ems/shared";
 import {
   BarChart3, Bot, BrainCircuit, BriefcaseBusiness, Building2, CalendarCheck2,
@@ -118,10 +118,16 @@ export const AppLayout = () => {
     document.body.scrollLeft = 0;
   }, [location.pathname]);
 
+  const queryClient = useQueryClient();
+
   const logout = useMutation({
     mutationFn: authApi.logout,
     onSettled: () => {
       setUser(null);
+      queryClient.clear();
+      try {
+        sessionStorage.clear();
+      } catch {}
       window.location.replace("/login");
     },
   });

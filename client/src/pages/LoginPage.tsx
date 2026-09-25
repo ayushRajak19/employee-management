@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
@@ -14,6 +14,16 @@ type FormValues = z.infer<typeof schema>;
 export const LoginPage = () => {
   const navigate = useNavigate(); const location = useLocation(); const { user, setUser } = useAuth(); const [showPassword, setShowPassword] = useState(false);
   const passwordChanged = Boolean((location.state as { passwordChanged?: boolean } | null)?.passwordChanged);
+
+  useEffect(() => {
+    window.history.pushState(null, "", window.location.href);
+    const handlePopState = () => {
+      window.history.pushState(null, "", window.location.href);
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
   const form = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { email: "", password: "", tenantSlug: "" } });
   const mutation = useMutation({ mutationFn: authApi.login, onSuccess: ({ user: nextUser }) => { setUser(nextUser); navigate(nextUser.forcePasswordChange ? "/change-password" : "/", { replace: true }); } });
   if (user) return <Navigate to={user.forcePasswordChange ? "/change-password" : "/"} replace/>;

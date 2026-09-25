@@ -1,11 +1,39 @@
 import type { ApiResponse } from "@mobius-ems/shared";
 export class ApiError extends Error { constructor(message: string, public status: number, public errors?: Record<string, string[]>) { super(message); } }
 let refreshPromise: Promise<boolean> | null = null;
+
+const PUBLIC_PATHS = [
+  "/login",
+  "/welcome",
+  "/register",
+  "/forgot-password",
+  "/reset-password",
+  "/platform/login",
+  "/terms",
+  "/privacy",
+];
+
+const isPublicPath = (pathname: string) => {
+  return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith("/solutions"));
+};
+
+const handleUnauthorized = () => {
+  if (typeof window !== "undefined") {
+    const pathname = window.location.pathname;
+    if (!isPublicPath(pathname)) {
+      window.location.replace("/login");
+    }
+  }
+};
+
 const request = async <T>(path: string, init: RequestInit = {}, canRefresh = true): Promise<T> => {
   const response = await fetch(path, { ...init, credentials: "include", headers: init.body instanceof FormData ? init.headers : { "Content-Type": "application/json", ...init.headers } });
   if (response.status === 401 && canRefresh && path !== "/api/v1/auth/refresh") {
     refreshPromise ??= fetch("/api/v1/auth/refresh", { method: "POST", credentials: "include" }).then((r) => r.ok).finally(() => { refreshPromise = null; });
     if (await refreshPromise) return request<T>(path, init, false);
+  }
+  if (response.status === 401 && path !== "/api/v1/auth/login" && path !== "/api/v1/auth/forgot-password" && path !== "/api/v1/auth/reset-password") {
+    handleUnauthorized();
   }
   const payload = await response.json() as ApiResponse<T>;
   if (!response.ok || !payload.success) {

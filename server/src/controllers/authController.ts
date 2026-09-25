@@ -24,7 +24,11 @@ export const refresh = async (request: Request, response: Response): Promise<voi
   response.json({ success: true, message: "Session refreshed", data: { user: result.user } });
 };
 export const logout = async (request: Request, response: Response): Promise<void> => {
-  await authService.revokeRefreshToken(request.cookies.refresh_token as string | undefined); clearCookies(response);
+  await authService.revokeRefreshToken(request.cookies.refresh_token as string | undefined);
+  clearCookies(response);
+  response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+  response.setHeader("Pragma", "no-cache");
+  response.setHeader("Clear-Site-Data", '"cache"');
   response.json({ success: true, message: "Signed out successfully" });
 };
 export const me = async (request: Request, response: Response): Promise<void> => { response.json({ success: true, message: "Session retrieved", data: { user: request.user } }); };
