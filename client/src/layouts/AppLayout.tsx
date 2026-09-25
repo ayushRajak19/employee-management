@@ -4,7 +4,7 @@ import logoMark from "@/assets/mobius-ems-official-mark.png";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { CapabilityName, PermissionName, RoleName, SectionPermissionName, PlanFeatures } from "@mobius-ems/shared";
 import {
-  BarChart3, Bot, BrainCircuit, BriefcaseBusiness, Building2, CalendarCheck2,
+  Bot, BrainCircuit, BriefcaseBusiness, Building2, CalendarCheck2,
   ChevronLeft, CircleGauge, CreditCard, FileSpreadsheet, FileText, GraduationCap, ListTodo, LogOut, Menu,
   MailPlus, MapPinned, Route, ShieldCheck, Sparkles, Target, TrendingUp, UserCog, UserPlus, UserRound, Users, Workflow, X,
 } from "lucide-react";
@@ -64,7 +64,6 @@ const groups: { label: string; items: NavItem[] }[] = [
     items: [
       { label: "Goals & performance", icon: Target, path: "/performance", section: "section.performance" },
       { label: "Skills & Verification", icon: Sparkles, path: "/skills", section: "section.skills" },
-      { label: "Skill matrix", icon: BarChart3, path: "/skill-matrix", section: "section.skill_matrix" },
       { label: "Assessments", icon: ShieldCheck, path: "/assessments", section: "section.assessments" },
       { label: "Learning & training", icon: GraduationCap, path: "/development", section: "section.development" },
       { label: "Contribution & support", icon: TrendingUp, path: "/contribution", section: "section.contribution" },
@@ -358,5 +357,4 @@ export const AppLayout = () => {
     </div>
   );
 };
-
 

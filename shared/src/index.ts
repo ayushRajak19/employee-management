@@ -12,7 +12,6 @@ export const SECTION_ACCESS = [
   { key: "section.employee_map", label: "Employee map", group: "People" },
   { key: "section.sales", label: "Sales", group: "Sales" },
   { key: "section.skills", label: "Skills", group: "Capability" },
-  { key: "section.skill_matrix", label: "Skill matrix", group: "Capability" },
   { key: "section.assessments", label: "Assessments", group: "Capability" },
   { key: "section.work", label: "Tasks & projects", group: "Work" },
   { key: "section.task_tracker", label: "Task tracker", group: "Work" },
@@ -76,7 +75,7 @@ export const ROLE_PERMISSIONS: Record<RoleName, readonly PermissionName[]> = {
   DEPARTMENT_HEAD: ["employee.view", "department.view", "skill.verify", "task.create", "task.assign", "task.update", "task.review", "performance.view", "performance.review", "goal.create", "goal.update", "kpi.evaluate", "document.view", "report.view", ...TEAM_SALES_PERMISSIONS, ...SECTION_PERMISSIONS.filter((permission) => !["section.attendance", "section.profile", "section.task_tracker", "section.resumes", "section.applicants", "section.resume_screener", "section.email_automation"].includes(permission))],
   MANAGER: ["employee.view", "department.view", "task.create", "task.assign", "task.update", "task.review", "performance.view", "performance.review", "goal.create", "goal.update", "kpi.evaluate", "document.view", "report.view", ...TEAM_SALES_PERMISSIONS, ...SECTION_PERMISSIONS.filter((permission) => !["section.attendance", "section.profile", "section.task_tracker", "section.resumes", "section.applicants", "section.resume_screener", "section.email_automation"].includes(permission))],
   TEAM_LEAD: ["employee.view", "department.view", "task.create", "task.assign", "task.update", "task.review", "performance.view", "performance.review", "goal.create", "goal.update", "document.view", "report.view", ...TEAM_SALES_PERMISSIONS, ...SECTION_PERMISSIONS.filter((permission) => !["section.attendance", "section.profile", "section.task_tracker", "section.resumes", "section.applicants", "section.resume_screener", "section.email_automation"].includes(permission))],
-  EMPLOYEE: ["employee.view", "department.view", "task.update", "performance.view", "goal.update", "document.view", "document.upload", ...SELF_SALES_PERMISSIONS, ...SECTION_PERMISSIONS.filter((permission) => !["section.employees", "section.organization", "section.skill_matrix", "section.applicants", "section.resume_screener", "section.email_automation"].includes(permission))],
+  EMPLOYEE: ["employee.view", "department.view", "task.update", "performance.view", "goal.update", "document.view", "document.upload", ...SELF_SALES_PERMISSIONS, ...SECTION_PERMISSIONS.filter((permission) => !["section.employees", "section.organization", "section.applicants", "section.resume_screener", "section.email_automation"].includes(permission))],
   APPLICANT: ["section.assessments"]
 };
 
