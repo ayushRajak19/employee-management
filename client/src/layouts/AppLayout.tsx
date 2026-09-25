@@ -127,7 +127,7 @@ export const AppLayout = () => {
       try {
         sessionStorage.clear();
       } catch {}
-      window.location.replace("/login");
+      window.location.replace("/welcome");
     },
   });
 
@@ -357,4 +357,3 @@ export const AppLayout = () => {
     </div>
   );
 };
-
