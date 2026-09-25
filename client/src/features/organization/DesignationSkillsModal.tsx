@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Award, Download, Plus, Sparkles, Trash2, X, Building2 } from "lucide-react";
+import { Award, Bot, Download, Plus, Trash2, X, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { organizationApi } from "./organizationApi";
@@ -98,10 +98,10 @@ export const DesignationSkillsModal = ({
 
       if (aiAppendMode) {
         setTargetSkills((prev) => [...prev, ...generated]);
-        setAiFeedback(`✨ Added ${generated.length} AI-generated skills to ${activeDesignation.name}!`);
+        setAiFeedback(`Added ${generated.length} AI-generated skills to ${activeDesignation.name}!`);
       } else {
         setTargetSkills(generated);
-        setAiFeedback(`✨ Generated ${generated.length} skills tailored for ${activeDesignation.name}!`);
+        setAiFeedback(`Generated ${generated.length} skills tailored for ${activeDesignation.name}!`);
       }
       setShowAiBuilder(false);
     } catch (err: any) {
@@ -261,8 +261,8 @@ export const DesignationSkillsModal = ({
                 className="h-9 text-xs font-semibold shadow-xs"
                 onClick={() => setShowAiBuilder(!showAiBuilder)}
               >
-                <Sparkles size={14} className={showAiBuilder ? "mr-1.5 text-amber-200" : "mr-1.5 text-amber-500"} />
-                {showAiBuilder ? "Hide AI Skill Builder" : "✨ AI Skill Builder (from JD)"}
+                <Bot size={14} className="mr-1.5" />
+                {showAiBuilder ? "Hide AI Skill Builder" : "AI Skill Builder (from JD)"}
               </Button>
 
               {/* EDITABLE NUMBER FIELD FOR SKILLS */}
@@ -401,7 +401,7 @@ export const DesignationSkillsModal = ({
               <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-2">
                   <div className="grid size-7 place-items-center rounded-lg bg-brand-600 text-white shadow-xs">
-                    <Sparkles size={15} />
+                    <Bot size={15} />
                   </div>
                   <h3 className="text-sm font-semibold text-slate-800">
                     AI Skill Builder for {activeDesignation?.name || "Selected Role"}
@@ -509,7 +509,7 @@ export const DesignationSkillsModal = ({
                   onClick={handleGenerateSkillsWithAi}
                   className="h-9 px-4 text-xs bg-brand-600 hover:bg-brand-700 text-white font-medium shadow-sm"
                 >
-                  <Sparkles size={13} className={isGeneratingAi ? "mr-1.5 animate-spin text-amber-300" : "mr-1.5 text-amber-300"} />
+                  <Bot size={13} className={isGeneratingAi ? "mr-1.5 animate-spin" : "mr-1.5"} />
                   {isGeneratingAi ? `Analyzing JD & Generating ${aiSkillCount || 8} Skills...` : `Generate ${aiSkillCount || 8} Skills from JD`}
                 </Button>
               </div>
@@ -526,7 +526,7 @@ export const DesignationSkillsModal = ({
           {targetSkills.length === 0 ? (
             <div className="rounded-2xl border-2 border-dashed border-slate-200 p-10 text-center">
               <div className="mx-auto grid size-12 place-items-center rounded-2xl bg-brand-50 text-brand-600 mb-3">
-                <Sparkles size={24} />
+                <Bot size={24} />
               </div>
               <h3 className="text-sm font-semibold text-slate-800">No Assessment Skills Configured</h3>
               <p className="mt-1 text-xs text-slate-500 max-w-sm mx-auto">
@@ -537,7 +537,7 @@ export const DesignationSkillsModal = ({
                   className="h-8 px-3 text-xs bg-brand-600 text-white"
                   onClick={() => setShowAiBuilder(true)}
                 >
-                  <Sparkles size={13} className="mr-1 text-amber-300" /> Open AI Skill Builder
+                  <Bot size={13} className="mr-1" /> Open AI Skill Builder
                 </Button>
                 <Button variant="secondary" className="h-8 px-3 text-xs" onClick={handleAddCustomSkill}>
                   <Plus size={13} className="mr-1" /> Add Custom Skill

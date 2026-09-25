@@ -4,12 +4,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Award,
   BadgeCheck,
+  Bot,
   Building2,
   Pencil,
   Plus,
   Search,
   ShieldCheck,
-  Sparkles,
   Target,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -167,8 +167,8 @@ export const SkillsPage = () => {
               className="bg-brand-600 hover:bg-brand-700 text-white font-semibold shadow-xs"
               onClick={() => handleOpenBuilder()}
             >
-              <Sparkles size={15} className="mr-1.5 text-amber-300" />
-              ✨ AI Skill Builder (from JD)
+              <Bot size={15} className="mr-1.5" />
+              AI Skill Builder (from JD)
             </Button>
 
             {user?.permissions.includes("skill.create") && (
@@ -179,7 +179,7 @@ export const SkillsPage = () => {
 
             {hasProfile && (
               <Button variant="secondary" onClick={() => setShowClaim(true)}>
-                <Sparkles size={16} /> Add my skill
+                <Plus size={15} /> Add my skill
               </Button>
             )}
           </div>
@@ -197,7 +197,7 @@ export const SkillsPage = () => {
               }`}
               onClick={() => handleTabChange("submissions")}
             >
-              <Target size={14} className={activeTab === "submissions" ? "text-amber-300" : "text-brand-600"} />
+              <Target size={14} className={activeTab === "submissions" ? "text-white" : "text-brand-600"} />
               <span>Skill Verification & Calibration</span>
             </button>
           )}
@@ -211,7 +211,7 @@ export const SkillsPage = () => {
             }`}
             onClick={() => handleTabChange("builder")}
           >
-            <Sparkles size={14} className={activeTab === "builder" ? "text-amber-300" : "text-brand-600"} />
+            <Bot size={14} className={activeTab === "builder" ? "text-white" : "text-brand-600"} />
             <span>AI Skill Builder & Role Assessments</span>
             {orgQuery.data?.designations && (
               <span
@@ -271,7 +271,7 @@ export const SkillsPage = () => {
               <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
                 <div className="max-w-2xl">
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-100 px-3 py-1 text-xs font-semibold text-brand-700">
-                    <Sparkles size={13} className="text-amber-500" /> AI Competency Architect
+                    <Bot size={13} className="text-brand-600" /> AI Competency Architect
                   </span>
                   <h2 className="mt-2.5 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
                     Generate Skills & Assessments with AI
@@ -286,7 +286,7 @@ export const SkillsPage = () => {
                     className="bg-brand-600 hover:bg-brand-700 text-white px-5 py-3 text-sm font-semibold shadow-md"
                     onClick={() => handleOpenBuilder()}
                   >
-                    <Sparkles size={16} className="mr-2 text-amber-300" />
+                    <Bot size={16} className="mr-2" />
                     Launch AI Skill Builder
                   </Button>
                 </div>
@@ -370,9 +370,9 @@ export const SkillsPage = () => {
 
                           <div className="mt-2 flex flex-wrap items-center gap-2">
                             {hasCustomSkills ? (
-                              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-700">
-                                <Sparkles size={10} /> {designation.customSkills!.length} Custom AI Skills Active
-                              </span>
+                               <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-700">
+                                 <Bot size={11} /> {designation.customSkills!.length} Custom AI Skills Active
+                               </span>
                             ) : designation.catalogRole ? (
                               <span className="rounded-full border border-brand-200 bg-brand-50 px-2.5 py-0.5 text-[10px] font-medium text-brand-700">
                                 Template: {designation.catalogRole}
@@ -409,8 +409,8 @@ export const SkillsPage = () => {
                             className="h-8 px-3 text-xs bg-brand-600 text-white hover:bg-brand-700 shadow-xs"
                             onClick={() => handleOpenBuilder(designation)}
                           >
-                            <Sparkles size={12} className="mr-1 text-amber-300" />
-                            {hasCustomSkills ? "Regenerate / Add AI Skills" : "✨ AI Skill Builder"}
+                            <Bot size={12} className="mr-1" />
+                            {hasCustomSkills ? "Regenerate / Add AI Skills" : "AI Skill Builder"}
                           </Button>
                           <Button
                             variant="secondary"

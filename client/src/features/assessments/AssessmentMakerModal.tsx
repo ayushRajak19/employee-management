@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AlertCircle, CheckCircle2, ChevronDown, ChevronUp, Plus, Sparkles, Trash2, X, Users, Clock, Award } from "lucide-react";
+import { AlertCircle, Bot, CheckCircle2, ChevronDown, ChevronUp, Plus, Trash2, X, Users, Clock, Award } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { skillApi, type AssessmentQuestion } from "@/features/skills/skillApi";
@@ -89,7 +89,7 @@ export const AssessmentMakerModal = ({
       setExpandedQuestionIdx(0);
       setFeedback({
         type: "success",
-        text: `✨ Successfully generated ${res.questions.length} questions tailored to your job description!`,
+        text: `Successfully generated ${res.questions.length} questions tailored to your job description!`,
       });
     } catch (err: any) {
       setFeedback({
@@ -188,7 +188,7 @@ export const AssessmentMakerModal = ({
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
           <div className="flex items-center gap-3">
             <div className="grid size-11 place-items-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-md shadow-brand-500/20">
-              <Sparkles size={22} />
+              <Bot size={22} />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -333,10 +333,10 @@ export const AssessmentMakerModal = ({
                   disabled={isGenerating || !title.trim()}
                   className="w-full bg-gradient-to-r from-brand-600 to-indigo-600 text-white shadow-md hover:from-brand-700 hover:to-indigo-700"
                 >
-                  <Sparkles size={16} className={isGenerating ? "animate-spin" : ""} />
+                  <Bot size={16} className={isGenerating ? "animate-spin mr-1.5" : "mr-1.5"} />
                   {isGenerating
                     ? `Generating ${questionCount} Questions with AI...`
-                    : `✨ Generate ${questionCount} Questions with AI`}
+                    : `Generate ${questionCount} Questions with AI`}
                 </Button>
               </div>
             </div>
@@ -453,7 +453,7 @@ export const AssessmentMakerModal = ({
             {questions.length === 0 ? (
               <div className="mt-4 grid min-h-40 place-items-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-6 text-center">
                 <div>
-                  <Sparkles size={28} className="mx-auto text-slate-300 mb-2" />
+                  <Bot size={28} className="mx-auto text-slate-300 mb-2" />
                   <p className="text-xs font-semibold text-slate-600">No questions generated yet</p>
                   <p className="mt-1 text-[11px] text-slate-400">
                     Click &ldquo;Generate Questions with AI&rdquo; above or &ldquo;Add Question&rdquo; to build your assessment.
