@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircle,
   Award,
+  Briefcase,
   Building2,
   CheckCircle2,
   ChevronRight,
@@ -29,6 +30,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { organizationApi } from "@/features/organization/organizationApi";
+import { governanceApi } from "@/features/governance/governanceApi";
 import type { HierarchyEmployeeNode } from "@/features/organization/types";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
@@ -118,6 +120,11 @@ export const OrgHierarchyPage = () => {
   const teams = useMemo(() => data?.teams || [], [data?.teams]);
   const seniorityTiers = useMemo(() => data?.seniorityTiers || [], [data?.seniorityTiers]);
   const stats = data?.stats;
+  const jobDescriptionsQuery = useQuery({
+    queryKey: ["governance", "job-descriptions"],
+    queryFn: governanceApi.jobDescriptions,
+  });
+  const openJobs = useMemo(() => jobDescriptionsQuery.data?.items ?? [], [jobDescriptionsQuery.data]);
 
   const canManageHierarchy = user?.role === "SUPER_ADMIN" || user?.role === "HR_ADMIN";
 
@@ -459,7 +466,7 @@ export const OrgHierarchyPage = () => {
         )}
 
         {/* Stats Strip */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:gap-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 lg:gap-4">
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
             <div className="flex items-center gap-3">
               <div className="grid size-10 place-items-center rounded-xl bg-blue-50 text-blue-600">
@@ -504,6 +511,18 @@ export const OrgHierarchyPage = () => {
               <div>
                 <p className="text-xs font-medium text-slate-500">Managers & Leads</p>
                 <p className="text-lg font-bold text-slate-900">{stats?.totalManagers ?? 0}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
+            <div className="flex items-center gap-3">
+              <div className="grid size-10 place-items-center rounded-xl bg-teal-50 text-teal-600">
+                <Briefcase size={18} />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-slate-500">Open Requisitions</p>
+                <p className="text-lg font-bold text-slate-900">{openJobs.length} Positions</p>
               </div>
             </div>
           </div>
@@ -865,6 +884,37 @@ export const OrgHierarchyPage = () => {
                                     {e.name}
                                   </button>
                                 ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Open Headcount / Requisitions */}
+                        {openJobs.length > 0 && (
+                          <div className="rounded-xl border border-dashed border-teal-200 bg-teal-50/50 p-3">
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="text-[11px] font-semibold text-teal-800 flex items-center gap-1">
+                                <Briefcase size={12} className="text-teal-600" />
+                                Open Headcount ({openJobs.length}):
+                              </span>
+                              <span className="text-[10px] font-bold text-teal-700 bg-teal-100/80 rounded-full px-2 py-0.5">
+                                Hiring
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                              {openJobs.slice(0, 3).map((job) => (
+                                <span
+                                  key={job._id}
+                                  className="inline-flex items-center gap-1 rounded-md bg-white border border-teal-200 px-2 py-0.5 text-[11px] font-medium text-teal-800 shadow-2xs"
+                                >
+                                  <span className="size-1.5 rounded-full bg-teal-500" />
+                                  {job.title}
+                                </span>
+                              ))}
+                              {openJobs.length > 3 && (
+                                <span className="inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold text-teal-600">
+                                  +{openJobs.length - 3} more
+                                </span>
+                              )}
                             </div>
                           </div>
                         )}

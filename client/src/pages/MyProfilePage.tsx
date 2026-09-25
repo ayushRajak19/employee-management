@@ -17,13 +17,45 @@ export const MyProfilePage = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const query = useQuery({ queryKey: ["employee", "me"], queryFn: employeeApi.me });
-  const [form, setForm] = useState({ firstName: "", lastName: "", phone: "", personalEmail: "", address: "", emergencyContact: "", professionalSummary: "" });
+  const [form, setForm] = useState({
+    firstName: "",
+    lastName: "",
+    phone: "",
+    personalEmail: "",
+    address: "",
+    emergencyContact: "",
+    professionalSummary: "",
+    panNumber: "",
+    aadhaarNumber: "",
+    taxId: "",
+    accountHolderName: "",
+    accountNumber: "",
+    bankName: "",
+    ifscCode: "",
+    branchName: "",
+  });
   const [experiences, setExperiences] = useState<ExperienceForm[]>([]);
 
   useEffect(() => {
     const employee = query.data?.employee;
     if (!employee) return;
-    setForm({ firstName: employee.firstName, lastName: employee.lastName, phone: employee.phone ?? "", personalEmail: employee.personal?.personalEmail ?? "", address: employee.personal?.address ?? "", emergencyContact: employee.personal?.emergencyContact ?? "", professionalSummary: employee.professionalSummary ?? "" });
+    setForm({
+      firstName: employee.firstName,
+      lastName: employee.lastName,
+      phone: employee.phone ?? "",
+      personalEmail: employee.personal?.personalEmail ?? "",
+      address: employee.personal?.address ?? "",
+      emergencyContact: employee.personal?.emergencyContact ?? "",
+      professionalSummary: employee.professionalSummary ?? "",
+      panNumber: employee.personal?.panNumber ?? "",
+      aadhaarNumber: employee.personal?.aadhaarNumber ?? "",
+      taxId: employee.personal?.taxId ?? "",
+      accountHolderName: employee.bankDetails?.accountHolderName ?? "",
+      accountNumber: employee.bankDetails?.accountNumber ?? "",
+      bankName: employee.bankDetails?.bankName ?? "",
+      ifscCode: employee.bankDetails?.ifscCode ?? "",
+      branchName: employee.bankDetails?.branchName ?? "",
+    });
     setExperiences(employee.previousExperience?.map((item) => ({ company: item.company, role: item.role, startDate: item.startDate?.slice(0, 10) ?? "", endDate: item.endDate?.slice(0, 10) ?? "", summary: item.summary ?? "" })) ?? []);
   }, [query.data?.employee]);
 
@@ -34,7 +66,21 @@ export const MyProfilePage = () => {
       lastName: form.lastName,
       phone: form.phone || undefined,
       professionalSummary: form.professionalSummary || undefined,
-      personal: { personalEmail: form.personalEmail || undefined, address: form.address || undefined, emergencyContact: form.emergencyContact || undefined },
+      personal: {
+        personalEmail: form.personalEmail || undefined,
+        address: form.address || undefined,
+        emergencyContact: form.emergencyContact || undefined,
+        panNumber: form.panNumber || undefined,
+        aadhaarNumber: form.aadhaarNumber || undefined,
+        taxId: form.taxId || undefined,
+      },
+      bankDetails: {
+        accountHolderName: form.accountHolderName || undefined,
+        accountNumber: form.accountNumber || undefined,
+        bankName: form.bankName || undefined,
+        ifscCode: form.ifscCode || undefined,
+        branchName: form.branchName || undefined,
+      },
       previousExperience: experiences.filter((item) => item.company && item.role && item.startDate).map((item) => ({ company: item.company, role: item.role, startDate: item.startDate, ...(item.endDate ? { endDate: item.endDate } : {}), ...(item.summary ? { summary: item.summary } : {}) }))
     }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["employee"] })
@@ -75,7 +121,40 @@ export const MyProfilePage = () => {
     <section className="mt-7 rounded-3xl border bg-white p-6 shadow-soft sm:p-8">
       <div className="flex flex-col gap-5 border-b pb-7 sm:flex-row sm:items-center"><div className="grid size-24 shrink-0 place-items-center overflow-hidden rounded-3xl bg-brand-50 text-2xl font-semibold text-brand-700">{employee.profilePhotoUrl ? <img src={employee.profilePhotoUrl} alt={`${employee.firstName} ${employee.lastName}`} className="size-full object-cover"/> : `${employee.firstName[0] ?? ""}${employee.lastName[0] ?? ""}`}</div><div><h2 className="text-xl font-semibold">Profile picture</h2><p className="mt-1 text-sm text-slate-500">Upload a JPG, PNG or WebP image up to 5 MB.</p><label className="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium hover:bg-slate-50"><Camera size={16}/>{photo.isPending ? "Uploading..." : "Upload picture"}<input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" disabled={photo.isPending} onChange={(event) => { const file = event.target.files?.[0]; if (file) photo.mutate(file); }}/></label></div></div>
 
-      <div className="mt-7 grid gap-5 sm:grid-cols-2"><Field label="First name" required value={form.firstName} onChange={(value) => setForm({ ...form, firstName: value })}/><Field label="Last name" required value={form.lastName} onChange={(value) => setForm({ ...form, lastName: value })}/><Field label="Phone" value={form.phone} onChange={(value) => setForm({ ...form, phone: value })}/><Field label="Personal email" type="email" value={form.personalEmail} onChange={(value) => setForm({ ...form, personalEmail: value })}/><Field label="Emergency contact" value={form.emergencyContact} onChange={(value) => setForm({ ...form, emergencyContact: value })}/><Field label="Address" value={form.address} onChange={(value) => setForm({ ...form, address: value })}/><label className="text-sm font-medium sm:col-span-2">Professional summary<textarea className="mt-2 min-h-36 w-full rounded-xl border p-3 text-sm" maxLength={2000} placeholder="Describe your experience, strengths, responsibilities and career interests." value={form.professionalSummary} onChange={(event) => setForm({ ...form, professionalSummary: event.target.value })}/></label></div>
+      <div className="mt-7 grid gap-5 sm:grid-cols-2">
+        <Field label="First name" required value={form.firstName} onChange={(value) => setForm({ ...form, firstName: value })}/>
+        <Field label="Last name" required value={form.lastName} onChange={(value) => setForm({ ...form, lastName: value })}/>
+        <Field label="Phone" value={form.phone} onChange={(value) => setForm({ ...form, phone: value })}/>
+        <Field label="Personal email" type="email" value={form.personalEmail} onChange={(value) => setForm({ ...form, personalEmail: value })}/>
+        <Field label="Emergency contact" value={form.emergencyContact} onChange={(value) => setForm({ ...form, emergencyContact: value })}/>
+        <Field label="Address" value={form.address} onChange={(value) => setForm({ ...form, address: value })}/>
+        <label className="text-sm font-medium sm:col-span-2">
+          Professional summary
+          <textarea className="mt-2 min-h-36 w-full rounded-xl border p-3 text-sm" maxLength={2000} placeholder="Describe your experience, strengths, responsibilities and career interests." value={form.professionalSummary} onChange={(event) => setForm({ ...form, professionalSummary: event.target.value })}/>
+        </label>
+      </div>
+
+      <div className="mt-8 border-t pt-7">
+        <h2 className="font-semibold text-slate-900">Statutory Identification</h2>
+        <p className="mt-1 text-xs text-slate-400">Required for official compliance, tax withholding, and audit readiness.</p>
+        <div className="mt-4 grid gap-5 sm:grid-cols-3">
+          <Field label="PAN Number" value={form.panNumber} onChange={(value) => setForm({ ...form, panNumber: value.toUpperCase() })}/>
+          <Field label="Aadhaar Number" value={form.aadhaarNumber} onChange={(value) => setForm({ ...form, aadhaarNumber: value })}/>
+          <Field label="Tax ID / UAN" value={form.taxId} onChange={(value) => setForm({ ...form, taxId: value })}/>
+        </div>
+      </div>
+
+      <div className="mt-8 border-t pt-7">
+        <h2 className="font-semibold text-slate-900">Bank Account & Remittance Details</h2>
+        <p className="mt-1 text-xs text-slate-400">Direct deposit account used for payroll disbursement and expense reimbursement.</p>
+        <div className="mt-4 grid gap-5 sm:grid-cols-2">
+          <Field label="Account Holder Name" value={form.accountHolderName} onChange={(value) => setForm({ ...form, accountHolderName: value })}/>
+          <Field label="Bank Name" value={form.bankName} onChange={(value) => setForm({ ...form, bankName: value })}/>
+          <Field label="Account Number" value={form.accountNumber} onChange={(value) => setForm({ ...form, accountNumber: value })}/>
+          <Field label="IFSC Code" value={form.ifscCode} onChange={(value) => setForm({ ...form, ifscCode: value.toUpperCase() })}/>
+          <Field label="Branch Name" value={form.branchName} onChange={(value) => setForm({ ...form, branchName: value })}/>
+        </div>
+      </div>
 
       <div className="mt-8 border-t pt-7"><div className="flex items-center justify-between gap-3"><div><h2 className="font-semibold">Previous experience</h2><p className="mt-1 text-xs text-slate-400">Optional. Company, role and start date are needed only when saving an experience.</p></div><Button type="button" variant="secondary" onClick={() => setExperiences((items) => [...items, blankExperience()])}><Plus size={15}/> Add experience</Button></div><div className="mt-5 space-y-4">{experiences.length ? experiences.map((item, index) => <div className="rounded-2xl border bg-slate-50 p-4" key={index}><div className="grid gap-4 sm:grid-cols-2"><Field label="Company" value={item.company} onChange={(value) => updateExperience(index, "company", value)}/><Field label="Role" value={item.role} onChange={(value) => updateExperience(index, "role", value)}/><Field label="Start date" type="date" value={item.startDate} onChange={(value) => updateExperience(index, "startDate", value)}/><Field label="End date" type="date" value={item.endDate} onChange={(value) => updateExperience(index, "endDate", value)}/><label className="text-sm font-medium sm:col-span-2">Summary<textarea className="mt-2 min-h-24 w-full rounded-xl border bg-white p-3 text-sm" maxLength={1000} placeholder="Summarize your responsibilities, achievements and technologies used." value={item.summary} onChange={(event) => updateExperience(index, "summary", event.target.value)}/></label></div><button type="button" className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-red-600" onClick={() => setExperiences((items) => items.filter((_, itemIndex) => itemIndex !== index))}><Trash2 size={14}/> Remove experience</button></div>) : <p className="rounded-2xl bg-slate-50 p-5 text-sm text-slate-400">No previous experience added. You can leave this blank.</p>}</div></div>
 

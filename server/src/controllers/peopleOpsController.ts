@@ -1,5 +1,13 @@
 import type { Request, Response } from "express"; import { AppError } from "../utils/AppError.js"; import * as service from "../services/peopleOpsService.js"; const viewer = (request: Request) => ({ id: request.user!.id, role: request.user!.role });
 export const leaves = async (request: Request, response: Response): Promise<void> => { response.json({ success: true, message: "Leave requests retrieved", data: { items: await service.listLeaves(viewer(request)) } }); };
+export const leaveBalances = async (request: Request, response: Response): Promise<void> => {
+  const year = request.query.year ? Number(request.query.year) : undefined;
+  response.json({ success: true, message: "Leave balances retrieved", data: { items: await service.getLeaveBalances(request.user!.id, year) } });
+};
+export const teamCalendar = async (request: Request, response: Response): Promise<void> => {
+  const month = request.query.month as string | undefined;
+  response.json({ success: true, message: "Team leave calendar retrieved", data: { items: await service.getTeamLeaveCalendar(viewer(request), month) } });
+};
 export const requestLeave = async (request: Request, response: Response): Promise<void> => { if (request.user!.role !== "EMPLOYEE") throw new AppError("Only employees can request leave", 403); response.status(201).json({ success: true, message: "Leave request submitted", data: { item: await service.requestLeave(request.user!.id, request.body) } }); };
 export const reviewLeave = async (request: Request, response: Response): Promise<void> => { response.json({ success: true, message: "Leave request reviewed", data: { item: await service.reviewLeave(String(request.params.id), request.body, viewer(request)) } }); };
 export const recognition = async (request: Request, response: Response): Promise<void> => { response.json({ success: true, message: "Recognition retrieved", data: { items: await service.listRecognition(viewer(request)) } }); };

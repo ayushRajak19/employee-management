@@ -10,6 +10,24 @@ export const applicants = async (request: Request, response: Response): Promise<
 export const applicantCv = async (request: Request, response: Response): Promise<void> => { requireApplicantAccess(request); response.json({ success: true, message: "Authorized applicant CV URL generated", data: await service.applicantCvUrl(String(request.params.id), request.user!.id) }); };
 export const applicantCvFile = async (request: Request, response: Response): Promise<void> => { requireApplicantAccess(request); const { applicant, stream } = await service.applicantCvStream(String(request.params.id)); const safeName = applicant.originalName.replace(/[\r\n"]/g, "_"); response.setHeader("Content-Type", applicant.mimeType); response.setHeader("Content-Length", String(applicant.size)); response.setHeader("Content-Disposition", `inline; filename="${safeName}"`); stream.on("error", () => { if (!response.headersSent) response.status(404).json({ success: false, message: "Document not found" }); else response.destroy(); }); stream.pipe(response); };
 export const deleteApplicant = async (request: Request, response: Response): Promise<void> => { requireApplicantAccess(request); response.json({ success: true, message: "Applicant and CV deleted", data: { item: await service.deleteApplicant(String(request.params.id), request.user!.id) } }); };
+export const updateApplicantStage = async (request: Request, response: Response): Promise<void> => {
+  requireApplicantAccess(request);
+  const { stage, note } = request.body;
+  if (!stage) throw new AppError("Applicant stage is required", 422);
+  response.json({
+    success: true,
+    message: "Applicant pipeline stage updated",
+    data: { item: await service.updateApplicantStage(String(request.params.id), stage, note, request.user!.id) }
+  });
+};
+export const convertApplicant = async (request: Request, response: Response): Promise<void> => {
+  requireApplicantAccess(request);
+  response.status(201).json({
+    success: true,
+    message: "Applicant converted to employee successfully",
+    data: await service.convertApplicantToEmployee(String(request.params.id), request.user!.id, request.body)
+  });
+};
 const requireSuperAdmin = (request: Request) => { if (request.user!.role !== "SUPER_ADMIN") throw new AppError("Resume screening is restricted to Super Admin", 403); };
 export const screenResumes = async (request: Request, response: Response): Promise<void> => { requireSuperAdmin(request); const parsed = resumeScreeningSchema.safeParse(request.body); if (!parsed.success) throw new AppError("Enter a job title and a detailed job description", 422); const files = request.files as Express.Multer.File[] | undefined; if (!files?.length) throw new AppError("Upload at least one PDF or DOCX resume", 422); response.status(201).json({ success: true, message: "Resume screening completed", data: { item: await screeningService.runResumeScreening({ ...parsed.data, files, actorId: request.user!.id }) } }); };
 export const resumeScreenings = async (request: Request, response: Response): Promise<void> => { requireSuperAdmin(request); response.json({ success: true, message: "Screening history retrieved", data: { items: await screeningService.listResumeScreenings() } }); };

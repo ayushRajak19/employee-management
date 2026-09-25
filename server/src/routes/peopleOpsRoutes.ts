@@ -1,6 +1,10 @@
 import { Router } from "express"; import * as controller from "../controllers/peopleOpsController.js"; import { authenticate, requirePermission } from "../middleware/auth.js"; import { validate } from "../middleware/validate.js"; import { asyncHandler } from "../utils/asyncHandler.js"; import { administratorSchema, leaveReviewSchema, leaveSchema, recognitionSchema, rolePermissionsSchema, roleSectionAccessSchema } from "../validators/peopleOpsValidators.js";
 export const peopleOpsRouter = Router(); peopleOpsRouter.use(authenticate);
-peopleOpsRouter.get("/leaves", asyncHandler(controller.leaves)); peopleOpsRouter.post("/leaves", validate(leaveSchema), asyncHandler(controller.requestLeave)); peopleOpsRouter.patch("/leaves/:id/review", requirePermission("performance.review"), validate(leaveReviewSchema), asyncHandler(controller.reviewLeave));
+peopleOpsRouter.get("/leaves", asyncHandler(controller.leaves));
+peopleOpsRouter.get("/leaves/balances", asyncHandler(controller.leaveBalances));
+peopleOpsRouter.get("/leaves/team-calendar", asyncHandler(controller.teamCalendar));
+peopleOpsRouter.post("/leaves", validate(leaveSchema), asyncHandler(controller.requestLeave));
+peopleOpsRouter.patch("/leaves/:id/review", requirePermission("performance.review"), validate(leaveReviewSchema), asyncHandler(controller.reviewLeave));
 peopleOpsRouter.get("/recognition", asyncHandler(controller.recognition)); peopleOpsRouter.post("/recognition", requirePermission("performance.review"), validate(recognitionSchema), asyncHandler(controller.award));
 peopleOpsRouter.get("/roles", requirePermission("settings.manage"), asyncHandler(controller.roles)); peopleOpsRouter.put("/roles/:id/permissions", requirePermission("settings.manage"), validate(rolePermissionsSchema), asyncHandler(controller.permissions));
 peopleOpsRouter.put("/roles/:id/section-access", requirePermission("settings.manage"), validate(roleSectionAccessSchema), asyncHandler(controller.sectionAccess));

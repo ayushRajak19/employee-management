@@ -1,7 +1,100 @@
-import { randomBytes } from "node:crypto"; import bcrypt from "bcrypt"; import { SECTION_PERMISSIONS, type PermissionName, type SectionPermissionName } from "@mobius-ems/shared"; import { Employee } from "../models/Employee.js"; import { LeaveRequest, type LeaveRequestDocument } from "../models/LeaveRequest.js"; import { Recognition, type RecognitionDocument } from "../models/Recognition.js"; import { Role } from "../models/Role.js"; import { User } from "../models/User.js"; import { AppError } from "../utils/AppError.js"; import { notify } from "./notificationService.js"; import { writeAudit } from "./auditService.js";
+import { randomBytes } from "node:crypto"; import bcrypt from "bcrypt"; import { SECTION_PERMISSIONS, type PermissionName, type SectionPermissionName, type LeaveBalanceItem } from "@mobius-ems/shared"; import { Employee } from "../models/Employee.js"; import { LeaveRequest, type LeaveRequestDocument } from "../models/LeaveRequest.js"; import { Recognition, type RecognitionDocument } from "../models/Recognition.js"; import { Role } from "../models/Role.js"; import { User } from "../models/User.js"; import { AppError } from "../utils/AppError.js"; import { notify } from "./notificationService.js"; import { writeAudit } from "./auditService.js";
 const scopedEmployees = async (viewer: { id: string; role: string }) => { if (!["EMPLOYEE","MANAGER"].includes(viewer.role)) return Employee.find({ isActive: true }).distinct("_id"); const own = await Employee.findOne({ user: viewer.id }).select("_id"); return viewer.role === "EMPLOYEE" ? own ? [own._id] : [] : Employee.find({ $or: [{ _id: own?._id }, { reportingManager: own?._id }] }).distinct("_id"); };
 export const listLeaves = async (viewer: { id: string; role: string }) => LeaveRequest.find({ employee: { $in: await scopedEmployees(viewer) } }).populate("employee", "firstName lastName employeeId").populate("reviewedBy", "name").sort({ createdAt: -1 }).lean();
-export const requestLeave = async (userId: string, input: { type: LeaveRequestDocument["type"]; startDate: Date; endDate: Date; reason: string }) => { const employee = await Employee.findOne({ user: userId, isActive: true }); if (!employee) throw new AppError("Employee profile not found", 404); return LeaveRequest.create({ ...input, employee: employee._id }); };
+
+export const LEAVE_QUOTAS: Record<LeaveRequestDocument["type"], number> = {
+  CASUAL_LEAVE: 12,
+  SICK_LEAVE: 10,
+  PAID_LEAVE: 15,
+  WORK_FROM_HOME: 24,
+  UNPAID_LEAVE: 999,
+  OTHER: 10
+};
+
+export const getLeaveBalances = async (userId: string, year = new Date().getFullYear()): Promise<LeaveBalanceItem[]> => {
+  const employee = await Employee.findOne({ user: userId, isActive: true });
+  if (!employee) throw new AppError("Employee profile not found", 404);
+  const startOfYear = new Date(year, 0, 1);
+  const endOfYear = new Date(year, 11, 31, 23, 59, 59, 999);
+
+  const leaves = await LeaveRequest.find({
+    employee: employee._id,
+    status: { $in: ["APPROVED", "PENDING"] },
+    startDate: { $gte: startOfYear, $lte: endOfYear }
+  }).lean();
+
+  const usedMap: Record<string, number> = {
+    CASUAL_LEAVE: 0,
+    SICK_LEAVE: 0,
+    PAID_LEAVE: 0,
+    WORK_FROM_HOME: 0,
+    UNPAID_LEAVE: 0,
+    OTHER: 0
+  };
+
+  for (const l of leaves) {
+    const days = Math.max(1, Math.round((new Date(l.endDate).getTime() - new Date(l.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1);
+    usedMap[l.type] = (usedMap[l.type] || 0) + days;
+  }
+
+  const types: LeaveRequestDocument["type"][] = ["CASUAL_LEAVE", "SICK_LEAVE", "PAID_LEAVE", "WORK_FROM_HOME", "UNPAID_LEAVE", "OTHER"];
+  return types.map((type) => {
+    const quotaDays = LEAVE_QUOTAS[type];
+    const usedDays = usedMap[type] || 0;
+    const remainingDays = type === "UNPAID_LEAVE" ? 999 : Math.max(0, quotaDays - usedDays);
+    return { type, quotaDays, usedDays, remainingDays };
+  });
+};
+
+export const requestLeave = async (userId: string, input: { type: LeaveRequestDocument["type"]; startDate: Date; endDate: Date; reason: string }) => {
+  const employee = await Employee.findOne({ user: userId, isActive: true });
+  if (!employee) throw new AppError("Employee profile not found", 404);
+
+  const start = new Date(input.startDate);
+  const end = new Date(input.endDate);
+  if (end < start) throw new AppError("End date must be on or after start date", 400);
+
+  const daysRequested = Math.max(1, Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+
+  const overlapping = await LeaveRequest.findOne({
+    employee: employee._id,
+    status: { $in: ["PENDING", "APPROVED"] },
+    startDate: { $lte: end },
+    endDate: { $gte: start }
+  });
+  if (overlapping) {
+    throw new AppError("A leave request already exists or overlaps with the selected date range", 409, "LEAVE_OVERLAP_DETECTED");
+  }
+
+  if (input.type !== "UNPAID_LEAVE") {
+    const balances = await getLeaveBalances(userId, start.getFullYear());
+    const balance = balances.find((b) => b.type === input.type);
+    if (balance && balance.remainingDays < daysRequested) {
+      throw new AppError(`Insufficient leave balance. You have ${balance.remainingDays} days remaining for ${input.type.replaceAll("_", " ")}.`, 422, "INSUFFICIENT_LEAVE_BALANCE");
+    }
+  }
+
+  return LeaveRequest.create({ ...input, employee: employee._id });
+};
+
+export const getTeamLeaveCalendar = async (viewer: { id: string; role: string }, month?: string) => {
+  const targetDate = month ? new Date(`${month}-01T00:00:00Z`) : new Date();
+  const monthStart = new Date(Date.UTC(targetDate.getUTCFullYear(), targetDate.getUTCMonth(), 1));
+  const monthEnd = new Date(Date.UTC(targetDate.getUTCFullYear(), targetDate.getUTCMonth() + 1, 0, 23, 59, 59, 999));
+
+  const employeeIds = await scopedEmployees(viewer);
+  return LeaveRequest.find({
+    employee: { $in: employeeIds },
+    status: "APPROVED",
+    startDate: { $lte: monthEnd },
+    endDate: { $gte: monthStart }
+  })
+    .populate("employee", "firstName lastName employeeId department")
+    .populate("reviewedBy", "name")
+    .sort({ startDate: 1 })
+    .lean();
+};
+
 export const reviewLeave = async (id: string, input: { status: "APPROVED" | "REJECTED"; reviewComment?: string }, viewer: { id: string; role: string }) => { const leave = await LeaveRequest.findById(id); if (!leave) throw new AppError("Leave request not found", 404); if (["EMPLOYEE","MANAGER"].includes(viewer.role)) { const allowed = (await scopedEmployees(viewer)).some((employeeId) => employeeId.equals(leave.employee)); if (!allowed || viewer.role === "EMPLOYEE") throw new AppError("Leave request is outside your review scope", 403); } leave.status = input.status; leave.reviewComment = input.reviewComment; leave.reviewedBy = viewer.id as never; await leave.save(); const employee = await Employee.findById(leave.employee); if (employee) await notify({ recipient: employee.user.toString(), type: "LEAVE_REVIEWED", title: `Leave request ${input.status.toLowerCase()}`, body: input.reviewComment || `Your leave request was ${input.status.toLowerCase()}.`, entityType: "LeaveRequest", entityId: leave.id }); return leave; };
 export const listRecognition = async (viewer: { id: string; role: string }) => Recognition.find({ employee: { $in: await scopedEmployees(viewer) } }).populate("employee", "firstName lastName employeeId").populate("awardedBy", "name").sort({ awardedAt: -1 }).lean();
 export const awardRecognition = async (input: { employee: string; badge: RecognitionDocument["badge"]; explanation: string; evidence: string[] }, actor: string) => { const employee = await Employee.findById(input.employee); if (!employee) throw new AppError("Employee not found", 404); const item = await Recognition.create({ ...input, awardedBy: actor, awardedAt: new Date() }); await notify({ recipient: employee.user.toString(), type: "RECOGNITION_AWARDED", title: `Recognition: ${input.badge.replaceAll("_", " ")}`, body: input.explanation, entityType: "Recognition", entityId: item.id }); await writeAudit({ user: actor, action: "RECOGNITION_AWARDED", entityType: "Recognition", entityId: item.id, newValue: input }); return item; };

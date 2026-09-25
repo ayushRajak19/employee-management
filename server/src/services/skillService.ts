@@ -1,3 +1,4 @@
+import type { SPOFItem } from "@mobius-ems/shared";
 import { Employee } from "../models/Employee.js"; import { EmployeeSkill, type EmployeeSkillDocument } from "../models/EmployeeSkill.js"; import { Skill } from "../models/Skill.js"; import { SkillVerification, type SkillVerificationDocument } from "../models/SkillVerification.js"; import { Designation, type DesignationSkillItem } from "../models/Designation.js"; import { AppError } from "../utils/AppError.js"; import { writeAudit } from "./auditService.js";
 import { Assessment, type AssessmentDocument } from "../models/Assessment.js"; import { AssessmentResult } from "../models/AssessmentResult.js";
 import { recalculateProfileCompletion } from "./profileCompletionService.js";
@@ -907,4 +908,54 @@ export const recordAssessmentResult = async (assessmentId: string, input: { atte
   assessment.status = "COMPLETED";
   await assessment.save();
   return AssessmentResult.create({ assessment: assessment._id, employee: assessment.assignedEmployee, attemptDate: input.attemptDate, score: input.score, result, evaluatedBy: evaluator as any, notes: input.notes });
+};
+
+export const detectSinglePointOfFailures = async (): Promise<SPOFItem[]> => {
+  const employeeSkills = await EmployeeSkill.find({
+    isActive: true,
+    $or: [
+      { verificationStatus: "VERIFIED", verifiedRating: { $gte: 3 } },
+      { selfRating: { $gte: 3 } }
+    ]
+  })
+    .populate({
+      path: "employee",
+      match: { isActive: true },
+      select: "firstName lastName employeeId department",
+      populate: { path: "department", select: "name" }
+    })
+    .populate("skill", "name category isActive")
+    .lean();
+
+  const skillMap = new Map<string, any[]>();
+  for (const es of employeeSkills) {
+    if (!es.employee || !es.skill) continue;
+    const skill = es.skill as any;
+    if (!skill.isActive) continue;
+    const skillId = skill._id.toString();
+    const list = skillMap.get(skillId) || [];
+    list.push(es);
+    skillMap.set(skillId, list);
+  }
+
+  const spofList: SPOFItem[] = [];
+  for (const [skillId, holders] of skillMap.entries()) {
+    if (holders.length === 1) {
+      const holder = holders[0];
+      const emp = holder.employee as any;
+      const skl = holder.skill as any;
+      spofList.push({
+        skillId,
+        skillName: skl.name,
+        category: skl.category,
+        employeeId: emp._id.toString(),
+        employeeName: `${emp.firstName} ${emp.lastName}`,
+        employeeCode: emp.employeeId,
+        departmentName: emp.department?.name || "General",
+        verifiedRating: holder.verifiedRating || holder.selfRating || 3
+      });
+    }
+  }
+
+  return spofList.sort((a, b) => a.category.localeCompare(b.category) || a.skillName.localeCompare(b.skillName));
 };

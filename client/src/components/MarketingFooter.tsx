@@ -8,7 +8,7 @@ import {
   Mic,
   ShieldCheck,
 } from "lucide-react";
-import logo from "@/assets/mobius-mark.svg";
+import logo from "@/assets/mobius-ems-official-logo.png";
 import { useAuth } from "@/features/auth/AuthProvider";
 
 export const MarketingFooter = () => {
@@ -59,16 +59,8 @@ export const MarketingFooter = () => {
                 <img
                   src={logo}
                   alt="MobiusEMS Logo"
-                  className="h-9 w-auto object-contain transition-transform duration-200 group-hover:scale-105"
+                  className="h-12 w-auto max-w-[220px] rounded-md object-contain transition-transform duration-200 group-hover:scale-105"
                 />
-                <div className="flex flex-col">
-                  <span className="text-xl font-extrabold tracking-tight text-white leading-none">
-                    MobiusEMS
-                  </span>
-                  <span className="mt-1 text-[9px] font-bold uppercase tracking-[0.2em] text-emerald-400">
-                    Workforce Operating System
-                  </span>
-                </div>
               </Link>
 
               <p className="max-w-sm text-xs leading-relaxed text-slate-300">

@@ -1,4 +1,5 @@
 import { api } from "@/api/client";
+import type { ApplicantStage } from "@mobius-ems/shared";
 export interface DocumentItem {
   _id: string;
   employee: { firstName: string; lastName: string; employeeId: string };
@@ -27,15 +28,21 @@ export interface ResumeItem {
 export interface ApplicantItem {
   _id: string;
   name: string;
+  email?: string;
+  phone?: string;
   designation: string;
   jobCategory?: string;
   city?: string;
   state?: string;
   matchScore?: number;
+  stage: ApplicantStage;
+  stageNotes?: { stage: ApplicantStage; note: string; updatedAt: string }[];
   originalName: string;
   size: number;
   createdAt: string;
   uploadedBy?: { name: string; email: string };
+  convertedEmployeeId?: { _id: string; firstName: string; lastName: string; employeeId: string };
+  convertedAt?: string;
 }
 export type FitClassification = "STRONG_FIT" | "POTENTIAL_FIT" | "NOT_FIT";
 export interface ScreeningResult {
@@ -125,6 +132,13 @@ export const governanceApi = {
     api.get<{ url: string }>(`/api/v1/governance/applicants/${id}/cv`),
   deleteApplicant: (id: string) =>
     api.delete(`/api/v1/governance/applicants/${id}`),
+  updateApplicantStage: (id: string, stage: ApplicantStage, note?: string) =>
+    api.patch<{ item: ApplicantItem }>(`/api/v1/governance/applicants/${id}/stage`, { stage, note }),
+  convertApplicant: (id: string, body?: { departmentId?: string; designationId?: string; officialEmail?: string }) =>
+    api.post<{
+      employee: { _id: string; employeeId: string; firstName: string; lastName: string; officialEmail: string };
+      temporaryCredentials: { email: string; password: string };
+    }>(`/api/v1/governance/applicants/${id}/convert`, body || {}),
   screenResumes: (data: FormData) =>
     api.upload<{ item: ResumeScreeningItem }>(
       "/api/v1/governance/resume-screenings",

@@ -1,10 +1,158 @@
-import { Document } from "../models/Document.js"; import { Applicant } from "../models/Applicant.js"; import { ResumeScreening } from "../models/ResumeScreening.js"; import { Employee } from "../models/Employee.js"; import { Skill } from "../models/Skill.js"; import { Department } from "../models/Department.js"; import { Project } from "../models/Project.js"; import { Task } from "../models/Task.js"; import { AuditLog } from "../models/AuditLog.js"; import { Goal } from "../models/Goal.js"; import { KPI } from "../models/KPI.js"; import { EmployeeKPI } from "../models/EmployeeKPI.js"; import { PerformanceSnapshot } from "../models/PerformanceSnapshot.js"; import { EmployeeTraining } from "../models/EmployeeTraining.js"; import { EmployeeSkill } from "../models/EmployeeSkill.js"; import { AppError } from "../utils/AppError.js"; import { deletePrivateObject, openMongoPrivate, signedPrivateUrl, uploadApplicantPrivate, uploadPrivate } from "./storageService.js"; import { writeAudit } from "./auditService.js"; import { recalculateProfileCompletion } from "./profileCompletionService.js"; import { requireTenantId } from "../tenancy/tenantContext.js";
+import { randomBytes } from "node:crypto";
+import bcrypt from "bcrypt";
+import { Document } from "../models/Document.js"; import { Applicant } from "../models/Applicant.js"; import { ResumeScreening } from "../models/ResumeScreening.js"; import { Employee } from "../models/Employee.js"; import { Skill } from "../models/Skill.js"; import { Department } from "../models/Department.js"; import { Project } from "../models/Project.js"; import { Task } from "../models/Task.js"; import { AuditLog } from "../models/AuditLog.js"; import { Goal } from "../models/Goal.js"; import { KPI } from "../models/KPI.js"; import { EmployeeKPI } from "../models/EmployeeKPI.js"; import { PerformanceSnapshot } from "../models/PerformanceSnapshot.js"; import { EmployeeTraining } from "../models/EmployeeTraining.js"; import { EmployeeSkill } from "../models/EmployeeSkill.js"; import { User } from "../models/User.js"; import { Role } from "../models/Role.js"; import { Designation } from "../models/Designation.js"; import { AppError } from "../utils/AppError.js"; import { deletePrivateObject, openMongoPrivate, signedPrivateUrl, uploadApplicantPrivate, uploadPrivate } from "./storageService.js"; import { writeAudit } from "./auditService.js"; import { recalculateProfileCompletion } from "./profileCompletionService.js"; import { requireTenantId } from "../tenancy/tenantContext.js";
+import { APPLICANT_STAGES, type ApplicantStage } from "@mobius-ems/shared";
 const visibleEmployees = async (viewer: { id: string; role: string }) => { if (!["EMPLOYEE","MANAGER"].includes(viewer.role)) return Employee.find({ isActive: true }).distinct("_id"); const own = await Employee.findOne({ user: viewer.id }).select("_id"); return viewer.role === "EMPLOYEE" ? own ? [own._id] : [] : Employee.find({ $or: [{ _id: own?._id }, { reportingManager: own?._id }], isActive: true }).distinct("_id"); };
 export const uploadDocument = async (file: Express.Multer.File, metadata: { employee: string; category: string; expiresAt?: string }, actor: { id: string; role: string }) => { const visible = await visibleEmployees(actor); if (!visible.some((id) => id.toString() === metadata.employee)) throw new AppError("Employee documents are outside your scope", 403); const employee = await Employee.findById(metadata.employee); if (!employee) throw new AppError("Employee not found", 404); const expiry = metadata.expiresAt ? new Date(`${metadata.expiresAt}T23:59:59.999+05:30`) : undefined; if (expiry && (Number.isNaN(expiry.getTime()) || expiry.toISOString().slice(0, 10) !== metadata.expiresAt)) throw new AppError("Invalid document expiration date", 422); const stored = await uploadPrivate(file.buffer, `mobius-ems/${employee.employeeId}`, { originalName: file.originalname, mimeType: file.mimetype, category: metadata.category, employeeId: employee.employeeId }); const document = await Document.create({ employee: employee._id, category: metadata.category, originalName: file.originalname, storageProvider: stored.provider, storageKey: stored.key, format: stored.format, mimeType: file.mimetype, size: stored.size, uploadedBy: actor.id, expiresAt: expiry }); await recalculateProfileCompletion(employee.id); await writeAudit({ user: actor.id, action: "DOCUMENT_UPLOADED", entityType: "Document", entityId: document.id, newValue: { employeeId: employee.employeeId, category: metadata.category, mimeType: file.mimetype, size: stored.size, storageProvider: stored.provider, expiresAt: expiry } }); return document; };
 export const listDocuments = async (viewer: { id: string; role: string }) => Document.find({ employee: { $in: await visibleEmployees(viewer) }, isActive: true }).populate("employee", "firstName lastName employeeId").populate("uploadedBy", "name").sort({ createdAt: -1 }).lean();
 export const listResumes = async (viewer: { id: string; role: string }, department?: string) => { let employeeIds = await visibleEmployees(viewer); if (department) employeeIds = await Employee.find({ _id: { $in: employeeIds }, department, isActive: true }).distinct("_id"); return Document.find({ employee: { $in: employeeIds }, category: "RESUME", isActive: true }).populate({ path: "employee", select: "firstName lastName employeeId designation department", populate: [{ path: "department", select: "name code" }, { path: "designation", select: "name" }] }).populate("uploadedBy", "name").sort({ createdAt: -1 }).lean(); };
-export const createApplicant = async (file: Express.Multer.File, metadata: { name: string; designation: string; jobCategory?: string; city?: string; state?: string }, actorId: string) => { const stored = await uploadApplicantPrivate(file.buffer, file.originalname, file.mimetype); const applicant = await Applicant.create({ ...metadata, originalName: file.originalname, storageProvider: stored.provider, storageKey: stored.key, format: stored.format, mimeType: file.mimetype, size: stored.size, uploadedBy: actorId }); await writeAudit({ user: actorId, action: "APPLICANT_CV_UPLOADED", entityType: "Applicant", entityId: applicant.id, newValue: { name: metadata.name, designation: metadata.designation, jobCategory: metadata.jobCategory, city: metadata.city, state: metadata.state, mimeType: file.mimetype, size: stored.size, storageProvider: stored.provider } }); return applicant; };
-export const listApplicants = async () => { const applicants = await Applicant.find({ isActive: true }).populate("uploadedBy", "name email").sort({ createdAt: -1 }).lean(); const missingIds = applicants.filter((item) => item.matchScore === undefined).map((item) => item._id); if (!missingIds.length) return applicants; const screenings = await ResumeScreening.find({ "results.applicant": { $in: missingIds } }).select("results.applicant results.score createdAt").sort({ createdAt: -1 }).lean(); const scores = new Map<string, number>(); for (const screening of screenings) for (const result of screening.results) if (!scores.has(String(result.applicant))) scores.set(String(result.applicant), result.score); return applicants.map((item) => ({ ...item, matchScore: item.matchScore ?? scores.get(String(item._id)) })); };
+export const createApplicant = async (file: Express.Multer.File, metadata: { name: string; designation: string; jobCategory?: string; city?: string; state?: string; email?: string; phone?: string }, actorId: string) => { const stored = await uploadApplicantPrivate(file.buffer, file.originalname, file.mimetype); const applicant = await Applicant.create({ ...metadata, originalName: file.originalname, storageProvider: stored.provider, storageKey: stored.key, format: stored.format, mimeType: file.mimetype, size: stored.size, uploadedBy: actorId, stage: "SOURCED", stageNotes: [] }); await writeAudit({ user: actorId, action: "APPLICANT_CV_UPLOADED", entityType: "Applicant", entityId: applicant.id, newValue: { name: metadata.name, designation: metadata.designation, jobCategory: metadata.jobCategory, city: metadata.city, state: metadata.state, mimeType: file.mimetype, size: stored.size, storageProvider: stored.provider } }); return applicant; };
+export const listApplicants = async () => { const applicants = await Applicant.find({ isActive: true }).populate("uploadedBy", "name email").populate("convertedEmployeeId", "firstName lastName employeeId").sort({ createdAt: -1 }).lean(); const missingIds = applicants.filter((item) => item.matchScore === undefined).map((item) => item._id); if (!missingIds.length) return applicants; const screenings = await ResumeScreening.find({ "results.applicant": { $in: missingIds } }).select("results.applicant results.score createdAt").sort({ createdAt: -1 }).lean(); const scores = new Map<string, number>(); for (const screening of screenings) for (const result of screening.results) if (!scores.has(String(result.applicant))) scores.set(String(result.applicant), result.score); return applicants.map((item) => ({ ...item, matchScore: item.matchScore ?? scores.get(String(item._id)) })); };
+export const updateApplicantStage = async (id: string, stage: ApplicantStage, note?: string, actorId?: string) => {
+  const applicant = await Applicant.findOne({ _id: id, isActive: true });
+  if (!applicant) throw new AppError("Applicant not found", 404);
+  const oldStage = applicant.stage;
+  applicant.stage = stage;
+  if (note?.trim()) {
+    applicant.stageNotes = applicant.stageNotes || [];
+    applicant.stageNotes.push({ stage, note: note.trim(), updatedAt: new Date() });
+  }
+  await applicant.save();
+  if (actorId) {
+    await writeAudit({
+      user: actorId,
+      action: "APPLICANT_STAGE_UPDATED",
+      entityType: "Applicant",
+      entityId: applicant.id,
+      oldValue: { stage: oldStage },
+      newValue: { stage, note }
+    });
+  }
+  return applicant;
+};
+export const convertApplicantToEmployee = async (
+  id: string,
+  actorId: string,
+  options?: { departmentId?: string; designationId?: string; officialEmail?: string }
+) => {
+  const applicant = await Applicant.findOne({ _id: id, isActive: true });
+  if (!applicant) throw new AppError("Applicant not found", 404);
+  if (applicant.convertedEmployeeId) throw new AppError("Applicant has already been converted to an employee", 409, "ALREADY_CONVERTED");
+
+  const nameParts = applicant.name.trim().split(/\s+/);
+  const firstName = nameParts[0] || "Applicant";
+  const lastName = nameParts.slice(1).join(" ") || "Employee";
+
+  let departmentId = options?.departmentId;
+  if (!departmentId) {
+    const defaultDept = await Department.findOne({ isActive: true }).sort({ createdAt: 1 });
+    if (!defaultDept) throw new AppError("No department found to assign the employee to", 400);
+    departmentId = defaultDept.id;
+  }
+
+  let designationId = options?.designationId;
+  if (!designationId) {
+    let desig = await Designation.findOne({ isActive: true, name: new RegExp(`^${applicant.designation}$`, "i") });
+    if (!desig) {
+      desig = await Designation.findOne({ isActive: true }).sort({ createdAt: 1 });
+    }
+    if (!desig) throw new AppError("No designation found to assign the employee to", 400);
+    designationId = desig.id;
+  }
+
+  const employeeRole = await Role.findOne({ name: "EMPLOYEE" });
+  if (!employeeRole) throw new AppError("Employee role not found; please seed roles", 400);
+
+  let officialEmail = options?.officialEmail?.trim().toLowerCase();
+  if (!officialEmail) {
+    const baseSlug = `${firstName.toLowerCase()}.${lastName.toLowerCase().replace(/[^a-z0-9]/g, "")}`;
+    officialEmail = `${baseSlug}@mobius.local`;
+    let count = 1;
+    while (await User.exists({ email: officialEmail })) {
+      officialEmail = `${baseSlug}${count}@mobius.local`;
+      count++;
+    }
+  } else {
+    if (await User.exists({ email: officialEmail })) {
+      throw new AppError("An account already uses this email address", 409, "EMAIL_EXISTS");
+    }
+  }
+
+  const tempPassword = `Mb!${randomBytes(8).toString("base64url")}1a`;
+  const passwordHash = await bcrypt.hash(tempPassword, 12);
+
+  const user = await User.create({
+    name: `${firstName} ${lastName}`,
+    email: officialEmail,
+    passwordHash,
+    role: employeeRole._id,
+    isActive: true,
+    forcePasswordChange: true,
+    onboardingComplete: false
+  });
+
+  let employeeIdCode = `EMP-${Math.floor(1000 + Math.random() * 9000)}`;
+  while (await Employee.exists({ employeeId: employeeIdCode })) {
+    employeeIdCode = `EMP-${Math.floor(1000 + Math.random() * 9000)}`;
+  }
+
+  const employee = await Employee.create({
+    employeeId: employeeIdCode,
+    user: user._id,
+    firstName,
+    lastName,
+    officialEmail,
+    phone: applicant.phone,
+    department: departmentId,
+    designation: designationId,
+    dateOfJoining: new Date(),
+    employmentType: "FULL_TIME",
+    status: "ACTIVE",
+    personal: { personalEmail: applicant.email },
+    onboardingStep: 1,
+    profileCompletion: 25,
+    isActive: true
+  });
+
+  try {
+    await Document.create({
+      employee: employee._id,
+      category: "RESUME",
+      originalName: applicant.originalName,
+      storageProvider: applicant.storageProvider,
+      storageKey: applicant.storageKey,
+      format: applicant.format,
+      mimeType: applicant.mimeType,
+      size: applicant.size,
+      uploadedBy: actorId
+    });
+  } catch (err) {
+    // Non-fatal if resume document duplicate key
+  }
+
+  applicant.stage = "HIRED";
+  applicant.convertedEmployeeId = employee._id;
+  applicant.convertedAt = new Date();
+  await applicant.save();
+
+  await writeAudit({
+    user: actorId,
+    action: "APPLICANT_CONVERTED_TO_EMPLOYEE",
+    entityType: "Employee",
+    entityId: employee.id,
+    newValue: {
+      applicantId: applicant.id,
+      employeeId: employee.employeeId,
+      officialEmail: employee.officialEmail
+    }
+  });
+
+  return {
+    employee: await Employee.findById(employee._id).populate("department designation", "name").lean(),
+    user: { id: user.id, email: user.email },
+    temporaryCredentials: { email: user.email, password: tempPassword }
+  };
+};
 export const applicantCvUrl = async (id: string, actorId: string) => { const applicant = await Applicant.findOne({ _id: id, isActive: true }); if (!applicant) throw new AppError("Applicant not found", 404); await writeAudit({ user: actorId, action: "APPLICANT_CV_VIEWED", entityType: "Applicant", entityId: applicant.id }); return { url: applicant.storageProvider === "MONGODB" ? `/api/v1/governance/applicants/${applicant.id}/cv/file` : signedPrivateUrl(applicant.storageKey) }; };
 export const applicantCvStream = async (id: string) => { const applicant = await Applicant.findOne({ _id: id, isActive: true }); if (!applicant) throw new AppError("Applicant not found", 404); if (applicant.storageProvider !== "MONGODB") throw new AppError("Document is stored externally", 409); return { applicant, stream: await openMongoPrivate(applicant.storageKey) }; };
 export const deleteApplicant = async (id: string, actorId: string) => { const applicant = await Applicant.findOne({ _id: id, isActive: true }); if (!applicant) throw new AppError("Applicant not found", 404); await deletePrivateObject({ provider: applicant.storageProvider, key: applicant.storageKey }); applicant.isActive = false; await applicant.save(); await writeAudit({ user: actorId, action: "APPLICANT_CV_DELETED", entityType: "Applicant", entityId: applicant.id, oldValue: { name: applicant.name, designation: applicant.designation, originalName: applicant.originalName } }); return applicant; };

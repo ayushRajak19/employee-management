@@ -6,6 +6,8 @@ import { AppError } from "../utils/AppError.js";
 import { writeAudit } from "./auditService.js";
 import { LeaveRequest } from "../models/LeaveRequest.js";
 import { AttendanceOffice } from "../models/AttendanceOffice.js";
+import { AttendanceRegularization, type AttendanceRegularizationDocument } from "../models/AttendanceRegularization.js";
+import { notify } from "./notificationService.js";
 
 type Coordinates = { latitude: number; longitude: number; accuracy: number };
 const defaultOffice = { name: env.ATTENDANCE_OFFICE_NAME, latitude: env.ATTENDANCE_OFFICE_LATITUDE, longitude: env.ATTENDANCE_OFFICE_LONGITUDE, radiusMeters: env.ATTENDANCE_RADIUS_METERS, maxAccuracyMeters: env.ATTENDANCE_MAX_ACCURACY_METERS, isPreciselyConfigured: false };
@@ -49,5 +51,171 @@ export const updateOfficeRadius = async (viewer: { id: string; role: RoleName },
   await office.save();
   await writeAudit({ user: viewer.id, action: "ATTENDANCE_RADIUS_UPDATED", entityType: "AttendanceOffice", entityId: office.id, oldValue: { radiusMeters: previousRadiusMeters }, newValue: { radiusMeters }, ipAddress: meta.ip, userAgent: meta.userAgent });
   return { name: office.name, latitude: office.latitude, longitude: office.longitude, radiusMeters: office.radiusMeters, maxAccuracyMeters: office.maxAccuracyMeters, isPreciselyConfigured: true, configuredAt: office.configuredAt };
+};
+
+export const requestRegularization = async (
+  userId: string,
+  input: { dateKey: string; reason: AttendanceRegularizationDocument["reason"]; note: string },
+  meta: { ip?: string; userAgent?: string }
+) => {
+  const employee = await ownEmployee(userId);
+  const existing = await Attendance.findOne({ employee: employee._id, dateKey: input.dateKey });
+  if (existing?.status === "PRESENT") {
+    throw new AppError("Attendance for this day is already recorded as Present", 409, "ALREADY_PRESENT");
+  }
+
+  const pending = await AttendanceRegularization.findOne({
+    employee: employee._id,
+    dateKey: input.dateKey,
+    status: "PENDING"
+  });
+  if (pending) {
+    throw new AppError("A regularization request is already pending for this date", 409, "REGULARIZATION_PENDING");
+  }
+
+  const originalStatus = (existing?.status as "LATE" | "HALF_DAY") ?? "ABSENT";
+  const req = await AttendanceRegularization.create({
+    employee: employee._id,
+    department: employee.department,
+    dateKey: input.dateKey,
+    originalStatus,
+    requestedStatus: "PRESENT",
+    reason: input.reason,
+    note: input.note,
+    status: "PENDING"
+  });
+
+  await writeAudit({
+    user: userId,
+    action: "ATTENDANCE_REGULARIZATION_REQUESTED",
+    entityType: "AttendanceRegularization",
+    entityId: req.id,
+    newValue: { dateKey: input.dateKey, originalStatus, reason: input.reason },
+    ipAddress: meta.ip,
+    userAgent: meta.userAgent
+  });
+
+  if (employee.reportingManager) {
+    const manager = await Employee.findById(employee.reportingManager).select("user");
+    if (manager?.user) {
+      await notify({
+        recipient: manager.user.toString(),
+        type: "ATTENDANCE_REGULARIZATION_PENDING",
+        title: "Attendance Regularization Request",
+        body: `${employee.firstName} ${employee.lastName} requested attendance regularization for ${input.dateKey}.`,
+        entityType: "AttendanceRegularization",
+        entityId: req.id
+      });
+    }
+  }
+
+  return req;
+};
+
+export const listRegularizations = async (
+  viewer: { id: string; role: RoleName },
+  query: { status?: string; dateKey?: string }
+) => {
+  const filter: Record<string, unknown> = { isActive: true };
+  if (query.status) filter.status = query.status;
+  if (query.dateKey) filter.dateKey = query.dateKey;
+
+  if (viewer.role === "EMPLOYEE") {
+    const employee = await Employee.findOne({ user: viewer.id, isActive: true }).select("_id");
+    if (!employee) return [];
+    filter.employee = employee._id;
+  } else if (["MANAGER", "TEAM_LEAD", "DEPARTMENT_HEAD"].includes(viewer.role)) {
+    const own = await Employee.findOne({ user: viewer.id, isActive: true }).select("_id department");
+    if (!own) return [];
+    if (viewer.role === "DEPARTMENT_HEAD" && own.department) {
+      filter.department = own.department;
+    } else {
+      const reports = await Employee.find({ $or: [{ _id: own._id }, { reportingManager: own._id }], isActive: true }).distinct("_id");
+      filter.employee = { $in: reports };
+    }
+  }
+
+  return AttendanceRegularization.find(filter)
+    .populate("employee", "firstName lastName employeeId department")
+    .populate("reviewedBy", "name email")
+    .sort({ createdAt: -1 })
+    .lean();
+};
+
+export const reviewRegularization = async (
+  id: string,
+  input: { status: "APPROVED" | "REJECTED"; reviewComment?: string },
+  viewer: { id: string; role: RoleName },
+  meta: { ip?: string; userAgent?: string }
+) => {
+  if (viewer.role === "EMPLOYEE") {
+    throw new AppError("Employees cannot review regularization requests", 403, "FORBIDDEN");
+  }
+
+  const req = await AttendanceRegularization.findById(id);
+  if (!req || !req.isActive) throw new AppError("Regularization request not found", 404);
+  if (req.status !== "PENDING") throw new AppError("This regularization request has already been reviewed", 409);
+
+  req.status = input.status;
+  req.reviewComment = input.reviewComment;
+  req.reviewedBy = viewer.id as never;
+  req.reviewedAt = new Date();
+  await req.save();
+
+  const employee = await Employee.findById(req.employee);
+  if (input.status === "APPROVED") {
+    const office = await officeConfig();
+    const mockLocation = {
+      latitude: office.latitude,
+      longitude: office.longitude,
+      accuracy: 10,
+      distanceMeters: 0,
+      recordedAt: new Date(`${req.dateKey}T09:30:00+05:30`)
+    };
+
+    const existing = await Attendance.findOne({ employee: req.employee, dateKey: req.dateKey });
+    if (existing) {
+      existing.status = "PRESENT";
+      if (!existing.workedMinutes || existing.workedMinutes < 240) {
+        existing.workedMinutes = 540;
+      }
+      await existing.save();
+    } else {
+      await Attendance.create({
+        employee: req.employee,
+        department: req.department,
+        dateKey: req.dateKey,
+        status: "PRESENT",
+        checkInAt: new Date(`${req.dateKey}T09:30:00+05:30`),
+        checkInLocation: mockLocation,
+        checkOutAt: new Date(`${req.dateKey}T18:30:00+05:30`),
+        checkOutLocation: mockLocation,
+        workedMinutes: 540
+      });
+    }
+  }
+
+  if (employee?.user) {
+    await notify({
+      recipient: employee.user.toString(),
+      type: "ATTENDANCE_REGULARIZATION_REVIEWED",
+      title: `Attendance Regularization ${input.status}`,
+      body: input.reviewComment || `Your regularization for ${req.dateKey} was ${input.status.toLowerCase()}.`,
+      entityType: "AttendanceRegularization",
+      entityId: req.id
+    });
+  }
+
+  await writeAudit({
+    user: viewer.id,
+    action: "ATTENDANCE_REGULARIZATION_REVIEWED",
+    entityType: "AttendanceRegularization",
+    entityId: req.id,
+    newValue: { status: input.status, dateKey: req.dateKey, employee: req.employee },
+    ipAddress: meta.ip,
+    userAgent: meta.userAgent
+  });
+
+  return req;
 };
 

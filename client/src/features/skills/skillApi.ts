@@ -215,6 +215,7 @@ export const skillApi = {
   pending: () => api.get<{ items: SkillClaim[] }>("/api/v1/skills/verifications/pending"),
   verify: (id: string, body: { status: string; verifiedRating?: number; method: string; justification: string }) => api.patch(`/api/v1/skills/verifications/${id}`, body),
   heatmap: () => api.get<{ items: SkillClaim[] }>("/api/v1/skills/heatmap"),
+  spof: () => api.get<{ items: import("@mobius-ems/shared").SPOFItem[] }>("/api/v1/skills/spof"),
   assessments: () => api.get<{ items: Assessment[] }>("/api/v1/skills/assessments"),
   assessmentCandidates: () => api.get<{ items: AssessmentCandidate[] }>("/api/v1/skills/assessment-candidates"),
   createAssessmentCandidate: (body: { name: string; email: string; position?: string; password?: string }) => api.post<{ candidate: AssessmentCandidate; temporaryCredentials: { email: string; password: string } }>("/api/v1/skills/assessment-candidates", body),

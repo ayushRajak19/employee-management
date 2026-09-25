@@ -1,5 +1,6 @@
 import { useEffect, useState, type ComponentType } from "react";
-import logoMark from "@/assets/mobius-mark.svg";
+import logo from "@/assets/mobius-ems-official-logo.png";
+import logoMark from "@/assets/mobius-ems-official-mark.png";
 import { useMutation } from "@tanstack/react-query";
 import type { CapabilityName, PermissionName, RoleName, SectionPermissionName, PlanFeatures } from "@mobius-ems/shared";
 import {
@@ -174,16 +175,10 @@ export const AppLayout = () => {
       {/* Sidebar header */}
       <div className="flex h-16 items-center border-b px-4 sm:h-20 sm:px-5">
         <img
-          src={logoMark}
+          src={collapsed ? logoMark : logo}
           alt="MobiusEMS"
-          className="h-9 w-9 shrink-0 object-contain"
+          className={cn("shrink-0 rounded-md object-contain", collapsed ? "h-9 w-9" : "h-11 w-[185px]")}
         />
-        {!collapsed && (
-          <div className="ml-3 overflow-hidden">
-            <p className="truncate text-sm font-semibold">MobiusEMS</p>
-            <p className="truncate text-[11px] text-slate-400">{user?.tenantName ?? "Employee management"}</p>
-          </div>
-        )}
         {/* Desktop collapse toggle */}
         <button
           className="ml-auto hidden size-8 place-items-center rounded-lg text-slate-400 hover:bg-slate-100 lg:grid"

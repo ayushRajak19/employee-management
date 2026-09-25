@@ -32,6 +32,7 @@ skillRouter.post("/mine", validate(claimSkillSchema), asyncHandler(controller.cl
 skillRouter.get("/verifications/pending", requirePermission("skill.verify"), asyncHandler(controller.pending));
 skillRouter.patch("/verifications/:id", requirePermission("skill.verify"), validate(verifySkillSchema), asyncHandler(controller.verify));
 skillRouter.get("/heatmap", requirePermission("employee.view"), asyncHandler(controller.heatmap));
+skillRouter.get("/spof", requirePermission("employee.view"), asyncHandler(controller.spof));
 skillRouter.put("/designations/:id/requirements", requirePermission("department.update"), validate(designationSkillsSchema), asyncHandler(controller.designationSkills));
 
 skillRouter.get("/assessments", asyncHandler(controller.assessments));

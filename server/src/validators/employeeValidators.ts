@@ -3,12 +3,31 @@ import { ROLES } from "@mobius-ems/shared";
 const objectId = z.string().regex(/^[a-f\d]{24}$/i, "Invalid identifier");
 const optionalObjectId = z.preprocess((value) => value === "" ? undefined : value, objectId.optional());
 const workLocation = z.object({ geoNode: objectId, coordinates: z.object({ type: z.literal("Point").default("Point"), coordinates: z.tuple([z.number().min(-180).max(180), z.number().min(-90).max(90)]) }).optional() });
+const employeeId = z.string().trim().min(1, "Employee ID is required").max(50).transform((value) => value.toUpperCase());
 export const createEmployeeSchema = z.object({ body: z.object({
-  employeeId: z.string().trim().min(1, "Employee ID is required").max(50).transform((value) => value.toUpperCase()), firstName: z.string().trim().min(1).max(80), lastName: z.string().trim().min(1).max(80), officialEmail: z.string().email().max(254).transform((v) => v.toLowerCase()), phone: z.string().trim().max(30).optional(),
+  employeeId, firstName: z.string().trim().min(1).max(80), lastName: z.string().trim().min(1).max(80), officialEmail: z.string().email().max(254).transform((v) => v.toLowerCase()), phone: z.string().trim().max(30).optional(),
   department: objectId, team: optionalObjectId, designation: objectId, reportingManager: optionalObjectId, dateOfJoining: z.coerce.date(), employmentType: z.enum(EMPLOYMENT_TYPES), officeLocation: z.string().trim().max(120).optional(), workLocation: workLocation.optional(), role: z.enum(ROLES).default("EMPLOYEE"), status: z.enum(EMPLOYEE_STATUSES).default("ONBOARDING")
 }) });
 export const listEmployeesSchema = z.object({ query: z.object({ page: z.coerce.number().int().min(1).default(1), limit: z.coerce.number().int().min(1).max(100).default(20), search: z.string().trim().max(100).optional(), department: objectId.optional(), status: z.enum(EMPLOYEE_STATUSES).optional() }) });
-export const onboardingSchema = z.object({ body: z.object({ step: z.number().int().min(2).max(8), personal: z.object({ personalEmail: z.string().email().optional(), dateOfBirth: z.coerce.date().optional(), address: z.string().trim().max(500).optional(), emergencyContact: z.string().trim().max(120).optional() }).optional(), professionalSummary: z.string().trim().max(2000).optional(), previousExperience: z.array(z.object({ company: z.string().trim().min(1).max(120), role: z.string().trim().min(1).max(120), startDate: z.coerce.date(), endDate: z.coerce.date().optional(), summary: z.string().trim().max(1000).optional() })).max(20).optional(), complete: z.boolean().optional() }) });
-export const updateEmployeeSchema = z.object({ params: z.object({ id: objectId }), body: z.object({ firstName: z.string().trim().min(1).max(80).optional(), lastName: z.string().trim().min(1).max(80).optional(), phone: z.string().trim().max(30).optional(), department: objectId.optional(), team: objectId.nullable().optional(), designation: objectId.optional(), reportingManager: objectId.nullable().optional(), employmentType: z.enum(EMPLOYMENT_TYPES).optional(), officeLocation: z.string().trim().max(120).optional(), workLocation: workLocation.nullable().optional(), role: z.enum(ROLES).optional(), status: z.enum(EMPLOYEE_STATUSES).optional() }).refine((body) => Object.keys(body).length > 0, "At least one field is required") });
-export const updateMyProfileSchema = z.object({ body: z.object({ firstName: z.string().trim().min(1).max(80).optional(), lastName: z.string().trim().min(1).max(80).optional(), phone: z.string().trim().min(5).max(30).optional(), professionalSummary: z.string().trim().max(2000).optional(), personal: z.object({ personalEmail: z.string().email().optional(), address: z.string().trim().max(500).optional(), emergencyContact: z.string().trim().max(120).optional() }).optional(), previousExperience: z.array(z.object({ company: z.string().trim().min(1).max(120), role: z.string().trim().min(1).max(120), startDate: z.coerce.date(), endDate: z.coerce.date().optional(), summary: z.string().trim().max(1000).optional() })).max(20).optional() }).refine((body) => Object.keys(body).length > 0, "At least one field is required") });
+const bankDetailsSchema = z.object({
+  accountHolderName: z.string().trim().max(120).optional(),
+  accountNumber: z.string().trim().max(50).optional(),
+  bankName: z.string().trim().max(120).optional(),
+  ifscCode: z.string().trim().max(20).optional(),
+  branchName: z.string().trim().max(120).optional()
+}).optional();
+
+const personalSchema = z.object({
+  personalEmail: z.string().email().optional(),
+  dateOfBirth: z.coerce.date().optional(),
+  address: z.string().trim().max(500).optional(),
+  emergencyContact: z.string().trim().max(120).optional(),
+  panNumber: z.string().trim().max(20).optional(),
+  aadhaarNumber: z.string().trim().max(20).optional(),
+  taxId: z.string().trim().max(30).optional()
+}).optional();
+
+export const onboardingSchema = z.object({ body: z.object({ step: z.number().int().min(2).max(8), personal: personalSchema, bankDetails: bankDetailsSchema, professionalSummary: z.string().trim().max(2000).optional(), previousExperience: z.array(z.object({ company: z.string().trim().min(1).max(120), role: z.string().trim().min(1).max(120), startDate: z.coerce.date(), endDate: z.coerce.date().optional(), summary: z.string().trim().max(1000).optional() })).max(20).optional(), complete: z.boolean().optional() }) });
+export const updateEmployeeSchema = z.object({ params: z.object({ id: objectId }), body: z.object({ employeeId: employeeId.optional(), firstName: z.string().trim().min(1).max(80).optional(), lastName: z.string().trim().min(1).max(80).optional(), phone: z.string().trim().max(30).optional(), department: objectId.optional(), team: objectId.nullable().optional(), designation: objectId.optional(), reportingManager: objectId.nullable().optional(), employmentType: z.enum(EMPLOYMENT_TYPES).optional(), officeLocation: z.string().trim().max(120).optional(), workLocation: workLocation.nullable().optional(), role: z.enum(ROLES).optional(), status: z.enum(EMPLOYEE_STATUSES).optional(), personal: personalSchema, bankDetails: bankDetailsSchema }).refine((body) => Object.keys(body).length > 0, "At least one field is required") });
+export const updateMyProfileSchema = z.object({ body: z.object({ firstName: z.string().trim().min(1).max(80).optional(), lastName: z.string().trim().min(1).max(80).optional(), phone: z.string().trim().min(5).max(30).optional(), professionalSummary: z.string().trim().max(2000).optional(), personal: personalSchema, bankDetails: bankDetailsSchema, previousExperience: z.array(z.object({ company: z.string().trim().min(1).max(120), role: z.string().trim().min(1).max(120), startDate: z.coerce.date(), endDate: z.coerce.date().optional(), summary: z.string().trim().max(1000).optional() })).max(20).optional() }).refine((body) => Object.keys(body).length > 0, "At least one field is required") });
 export const employeeIdSchema = z.object({ params: z.object({ id: objectId }) });

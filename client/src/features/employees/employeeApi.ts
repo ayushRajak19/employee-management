@@ -5,8 +5,31 @@ import type { SalesAnalytics } from "@mobius-ems/shared";
 
 export interface EmployeeList { items: EmployeeRow[]; pagination: { page: number; limit: number; total: number; pages: number } }
 export interface CreateEmployeeInput { employeeId: string; firstName: string; lastName: string; officialEmail: string; phone?: string; department: string; team?: string; designation: string; reportingManager?: string; dateOfJoining: string; employmentType: string; officeLocation?: string; role: string; status: string }
+export interface BankDetailsItem {
+  accountHolderName?: string;
+  accountNumber?: string;
+  bankName?: string;
+  ifscCode?: string;
+  branchName?: string;
+}
+export interface PersonalDetailsItem {
+  personalEmail?: string;
+  dateOfBirth?: string;
+  address?: string;
+  emergencyContact?: string;
+  panNumber?: string;
+  aadhaarNumber?: string;
+  taxId?: string;
+}
 export interface Employee360 {
-  employee: EmployeeRow & { dateOfJoining: string; employmentType: string; officeLocation?: string; professionalSummary?: string; personal?: { personalEmail?: string; address?: string; emergencyContact?: string } };
+  employee: EmployeeRow & {
+    dateOfJoining: string;
+    employmentType: string;
+    officeLocation?: string;
+    professionalSummary?: string;
+    personal?: PersonalDetailsItem;
+    bankDetails?: BankDetailsItem;
+  };
   skills: { _id: string; skill: { name: string; category: string }; selfRating: number; verifiedRating?: number; verificationStatus: string }[];
   roleSkillAssessment: RoleSkillAssessment | null;
   tasks: { _id: string; taskId: string; name: string; status: string; priority: string; deadline: string; qualityRating?: number }[];
@@ -21,7 +44,13 @@ export interface Employee360 {
   salesEligible: boolean;
   salesAnalytics?: SalesAnalytics;
 }
-export type MyEmployee = EmployeeRow & { onboardingStep: number; professionalSummary?: string; previousExperience?: { company: string; role: string; startDate: string; endDate?: string; summary?: string }[]; personal?: { personalEmail?: string; address?: string; emergencyContact?: string } };
+export type MyEmployee = EmployeeRow & {
+  onboardingStep: number;
+  professionalSummary?: string;
+  previousExperience?: { company: string; role: string; startDate: string; endDate?: string; summary?: string }[];
+  personal?: PersonalDetailsItem;
+  bankDetails?: BankDetailsItem;
+};
 
 export const employeeApi = {
   list: (params: URLSearchParams) => api.get<EmployeeList>(`/api/v1/employees?${params}`),

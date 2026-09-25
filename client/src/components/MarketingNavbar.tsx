@@ -15,7 +15,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import logo from "@/assets/mobius-mark.svg";
+import logo from "@/assets/mobius-ems-official-logo.png";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { ShimmerButton } from "@/components/inspira";
 
@@ -173,16 +173,8 @@ export const MarketingNavbar = () => {
           <img
             src={logo}
             alt=""
-            className="h-9 w-auto object-contain transition-transform duration-200 group-hover:scale-105"
+            className="h-11 w-auto max-w-[190px] rounded-md object-contain transition-transform duration-200 group-hover:scale-105 sm:h-12 sm:max-w-[230px]"
           />
-          <div className="flex items-baseline gap-2">
-            <span className="font-extrabold text-xl tracking-tight text-[#102d2c]">
-              MobiusEMS
-            </span>
-            <span className="hidden sm:inline-block text-[9px] font-bold tracking-[0.2em] text-[#63766e] pl-2 border-l border-[#cbd1c7]">
-              BY MOBIUS BLOOM
-            </span>
-          </div>
         </Link>
 
         {/* Desktop Navigation */}

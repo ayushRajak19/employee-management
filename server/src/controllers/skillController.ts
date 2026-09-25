@@ -58,6 +58,9 @@ export const pending = async (_request: Request, response: Response): Promise<vo
 export const verify = async (request: Request, response: Response): Promise<void> => { response.json({ success: true, message: "Skill verification recorded", data: { item: await service.verify(String(request.params.id), request.user!.id, request.body, { ip: request.ip, userAgent: request.get("user-agent") }) } }); };
 export const designationSkills = async (request: Request, response: Response): Promise<void> => { response.json({ success: true, message: "Role skill requirements updated", data: { item: await service.setDesignationSkills(String(request.params.id), request.body.requiredSkills) } }); };
 export const heatmap = async (_request: Request, response: Response): Promise<void> => { response.json({ success: true, message: "Skill heatmap retrieved", data: { items: await service.heatmap() } }); };
+export const spof = async (_request: Request, response: Response): Promise<void> => {
+  response.json({ success: true, message: "Single Point of Failure risks retrieved", data: { items: await service.detectSinglePointOfFailures() } });
+};
 
 export const assessments = async (request: Request, response: Response): Promise<void> => { response.json({ success: true, message: "Assessments retrieved", data: { items: await service.listAssessments({ id: request.user!.id, role: request.user!.role }) } }); };
 export const assessmentCandidates = async (_request: Request, response: Response): Promise<void> => { response.json({ success: true, message: "Assessment applicants retrieved", data: { items: await service.listAssessmentCandidates() } }); };

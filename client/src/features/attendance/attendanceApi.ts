@@ -4,5 +4,30 @@ export interface AttendanceRecord { _id: string; dateKey: string; status: "PRESE
 export interface OfficeGeofence { name: string; latitude: number; longitude: number; radiusMeters: number; maxAccuracyMeters: number; isPreciselyConfigured: boolean; configuredAt?: string }
 export interface AttendanceToday { office: OfficeGeofence; date: string; attendance: AttendanceRecord | null }
 export interface AttendanceRegister { date: string; office: OfficeGeofence; summary: { total: number; present: number; late: number; halfDay: number; onLeave: number; absent: number }; items: { employee: EmployeeRow; attendance: AttendanceRecord | null; dailyStatus: "PRESENT" | "LATE" | "HALF_DAY" | "ON_LEAVE" | "ABSENT" }[] }
+export interface RegularizationRecord {
+  _id: string;
+  employee: EmployeeRow;
+  dateKey: string;
+  originalStatus: "LATE" | "HALF_DAY" | "ABSENT";
+  requestedStatus: "PRESENT";
+  reason: "CLIENT_MEETING" | "TRANSIT_DELAY" | "TECHNICAL_ISSUE" | "WORK_TRAVEL" | "EMERGENCY" | "OTHER";
+  note: string;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  reviewedBy?: { _id: string; name: string; email: string };
+  reviewComment?: string;
+  reviewedAt?: string;
+  createdAt: string;
+}
+
 const coordinates = (position: GeolocationPosition) => ({ latitude: position.coords.latitude, longitude: position.coords.longitude, accuracy: position.coords.accuracy });
-export const attendanceApi = { today: () => api.get<AttendanceToday>("/api/v1/attendance/today"), checkIn: (position: GeolocationPosition) => api.post<{ attendance: AttendanceRecord }>("/api/v1/attendance/check-in", coordinates(position)), checkOut: (position: GeolocationPosition) => api.post<{ attendance: AttendanceRecord }>("/api/v1/attendance/check-out", coordinates(position)), register: (params: URLSearchParams) => api.get<AttendanceRegister>(`/api/v1/attendance/register?${params}`), configureOffice: (position: GeolocationPosition, radiusMeters: number) => api.put<{ office: OfficeGeofence }>("/api/v1/attendance/office", { ...coordinates(position), name: "Shivnath Business Centre, Raipur", radiusMeters }), updateOfficeRadius: (radiusMeters: number) => api.patch<{ office: OfficeGeofence }>("/api/v1/attendance/office/radius", { radiusMeters }) };
+export const attendanceApi = {
+  today: () => api.get<AttendanceToday>("/api/v1/attendance/today"),
+  checkIn: (position: GeolocationPosition) => api.post<{ attendance: AttendanceRecord }>("/api/v1/attendance/check-in", coordinates(position)),
+  checkOut: (position: GeolocationPosition) => api.post<{ attendance: AttendanceRecord }>("/api/v1/attendance/check-out", coordinates(position)),
+  register: (params: URLSearchParams) => api.get<AttendanceRegister>(`/api/v1/attendance/register?${params}`),
+  configureOffice: (position: GeolocationPosition, radiusMeters: number) => api.put<{ office: OfficeGeofence }>("/api/v1/attendance/office", { ...coordinates(position), name: "Shivnath Business Centre, Raipur", radiusMeters }),
+  updateOfficeRadius: (radiusMeters: number) => api.patch<{ office: OfficeGeofence }>("/api/v1/attendance/office/radius", { radiusMeters }),
+  requestRegularization: (body: { dateKey: string; reason: string; note: string }) => api.post<{ regularization: RegularizationRecord }>("/api/v1/attendance/regularize", body),
+  regularizations: (params?: URLSearchParams) => api.get<{ items: RegularizationRecord[] }>(`/api/v1/attendance/regularizations${params ? `?${params}` : ""}`),
+  reviewRegularization: (id: string, body: { status: "APPROVED" | "REJECTED"; reviewComment?: string }) => api.patch<{ regularization: RegularizationRecord }>(`/api/v1/attendance/regularizations/${id}`, body)
+};

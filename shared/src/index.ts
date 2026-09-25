@@ -357,3 +357,27 @@ export interface EmployeeSkillRank {
   completedTasksCount: number;
   velocityRatio: number;
 }
+
+export const APPLICANT_STAGES = ["SOURCED", "SCREENED", "INTERVIEWING", "OFFER_EXTENDED", "HIRED", "REJECTED"] as const;
+export type ApplicantStage = (typeof APPLICANT_STAGES)[number];
+
+export const REGULARIZATION_STATUSES = ["PENDING", "APPROVED", "REJECTED"] as const;
+export type RegularizationStatus = (typeof REGULARIZATION_STATUSES)[number];
+
+export interface LeaveBalanceItem {
+  type: string;
+  quotaDays: number;
+  usedDays: number;
+  remainingDays: number;
+}
+
+export interface SPOFItem {
+  skillId: string;
+  skillName: string;
+  category: string;
+  employeeId: string;
+  employeeName: string;
+  employeeCode: string;
+  departmentName: string;
+  verifiedRating: number;
+}

@@ -5,3 +5,19 @@ export const attendanceRegisterSchema = z.object({ query: z.object({ date: z.str
 const radiusMeters = z.number().int().min(50, "Radius must be at least 50 metres").max(5000, "Radius cannot exceed 5,000 metres");
 export const attendanceOfficeSchema = z.object({ body: location.extend({ name: z.string().trim().min(3).max(200).default("Shivnath Business Centre, Raipur"), radiusMeters: radiusMeters.default(300) }) });
 export const attendanceRadiusSchema = z.object({ body: z.object({ radiusMeters }) });
+
+export const attendanceRegularizeSchema = z.object({
+  body: z.object({
+    dateKey: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    reason: z.enum(["CLIENT_MEETING", "TRANSIT_DELAY", "TECHNICAL_ISSUE", "WORK_TRAVEL", "EMERGENCY", "OTHER"]),
+    note: z.string().trim().min(3).max(2000)
+  })
+});
+
+export const attendanceReviewRegularizeSchema = z.object({
+  params: z.object({ id: z.string().regex(/^[a-f\d]{24}$/i) }),
+  body: z.object({
+    status: z.enum(["APPROVED", "REJECTED"]),
+    reviewComment: z.string().trim().max(1000).optional()
+  })
+});
