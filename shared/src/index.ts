@@ -45,6 +45,7 @@ export const PERMISSIONS = [
   "sales.channel_partner.view", "sales.channel_partner.manage", "sales.channel_partner.manage.self", "sales.configuration.manage",
   "employee_map.self", "employee_map.team", "employee_map.all",
   "sales.map.self", "sales.map.team", "sales.map.all",
+  "section.skill_matrix", // Legacy database value; no longer exposed as a section.
   ...SECTION_PERMISSIONS,
 ] as const;
 export type PermissionName = (typeof PERMISSIONS)[number];
