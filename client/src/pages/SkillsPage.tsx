@@ -198,14 +198,7 @@ export const SkillsPage = () => {
               onClick={() => handleTabChange("submissions")}
             >
               <Target size={14} className={activeTab === "submissions" ? "text-amber-300" : "text-brand-600"} />
-              <span>Skill Submissions & Reality Engine</span>
-              <span
-                className={`rounded-full px-2 py-0.5 text-[10px] ${
-                  activeTab === "submissions" ? "bg-brand-700 text-brand-100" : "bg-white text-slate-700"
-                }`}
-              >
-                USP
-              </span>
+              <span>Skill Verification & Calibration</span>
             </button>
           )}
 
@@ -267,7 +260,7 @@ export const SkillsPage = () => {
           )}
         </div>
 
-        {/* ──────── TAB 0: SUPERADMIN SKILL SUBMISSIONS & REALITY ENGINE ──────── */}
+        {/* ──────── TAB 0: SUPERADMIN SKILL VERIFICATION & CALIBRATION ──────── */}
         {activeTab === "submissions" && <SuperAdminSkillSubmissions />}
 
         {/* ──────── TAB 1: AI SKILL BUILDER & ROLE ASSESSMENTS ──────── */}

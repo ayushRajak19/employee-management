@@ -6,8 +6,8 @@ import {
   CheckCircle2,
   Clock,
   Eye,
-  Play,
   Search,
+  SlidersHorizontal,
   Sparkles,
   Target,
   Users,
@@ -29,7 +29,7 @@ export const SuperAdminSkillSubmissions = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [deptFilter, setDeptFilter] = useState<string>("ALL");
-  const [showHowItWorks, setShowHowItWorks] = useState(true);
+  const [showHowItWorks, setShowHowItWorks] = useState(false);
 
   // Inspection Modal state
   const [inspectItem, setInspectItem] = useState<RoleSkillSubmissionItem | null>(null);
@@ -162,114 +162,109 @@ export const SuperAdminSkillSubmissions = () => {
 
   return (
     <div className="space-y-6">
-      {/* ────── SECTION 1: HOW SUBMITTING SKILL ASSESSMENT WORKS (Architecture & Process Guide) ────── */}
-      <div className="overflow-hidden rounded-3xl border border-brand-200 bg-gradient-to-br from-brand-50/90 via-white to-violet-50/70 p-6 shadow-soft sm:p-8">
-        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
-          <div className="max-w-3xl">
+      {/* ────── SECTION 1: METHODOLOGY & CALIBRATION FRAMEWORK ────── */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft sm:p-6">
+        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+          <div>
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-100 px-3 py-1 text-xs font-semibold text-brand-700">
-                <Sparkles size={13} className="text-amber-500" />
-                Core USP Engine
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-semibold text-brand-700">
+                <Target size={13} className="text-brand-600" />
+                Competency Calibration
               </span>
-              <span className="rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-bold text-violet-700">
-                Super Admin Overview
+              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+                Super Admin
               </span>
             </div>
-            <h2 className="mt-3 text-2xl font-bold tracking-tight text-ink sm:text-3xl">
-              How Submitting Skill Assessments Works
+            <h2 className="mt-2 text-xl font-bold tracking-tight text-ink sm:text-2xl">
+              Workforce Skill Verification & Calibration
             </h2>
-            <p className="mt-2 text-xs leading-relaxed text-slate-600 sm:text-sm">
-              Our 1st USP replaces subjective performance bias with an objective <strong>Skill Credibility & Delivery Velocity Engine</strong>. 
-              Here is the exact lifecycle from new employee onboarding to real-time internal ranking:
+            <p className="mt-1 text-xs text-slate-500 sm:text-sm">
+              Objective competency framework correlating employee self-assessments with task delivery velocity and peer benchmarks.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
             <Button
               variant="secondary"
               onClick={() => setShowHowItWorks(!showHowItWorks)}
-              className="h-8 text-xs font-semibold px-3"
+              className="h-8 text-xs font-medium px-3"
             >
-              {showHowItWorks ? "Collapse Process Guide" : "Expand Process Guide"}
+              {showHowItWorks ? "Hide Process Guide" : "Methodology Guide"}
             </Button>
             <Button
+              variant="secondary"
               onClick={() => {
                 setSimulationOpen(true);
                 if (orgQuery.data?.designations?.[0]) {
                   setSimDesignationId(orgQuery.data.designations[0]._id);
                 }
               }}
-              className="h-8 bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs px-3 shadow-xs"
+              className="h-8 text-xs font-medium px-3 gap-1.5"
             >
-              <Play size={13} className="mr-1.5 text-amber-300" />
-              Interactive Simulation Mode
+              <SlidersHorizontal size={13} className="text-brand-600" />
+              Calibration Simulator
             </Button>
           </div>
         </div>
 
         {showHowItWorks && (
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-5 pt-5 border-t border-slate-100 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {/* Step 1 */}
-            <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-4 shadow-sm transition hover:shadow-md">
+            <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-4">
               <div className="flex items-center justify-between">
-                <span className="grid size-7 place-items-center rounded-lg bg-blue-100 text-xs font-bold text-blue-700">
+                <span className="grid size-6 place-items-center rounded-md bg-blue-100 text-xs font-bold text-blue-700">
                   1
                 </span>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Onboarding</span>
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Onboarding</span>
               </div>
-              <h3 className="mt-3 text-sm font-bold text-ink">Designation Skill Ingestion</h3>
-              <p className="mt-1.5 text-xs leading-5 text-slate-500">
-                When an employee is assigned a designation, the system loads all required skills mapped to that role (technical, soft skills, tools).
+              <h3 className="mt-2.5 text-xs font-bold text-ink">Designation Skill Matrix</h3>
+              <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+                When an employee is assigned a role, the system loads all required technical, domain, and tool competencies.
               </p>
             </div>
 
             {/* Step 2 */}
-            <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-4 shadow-sm transition hover:shadow-md">
+            <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-4">
               <div className="flex items-center justify-between">
-                <span className="grid size-7 place-items-center rounded-lg bg-brand-100 text-xs font-bold text-brand-700">
+                <span className="grid size-6 place-items-center rounded-md bg-brand-100 text-xs font-bold text-brand-700">
                   2
                 </span>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Honesty Claim</span>
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Evaluation</span>
               </div>
-              <h3 className="mt-3 text-sm font-bold text-ink">1 to 10 Scale Self-Rating</h3>
-              <p className="mt-1.5 text-xs leading-5 text-slate-500">
-                The employee rates themselves on an honest 1–10 scale. Submitting locks this baseline claim into the AI system as their declared standard.
+              <h3 className="mt-2.5 text-xs font-bold text-ink">1 to 10 Self-Rating</h3>
+              <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+                The employee declares their self-assessed proficiency scale across role competencies as an initial baseline.
               </p>
             </div>
 
             {/* Step 3 */}
-            <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-4 shadow-sm transition hover:shadow-md">
+            <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-4">
               <div className="flex items-center justify-between">
-                <span className="grid size-7 place-items-center rounded-lg bg-violet-100 text-xs font-bold text-violet-700">
+                <span className="grid size-6 place-items-center rounded-md bg-violet-100 text-xs font-bold text-violet-700">
                   3
                 </span>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Delivery</span>
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Execution</span>
               </div>
-              <h3 className="mt-3 text-sm font-bold text-ink">Task Velocity Tracking</h3>
-              <p className="mt-1.5 text-xs leading-5 text-slate-500">
-                Tasks tagged with tested skills benchmark delivery speed:
-                <br />
-                <code className="mt-1 inline-block rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-mono text-brand-700 font-semibold">
+              <h3 className="mt-2.5 text-xs font-bold text-ink">Task Delivery Velocity</h3>
+              <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+                Tasks tagged with tested skills benchmark real execution speed:
+                <span className="mt-1 block font-mono text-[10px] text-brand-700 font-semibold">
                   Velocity = Estimated / Actual Hours
-                </code>
+                </span>
               </p>
             </div>
 
             {/* Step 4 */}
-            <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-4 shadow-sm transition hover:shadow-md">
+            <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-4">
               <div className="flex items-center justify-between">
-                <span className="grid size-7 place-items-center rounded-lg bg-emerald-100 text-xs font-bold text-emerald-700">
+                <span className="grid size-6 place-items-center rounded-md bg-emerald-100 text-xs font-bold text-emerald-700">
                   4
                 </span>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">AI Reality Check</span>
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Calibration</span>
               </div>
-              <h3 className="mt-3 text-sm font-bold text-ink">Gap Judgment & Ranks</h3>
-              <p className="mt-1.5 text-xs leading-5 text-slate-500">
-                • <strong>Claimed 10/10 & late</strong>: <span className="text-red-600 font-semibold">⚠️ Reality Gap</span> drops score.
-                <br />
-                • <strong>Claimed 10/10 & fast</strong>: <span className="text-emerald-600 font-semibold">⚡ Mastery Confirmed</span>.
-                <br />
-                • <strong>Claimed 3/10 & fast</strong>: <span className="text-blue-600 font-semibold">🚀 Fast Learner Surge</span>.
+              <h3 className="mt-2.5 text-xs font-bold text-ink">Competency Calibration</h3>
+              <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+                Self-ratings are correlated with delivery velocity and peer benchmarks to establish verified organizational rankings.
               </p>
             </div>
           </div>
@@ -285,21 +280,21 @@ export const SuperAdminSkillSubmissions = () => {
         </div>
 
         <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-soft">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Claims Submitted</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Evaluations Submitted</p>
           <p className="mt-1 text-2xl font-bold text-emerald-600">{stats?.submittedCount ?? 0}</p>
           <p className="mt-0.5 text-[11px] text-slate-400">
-            {stats ? Math.round((stats.submittedCount / (stats.totalEmployees || 1)) * 100) : 0}% onboarded
+            {stats ? Math.round((stats.submittedCount / (stats.totalEmployees || 1)) * 100) : 0}% completed
           </p>
         </div>
 
         <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-soft">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Pending Baseline</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Pending Evaluation</p>
           <p className="mt-1 text-2xl font-bold text-amber-600">{stats?.pendingCount ?? 0}</p>
-          <p className="mt-0.5 text-[11px] text-slate-400">Needs 1–10 self-rating</p>
+          <p className="mt-0.5 text-[11px] text-slate-400">Awaiting self-rating</p>
         </div>
 
         <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-soft">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Reality Gaps</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Calibration Gaps</p>
           <p className="mt-1 text-2xl font-bold text-red-600">{stats?.totalRealityGaps ?? 0}</p>
           <p className="mt-0.5 text-[11px] text-slate-400">Delivery lagged claims</p>
         </div>
@@ -311,9 +306,9 @@ export const SuperAdminSkillSubmissions = () => {
         </div>
 
         <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-soft">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Avg Credibility</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Credibility Index</p>
           <p className="mt-1 text-2xl font-bold text-brand-600">{stats?.averageCredibility ?? 100}%</p>
-          <p className="mt-0.5 text-[11px] text-slate-400">Company-wide index</p>
+          <p className="mt-0.5 text-[11px] text-slate-400">Company-wide accuracy</p>
         </div>
       </div>
 
@@ -322,9 +317,9 @@ export const SuperAdminSkillSubmissions = () => {
         {/* Table Header / Filters */}
         <div className="flex flex-col justify-between gap-4 border-b border-slate-100 bg-slate-50/50 p-5 sm:flex-row sm:items-center">
           <div>
-            <h3 className="text-base font-bold text-ink sm:text-lg">Workforce Skill Claims & Reality Ranks</h3>
+            <h3 className="text-base font-bold text-ink sm:text-lg">Workforce Skill Evaluations & Calibration</h3>
             <p className="text-xs text-slate-500">
-              Audit submitted 1–10 honesty claims, delivery velocity benchmarks, and credibility statuses.
+              Audit employee self-assessments, task delivery velocity benchmarks, and calibrated competency ratings.
             </p>
           </div>
 
@@ -688,9 +683,9 @@ export const SuperAdminSkillSubmissions = () => {
                       <div className="flex items-start gap-2.5">
                         <Clock size={18} className="text-amber-600 shrink-0 mt-0.5" />
                         <div className="text-xs text-amber-900 leading-relaxed">
-                          <strong className="font-semibold">Waiting for Employee Submission:</strong> Under our core USP workflow, the employee submits their own honest 1–10 self-rating first during onboarding or at <code>/skills</code>.
+                          <strong className="font-semibold">Waiting for Employee Submission:</strong> The employee submits their self-evaluation during onboarding or in their skills portal.
                           <span className="block mt-1 text-amber-700">
-                            No ratings are preset. You can review this designation&apos;s required skills here, or optionally set a baseline on their behalf if needed.
+                            No ratings are preset. You can review this designation&apos;s required skills here, or optionally calibrate a baseline on their behalf if needed.
                           </span>
                         </div>
                       </div>
@@ -934,15 +929,15 @@ export const SuperAdminSkillSubmissions = () => {
         <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-xs">
           <div className="my-8 w-full max-w-2xl rounded-3xl bg-white shadow-2xl overflow-hidden border">
             {/* Header */}
-            <div className="flex items-center justify-between border-b bg-gradient-to-r from-violet-50 via-white to-brand-50 p-6">
+            <div className="flex items-center justify-between border-b bg-slate-50/70 p-6">
               <div className="flex items-center gap-3">
-                <div className="grid size-11 place-items-center rounded-2xl bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white shadow-md">
-                  <Play size={22} />
+                <div className="grid size-11 place-items-center rounded-2xl bg-brand-50 border border-brand-100 text-brand-700 shadow-xs">
+                  <SlidersHorizontal size={20} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-ink">Skill Assessment Simulation & Preview</h3>
+                  <h3 className="text-lg font-bold text-ink">Skill Calibration Model Simulator</h3>
                   <p className="text-xs text-slate-500">
-                    Simulate how employees submit 1–10 claims and how the AI calculates delivery velocity & reality gaps.
+                    Preview how employee self-ratings and task delivery velocity ratios correlate to compute calibrated scores.
                   </p>
                 </div>
               </div>
@@ -980,13 +975,13 @@ export const SuperAdminSkillSubmissions = () => {
               </div>
 
               {/* Simulation Controls: Velocity Ratio Slider */}
-              <div className="rounded-2xl border border-violet-100 bg-violet-50/60 p-4">
+              <div className="rounded-2xl border border-brand-100 bg-brand-50/40 p-4">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-bold text-violet-900">
+                  <span className="text-xs font-bold text-slate-800">
                     Simulated Task Delivery Speed (Velocity Ratio):
                   </span>
-                  <span className="text-xs font-mono font-bold text-violet-700">
-                    {simVelocity.toFixed(2)}x ({simVelocity < 0.8 ? "Delayed / Late" : simVelocity >= 1.25 ? "Fast Delivery" : "On-Time"})
+                  <span className="text-xs font-mono font-bold text-brand-700">
+                    {simVelocity.toFixed(2)}x ({simVelocity < 0.8 ? "Delayed / Lagged" : simVelocity >= 1.25 ? "Exceeding Benchmark" : "On-Time Delivery"})
                   </span>
                 </div>
                 <input
@@ -997,12 +992,12 @@ export const SuperAdminSkillSubmissions = () => {
                   step="0.1"
                   value={simVelocity}
                   onChange={(e) => setSimVelocity(Number(e.target.value))}
-                  className="w-full accent-violet-600 cursor-pointer"
+                  className="w-full accent-brand-600 cursor-pointer"
                 />
                 <div className="flex justify-between text-[10px] text-slate-400 mt-1">
-                  <span>0.3x (Very Slow / Reality Gap)</span>
-                  <span>1.0x (Exact Estimate)</span>
-                  <span>2.0x (Twice as Fast / Mastery)</span>
+                  <span>0.3x (Significant Delay / Delivery Lag)</span>
+                  <span>1.0x (Standard Target)</span>
+                  <span>2.0x (High Velocity Benchmark)</span>
                 </div>
               </div>
 
@@ -1051,7 +1046,7 @@ export const SuperAdminSkillSubmissions = () => {
                                 onClick={() => setSimRatings((prev) => ({ ...prev, [skillId]: v }))}
                                 className={cn(
                                   "size-6 rounded text-[10px] font-bold transition",
-                                  rating === v ? "bg-violet-600 text-white shadow-xs" : "bg-white border text-slate-600"
+                                  rating === v ? "bg-brand-600 text-white shadow-xs" : "bg-white border text-slate-600"
                                 )}
                               >
                                 {v}
@@ -1068,7 +1063,7 @@ export const SuperAdminSkillSubmissions = () => {
                                 status === "REALITY_GAP" ? "text-red-600" : status === "MASTERY" ? "text-emerald-600" : "text-blue-600"
                               )}
                             >
-                              {status === "REALITY_GAP" ? "⚠️ Gap" : status === "MASTERY" ? "⚡ Mastery" : status === "FAST_LEARNER" ? "🚀 Surge" : "✓ Justified"}
+                              {status === "REALITY_GAP" ? "Calibration Gap" : status === "MASTERY" ? "Mastery Met" : status === "FAST_LEARNER" ? "High Velocity" : "Verified"}
                             </span>
                           </div>
                         </div>
@@ -1086,7 +1081,7 @@ export const SuperAdminSkillSubmissions = () => {
             {/* Footer */}
             <div className="flex justify-end border-t bg-slate-50 p-4">
               <Button variant="secondary" onClick={() => setSimulationOpen(false)}>
-                Done Previewing
+                Close Simulator
               </Button>
             </div>
           </div>
