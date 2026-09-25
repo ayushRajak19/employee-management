@@ -3,6 +3,7 @@ export class ApiError extends Error { constructor(message: string, public status
 let refreshPromise: Promise<boolean> | null = null;
 
 const PUBLIC_PATHS = [
+  "/",
   "/login",
   "/welcome",
   "/register",
