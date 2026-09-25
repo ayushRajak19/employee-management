@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import {
   AlertTriangle,
   ArrowRight,
+  Award,
   BarChart3,
   Bot,
   Check,
@@ -12,7 +13,6 @@ import {
   FileSearch,
   Mic,
   ShieldCheck,
-  Sparkles,
   Users,
 } from "lucide-react";
 import teamImg from "@/assets/team-collaboration.jpg";
@@ -53,17 +53,17 @@ const showroom: Record<
     accent: "#e8623c",
   },
   "Executive analytics": {
-    eyebrow: "Leadership telemetry",
-    title: "30s live metrics and burnout radar.",
+    eyebrow: "Executive analytics",
+    title: "Real-time metrics and burnout prevention.",
     body: "Measure on-time delivery rates, completion velocity, and remaining estimated hours per person to defend employee wellbeing.",
-    proof: ["30s auto-refresh telemetry", "On-time delivery %", "Workload capacity radar"],
+    proof: ["Live executive analytics", "On-time delivery %", "Workload capacity radar"],
     accent: "#13896b",
   },
   "Smart attendance": {
     eyebrow: "Geofenced workplace presence",
     title: "Zero-hardware check-in with 300m geofencing.",
     body: "Mobile browser check-ins verified against office coordinates. Automated 11:30 AM late detection, 4-hour half-day rules, and manager regularization without biometric machines.",
-    proof: ["300m Haversine geofence", "Zero biometric hardware", "Live office register"],
+    proof: ["Smart workplace geofencing", "Zero biometric hardware", "Live office register"],
     accent: "#136f63",
   },
   "AI Resume Screener": {
@@ -83,8 +83,8 @@ const showroom: Record<
   "Global workforce": {
     eyebrow: "Enterprise governance",
     title: "Interactive geo-map and compliance control.",
-    body: "Visualize hybrid and remote employee hubs, track geofenced attendance, and enforce section-level RBAC with immutable audit logs.",
-    proof: ["Interactive employee map", "Section-level permissions", "Multi-tenant isolation"],
+    body: "Visualize hybrid and remote employee hubs, track geofenced attendance, and enforce granular role-based permissions with immutable audit logs.",
+    proof: ["Interactive employee map", "Granular role permissions", "Secure enterprise workspace"],
     accent: "#1e293b",
   },
 };
@@ -116,11 +116,11 @@ const humanStories: Record<HumanStoryKey, HumanStoryItem> = {
     highlightText: "trusted team",
     story: "Traditional software treats employees like rows in a database. MobiusEMS gives leadership grounded operational evidence, defends focus time against burnout, and ensures high-stakes decisions remain 100% human-led.",
     image: teamImg,
-    imageAlt: "Executive leadership and engineering managers reviewing real-time telemetry together",
-    liveTag: "Executive Operations · Real-Time Telemetry",
+    imageAlt: "Executive leadership and managers reviewing operational performance together",
+    liveTag: "Executive Operations · Live Leadership Insights",
     stat1: { value: 94, suffix: "%", label: "Review satisfaction score" },
     stat2: { value: "100%", label: "Human-led decisions (Zero black-box AI)" },
-    ctaText: "Explore leadership telemetry",
+    ctaText: "Explore executive analytics",
   },
   engineering: {
     id: "engineering",
@@ -230,7 +230,7 @@ export const LandingPage = () => {
                 </div>
                 <div className="lp-app-side">
                   <div className="lp-ai-pulse">
-                    <span><Sparkles size={15}/> <SparklesText text="MOBIUSEMS AI" colors={{ first: "#a7d9c3", second: "#f5c94b" }} /></span>
+                    <span><Bot size={15}/> <SparklesText text="MOBIUSEMS AI" colors={{ first: "#a7d9c3", second: "#f5c94b" }} /></span>
                     <strong>What deserves attention?</strong>
                     <p>Two reviews are ready for approval, all team deliverables are unblocked, and sprint velocity is tracking at 94% on-time delivery.</p>
                     <button type="button">Open insight <ArrowRight size={13}/></button>
@@ -392,7 +392,7 @@ export const LandingPage = () => {
 
             {activeView === "Executive analytics" && <div className="lp-scene-exec">
               <div className="lp-exec-telemetry">
-                <span className="lp-telemetry-pill"><span className="inline-block size-2 animate-ping rounded-full bg-emerald-500"/> Live 30s Polling Telemetry</span>
+                <span className="lp-telemetry-pill"><span className="inline-block size-2 animate-ping rounded-full bg-emerald-500"/> Live Leadership Analytics</span>
                 <span><strong><NumberTicker value={86.4} decimalPlaces={1} suffix="%" /></strong> On-Time Delivery Rate</span>
               </div>
               <table className="lp-radar-table">
@@ -471,7 +471,7 @@ export const LandingPage = () => {
                 <div className="lp-matrix-row border-b pb-1 font-bold text-slate-500"><span>Capability</span><span>Lead</span><span>Senior</span><span>Staff</span></div>
                 <div className="lp-matrix-row"><span>Distributed Arch</span><span className="lp-matrix-badge lp-matrix-expert">Expert</span><span className="lp-matrix-badge lp-matrix-proficient">Proficient</span><span className="lp-matrix-badge lp-matrix-expert">Expert</span></div>
                 <div className="lp-matrix-row"><span>Cloud Infra</span><span className="lp-matrix-badge lp-matrix-proficient">Proficient</span><span className="lp-matrix-badge lp-matrix-gap">CRITICAL GAP</span><span className="lp-matrix-badge lp-matrix-gap">GAP</span></div>
-                <div className="lp-matrix-row"><span>Security & RBAC</span><span className="lp-matrix-badge lp-matrix-expert">Expert</span><span className="lp-matrix-badge lp-matrix-proficient">Proficient</span><span className="lp-matrix-badge lp-matrix-proficient">Proficient</span></div>
+                <div className="lp-matrix-row"><span>Security & Access Control</span><span className="lp-matrix-badge lp-matrix-expert">Expert</span><span className="lp-matrix-badge lp-matrix-proficient">Proficient</span><span className="lp-matrix-badge lp-matrix-proficient">Proficient</span></div>
               </div>
               <div className="flex items-center gap-2 rounded-lg bg-amber-50 p-2 text-[10px] text-amber-800">
                 <AlertTriangle size={14} className="shrink-0 text-amber-600"/><span>2 team gaps detected in Cloud Infra · Suggested training auto-assigned</span>
@@ -496,7 +496,7 @@ export const LandingPage = () => {
         <div className="lp-ai-conversation">
           <div className="lp-ai-avatar"><Bot size={31}/><i/></div>
           <p className="lp-ai-question">“What should I pay attention to before the executive review?”</p>
-          <div className="lp-ai-answer"><Sparkles size={18}/><div><strong>Here is the short version.</strong><p>Two tasks are awaiting review, the Q3 appraisal calibration has been cleared by the Lead, and team delivery velocity is tracking on schedule.</p><div><span>View overdue work ↗</span><span>Open team workload ↗</span></div></div></div>
+          <div className="lp-ai-answer"><Bot size={18}/><div><strong>Here is the short version.</strong><p>Two tasks are awaiting review, the Q3 appraisal calibration has been cleared by the Lead, and team delivery velocity is tracking on schedule.</p><div><span>View overdue work ↗</span><span>Open team workload ↗</span></div></div></div>
           <small><ShieldCheck size={13}/> Permission-aware · Grounded in available records · Human-reviewed decisions</small>
         </div>
         <div className="lp-ai-capabilities">
@@ -551,7 +551,7 @@ export const LandingPage = () => {
           {/* Feature 2: Verified Skill Matrix & Organizational Heatmaps */}
           <CardSpotlight className="lp-engine-card" color="rgba(101, 87, 217, 0.08)">
             <div>
-              <div className="lp-engine-top"><span className="lp-engine-badge badge-violet"><Sparkles size={13}/> SKILL MATRIX & GAPS</span><span className="font-mono text-xs text-slate-400">02</span></div>
+              <div className="lp-engine-top"><span className="lp-engine-badge badge-violet"><Award size={13}/> SKILL MATRIX & GAPS</span><span className="font-mono text-xs text-slate-400">02</span></div>
               <h3>Verified Skill Matrix & Heatmaps</h3>
               <p>Go beyond self-reported claims. Map validated employee skills against role expectations, uncover critical organizational gaps, and build targeted training paths for continuous workforce growth.</p>
               <div className="lp-engine-features">
@@ -576,7 +576,7 @@ export const LandingPage = () => {
                     <span className="rounded-md bg-amber-50 px-2 py-0.5 font-bold text-amber-700">Gap · Training Active</span>
                   </div>
                   <div className="flex items-center justify-between text-[11px]">
-                    <span className="font-medium text-slate-800">Security & RBAC</span>
+                    <span className="font-medium text-slate-800">Security & Access Control</span>
                     <span className="rounded-md bg-emerald-50 px-2 py-0.5 font-bold text-emerald-700">Proficient · 88%</span>
                   </div>
                 </div>
@@ -630,21 +630,21 @@ export const LandingPage = () => {
           {/* Feature 4: Executive Workload Radar & Burnout Defense */}
           <CardSpotlight className="lp-engine-card" color="rgba(245, 158, 11, 0.08)">
             <div>
-              <div className="lp-engine-top"><span className="lp-engine-badge badge-amber"><BarChart3 size={13}/> EXECUTIVE TELEMETRY</span><span className="font-mono text-xs text-slate-400">04</span></div>
+              <div className="lp-engine-top"><span className="lp-engine-badge badge-amber"><BarChart3 size={13}/> EXECUTIVE ANALYTICS</span><span className="font-mono text-xs text-slate-400">04</span></div>
               <h3>Workload Radar & Burnout Defense</h3>
               <p>Protect team capacity before delivery suffers. Super Admin analytics track remaining estimated hours per person, surface overcommitted engineers, and integrate employee focus rhythms.</p>
               <div className="lp-engine-features">
-                <span><Check size={12}/> 30s telemetry polling</span>
+                <span><Check size={12}/> Real-time operational metrics</span>
                 <span><Check size={12}/> Estimated hours capacity</span>
                 <span><Check size={12}/> Micro-breaks & mood rhythms</span>
               </div>
             </div>
             <div className="lp-engine-mockup">
               <div className="mb-3.5 rounded-lg overflow-hidden h-28 relative border border-slate-200/90 shadow-xs group">
-                <img src={teamImg} alt="Leadership telemetry and burnout defense review" loading="lazy" decoding="async" className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500" />
+                <img src={teamImg} alt="Leadership analytics and workload capacity review" loading="lazy" decoding="async" className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent flex items-end p-2.5">
                   <span className="text-[10px] text-white font-semibold tracking-wide">
-                    ● Leadership Telemetry · Capacity & Burnout Defense
+                    ● Leadership Analytics · Capacity & Burnout Defense
                   </span>
                 </div>
               </div>
@@ -686,13 +686,13 @@ export const LandingPage = () => {
       <section className="lp-voice relative overflow-hidden scroll-mt-24" id="voice">
         <div className="lp-voice-wave" aria-hidden="true">{[24,42,72,38,88,58,98,48,77,32,64,92,54,34,70,44,82,26].map((height,index)=><i key={index} style={{height:`${height}%`}}/>)}</div><div className="lp-voice-copy"><span><Mic size={20}/> MULTILINGUAL VOICE CONTROL</span><h2>Work said out loud.<br/><em>Work ready to move.</em></h2><p>Speak naturally. MobiusEMS turns the note into editable assignments, owners, and deadlines across English and Indian languages. You review everything before it becomes real.</p><blockquote>“Create the launch assets for the Design team, and assign the client follow-up to Client Success by tomorrow.”</blockquote><div><span><Check size={15}/> 2 task previews</span><span><Clock3 size={15}/> Deadline detected</span><span><Users size={15}/> Teams matched</span></div></div></section>
 
-      <section className="lp-chapters scroll-mt-24" id="why"><div className="lp-chapters-intro"><span className="lp-section-number">06</span><p className="lp-kicker">THE POWER OF COMPLETE CONNECTION</p><h2>Less software to manage.<br/>More company to understand.</h2></div><div className="lp-chapter-list">{[[Users, "People & Global Footprint", "Profiles, departments, onboarding, geofenced attendance, and interactive employee maps stay organized."], [CheckCircle2, "Delivery & Sprint Resolution", "Reporting line hierarchy, real-time roadblock resolution, and active review queues without status chasing."], [Sparkles, "Capability & Talent Matrix", "Skill assessments, verified competency heatmaps, and evidence-grounded performance reviews in one workspace."], [ShieldCheck, "Ethical Governance & Control", "Multi-tenant isolation, section-level RBAC, and recommendation-only AI keeping decisions 100% human-led."]].map(([Icon, title, text], index) => { const ChapterIcon = Icon as typeof Users; return <CardSpotlight key={title as string} color="rgba(19, 137, 107, 0.06)"><article className="border-0"><span>0{index + 1}</span><ChapterIcon size={24}/><h3>{title as string}</h3><p>{text as string}</p><i>↗</i></article></CardSpotlight>; })}</div></section>
+      <section className="lp-chapters scroll-mt-24" id="why"><div className="lp-chapters-intro"><span className="lp-section-number">06</span><p className="lp-kicker">THE POWER OF COMPLETE CONNECTION</p><h2>Less software to manage.<br/>More company to understand.</h2></div><div className="lp-chapter-list">{[[Users, "People & Global Footprint", "Profiles, departments, onboarding, geofenced attendance, and interactive employee maps stay organized."], [CheckCircle2, "Delivery & Sprint Resolution", "Reporting line hierarchy, real-time roadblock resolution, and active review queues without status chasing."], [Award, "Capability & Talent Matrix", "Skill assessments, verified competency heatmaps, and evidence-grounded performance reviews in one workspace."], [ShieldCheck, "Ethical Governance & Control", "Dedicated workspace isolation, role-based access control, and recommendation-only AI keeping decisions 100% human-led."]].map(([Icon, title, text], index) => { const ChapterIcon = Icon as typeof Users; return <CardSpotlight key={title as string} color="rgba(19, 137, 107, 0.06)"><article className="border-0"><span>0{index + 1}</span><ChapterIcon size={24}/><h3>{title as string}</h3><p>{text as string}</p><i>↗</i></article></CardSpotlight>; })}</div></section>
 
       <section className="lp-outcomes"><p className="lp-kicker">WHAT CHANGES WHEN WORK CONNECTS</p><div>{[["From", "Status chasing", "to", "Live Sprint Resolution"], ["From", "Scattered tools", "to", "Unified Workforce Operations"], ["From", "Reactive burnout", "to", "Workload Capacity Radar"]].map(([beforeLabel,before,afterLabel,after]) => <p key={before}><small>{beforeLabel}</small><span>{before}</span><i>→</i><small>{afterLabel}</small><strong>{after}</strong></p>)}</div></section>
 
-      <section className="lp-principles scroll-mt-24" id="principles"><ShieldCheck size={34}/><p className="lp-kicker">PEOPLE STAY IN CHARGE</p><h2>AI can organize the evidence.<br/>It cannot replace judgment.</h2><p>Section-level RBAC permissions, immutable audit history, editable previews, and recommendation-only AI keep employment decisions explainable and in human hands.</p></section>
+      <section className="lp-principles scroll-mt-24" id="principles"><ShieldCheck size={34}/><p className="lp-kicker">PEOPLE STAY IN CHARGE</p><h2>AI can organize the evidence.<br/>It cannot replace judgment.</h2><p>Granular role-based permissions, immutable audit history, editable previews, and recommendation-only AI keep employment decisions explainable and in human hands.</p></section>
 
-      <section className="lp-faq scroll-mt-24" id="faq"><div><span className="lp-section-number">07</span><p className="lp-kicker">STRAIGHT ANSWERS</p><h2>Before you bring<br/>everyone together.</h2></div><div>{[["What makes MobiusEMS different from simple project tools?", "Traditional tools only track static task cards. MobiusEMS unites dynamic organizational hierarchy, real-time blocker triage, verified skill matrices, explainable performance intelligence, and employee workload telemetry into one seamless employee management platform."], ["How does MobiusEMS handle performance reviews?", "Performance evaluations in MobiusEMS are grounded in verified contribution evidence, completed tasks, and transparent weighted KPIs. The platform strictly excludes black-box automated rankings—managers retain full context and make all review decisions."], ["How does the AI Resume Screener work?", "The screener automatically parses PDF and DOCX resumes, matches candidate experience against saved Job Descriptions (JDs), highlights matching vs missing skills, and calculates a documented fit percentage. The AI is advisory; human interviewers make the final hiring decisions."], ["How does MobiusEMS identify and defend against employee burnout?", "The dashboard calculates remaining estimated hours for open work per person and flags overloaded team members on a live Workload Radar, helping managers reassign tasks and promote focus rhythms before burnout occurs."], ["What is the Team Delivery & Resolution Hub?", "It allows team leads, department heads, and managers to filter by reporting lines, clear task dependencies with real-time notes, inspect pending reviews, and keep execution moving smoothly without scheduling meetings."], ["Does AI make decisions about employees?", "Never. AI only answers questions, parses documents, and drafts summaries from permitted records. Managers review the evidence and remain fully responsible for every promotion, compensation, and staffing decision."]].map(([question,answer]) => <details key={question}><summary>{question}<ChevronDown size={18}/></summary><p>{answer}</p></details>)}</div></section>
+      <section className="lp-faq scroll-mt-24" id="faq"><div><span className="lp-section-number">07</span><p className="lp-kicker">STRAIGHT ANSWERS</p><h2>Before you bring<br/>everyone together.</h2></div><div>{[["What makes MobiusEMS different from simple project tools?", "Traditional tools only track static task cards. MobiusEMS unites dynamic organizational hierarchy, real-time blocker triage, verified skill matrices, explainable performance intelligence, and employee workload analytics into one seamless employee management platform."], ["How does MobiusEMS handle performance reviews?", "Performance evaluations in MobiusEMS are grounded in verified contribution evidence, completed tasks, and transparent weighted KPIs. The platform strictly excludes black-box automated rankings—managers retain full context and make all review decisions."], ["How does the AI Resume Screener work?", "The screener automatically parses PDF and DOCX resumes, matches candidate experience against saved Job Descriptions (JDs), highlights matching vs missing skills, and calculates a documented fit percentage. The AI is advisory; human interviewers make the final hiring decisions."], ["How does MobiusEMS identify and defend against employee burnout?", "The dashboard calculates remaining estimated hours for open work per person and flags overloaded team members on a live Workload Radar, helping managers reassign tasks and promote focus rhythms before burnout occurs."], ["What is the Team Delivery & Resolution Hub?", "It allows team leads, department heads, and managers to filter by reporting lines, clear task dependencies with real-time notes, inspect pending reviews, and keep execution moving smoothly without scheduling meetings."], ["Does AI make decisions about employees?", "Never. AI only answers questions, parses documents, and drafts summaries from permitted records. Managers review the evidence and remain fully responsible for every promotion, compensation, and staffing decision."]].map(([question,answer]) => <details key={question}><summary>{question}<ChevronDown size={18}/></summary><p>{answer}</p></details>)}</div></section>
 
       <section className="lp-final relative overflow-hidden">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] h-[320px] bg-white/10 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />

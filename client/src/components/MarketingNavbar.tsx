@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   ArrowRight,
+  Award,
   Bot,
   BriefcaseBusiness,
   ChevronDown,
@@ -10,7 +11,6 @@ import {
   MailCheck,
   Menu,
   Mic,
-  Sparkles,
   Target,
   Users,
   X,
@@ -53,7 +53,7 @@ const capabilitiesGroups = [
         slug: "skills-development",
         name: "Skills & Development",
         desc: "Verified competency matrix & department heatmaps",
-        Icon: Sparkles,
+        Icon: Award,
         accent: "#6557d9",
       },
       {
@@ -92,7 +92,7 @@ const capabilitiesGroups = [
       {
         slug: "secure-operations",
         name: "Secure Operations",
-        desc: "Multi-tenant isolation, RBAC, & immutable audit logs",
+        desc: "Enterprise data isolation, role security, & audit logs",
         Icon: Fingerprint,
         accent: "#233e3a",
       },
@@ -285,9 +285,9 @@ export const MarketingNavbar = () => {
           </a>
           <Link
             to="/solutions/mobius-ems-ai"
-            className="px-3.5 py-1.5 text-xs font-semibold text-[#3f5350] hover:text-[#102d2c] hover:bg-white/80 rounded-full transition-all duration-150 flex items-center gap-1"
+            className="px-3.5 py-1.5 text-xs font-semibold text-[#3f5350] hover:text-[#102d2c] hover:bg-white/80 rounded-full transition-all duration-150 flex items-center gap-1.5"
           >
-            <Sparkles size={12} className="text-violet-600" />
+            <Bot size={13} className="text-emerald-700" />
             AI Workspace
           </Link>
         </nav>
@@ -408,7 +408,7 @@ export const MarketingNavbar = () => {
               onClick={() => setMobileOpen(false)}
               className="flex items-center gap-2 px-3 py-2.5 text-sm font-medium text-[#102d2c] hover:bg-[#102d2c]/5 rounded-xl transition-colors"
             >
-              <Sparkles size={16} className="text-violet-600" />
+              <Bot size={16} className="text-emerald-700" />
               AI Workspace
             </Link>
           </nav>

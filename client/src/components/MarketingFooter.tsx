@@ -90,15 +90,15 @@ export const MarketingFooter = () => {
               </div>
               <div className="flex items-center gap-2.5 text-[11px] text-slate-300">
                 <MapPin size={15} className="shrink-0 text-emerald-400" />
-                <span>300m Haversine Geofencing (Biometric-hardware free)</span>
+                <span>Smart Geofenced Attendance (Biometric-hardware free)</span>
               </div>
               <div className="flex items-center gap-2.5 text-[11px] text-slate-300">
                 <Mic size={15} className="shrink-0 text-emerald-400" />
-                <span>Local Speech-to-Task (Zero 3rd-party audio retention)</span>
+                <span>Private Voice-to-Task (Secure on-device audio privacy)</span>
               </div>
               <div className="flex items-center gap-2.5 text-[11px] text-slate-300">
                 <Lock size={15} className="shrink-0 text-emerald-400" />
-                <span>Fail-Closed Multi-Tenancy & Section-Scoped RBAC</span>
+                <span>Enterprise Workspace Isolation & Role Permissions</span>
               </div>
             </div>
           </div>
@@ -187,7 +187,7 @@ export const MarketingFooter = () => {
                   className="group inline-flex items-center gap-1.5 text-slate-300 transition-all hover:text-white hover:translate-x-1"
                 >
                   <ChevronRight size={12} className="text-emerald-500/70 transition-transform group-hover:text-emerald-400" />
-                  <span>Enterprise Security & RBAC</span>
+                  <span>Enterprise Security & Access Control</span>
                 </Link>
               </li>
               <li className="pt-2">
@@ -215,7 +215,7 @@ export const MarketingFooter = () => {
                   className="group inline-flex items-center gap-1.5 text-slate-300 transition-all hover:text-white hover:translate-x-1 cursor-pointer"
                 >
                   <ChevronRight size={12} className="text-emerald-500/70 transition-transform group-hover:text-emerald-400" />
-                  <span>Interactive Showroom & Telemetry</span>
+                  <span>Interactive Product Showroom</span>
                 </a>
               </li>
               <li>
@@ -225,7 +225,7 @@ export const MarketingFooter = () => {
                   className="group inline-flex items-center gap-1.5 text-slate-300 transition-all hover:text-white hover:translate-x-1 cursor-pointer"
                 >
                   <ChevronRight size={12} className="text-emerald-500/70 transition-transform group-hover:text-emerald-400" />
-                  <span>Permission-Scoped AI Boundaries</span>
+                  <span>Ethical & Governed AI Boundaries</span>
                 </a>
               </li>
               <li>
@@ -255,7 +255,7 @@ export const MarketingFooter = () => {
                   className="group inline-flex items-center gap-1.5 text-slate-300 transition-all hover:text-white hover:translate-x-1 cursor-pointer"
                 >
                   <ChevronRight size={12} className="text-emerald-500/70 transition-transform group-hover:text-emerald-400" />
-                  <span>Workload Radar & Burnout Defense</span>
+                  <span>Workload Capacity & Wellbeing</span>
                 </a>
               </li>
               <li>
@@ -339,26 +339,10 @@ export const MarketingFooter = () => {
                   className="group inline-flex items-center gap-1.5 text-slate-300 transition-all hover:text-white hover:translate-x-1"
                 >
                   <ChevronRight size={12} className="text-emerald-500/70 transition-transform group-hover:text-emerald-400" />
-                  <span>Platform Tenant Portal</span>
+                  <span>Enterprise Admin Portal</span>
                 </Link>
               </li>
             </ul>
-
-            <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.04] p-3.5 space-y-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                Platform Status
-              </span>
-              <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400">
-                <span className="relative flex size-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
-                </span>
-                <span>Operational (v2.4.0)</span>
-              </div>
-              <p className="text-[10px] text-slate-400 leading-tight">
-                100% Server-side multi-tenant isolation
-              </p>
-            </div>
           </div>
         </div>
       </div>
